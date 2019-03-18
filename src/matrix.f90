@@ -140,11 +140,11 @@ Module distributed_matrix_module
 !!$  End Interface distributed_matrix_remap_data
 
   Abstract Interface
-     Subroutine create( matrix, m, n, source_matrix )
+     Subroutine create( A, m, n, source_matrix )
        !! Create storage for the data of the matrix
        Import :: distributed_matrix
        Implicit None
-       Class( distributed_matrix ), Intent(   Out ) :: matrix
+       Class( distributed_matrix ), Intent(   Out ) :: A
        Integer                    , Intent( In    ) :: m
        Integer                    , Intent( In    ) :: n
        Class( distributed_matrix ), Intent( In    ) :: source_matrix
@@ -210,21 +210,21 @@ Contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Methods implemented on the base type and inherited by the extended types
 
-  Subroutine matrix_get_maps( matrix, gl_rows, gl_cols, lg_rows, lg_cols )
+  Subroutine matrix_get_maps( A, gl_rows, gl_cols, lg_rows, lg_cols )
 
     !! For the given matrix get all the mapping arrays
 
-    Class( distributed_matrix )         , Intent( In    ) :: matrix
+    Class( distributed_matrix )         , Intent( In    ) :: A
     Integer, Dimension( : ), Allocatable, Intent(   Out ) :: gl_rows
     Integer, Dimension( : ), Allocatable, Intent(   Out ) :: gl_cols
     Integer, Dimension( : ), Allocatable, Intent(   Out ) :: lg_rows
     Integer, Dimension( : ), Allocatable, Intent(   Out ) :: lg_cols
 
     ! Note using allocate on set
-    gl_rows = matrix%global_to_local_rows
-    gl_cols = matrix%global_to_local_cols
-    lg_rows = matrix%local_to_global_rows
-    lg_cols = matrix%local_to_global_cols
+    gl_rows = A%global_to_local_rows
+    gl_cols = A%global_to_local_cols
+    lg_rows = A%local_to_global_rows
+    lg_cols = A%local_to_global_cols
     
   End Subroutine matrix_get_maps
 
@@ -310,7 +310,7 @@ Contains
     
   End Function matrix_communicator
 
-  Pure Function matrix_dagger( matrix ) Result( tm )
+  Pure Function matrix_dagger( A ) Result( tm )
 
     !! Apply the dagger operator to the matrix
     !  Note this does NOT do any communication. Instead we simply set the flag
@@ -318,9 +318,9 @@ Contains
     
     Class( distributed_matrix ), Allocatable :: tm
 
-    Class( distributed_matrix ), Intent( In ) :: matrix
+    Class( distributed_matrix ), Intent( In ) :: A
 
-    Allocate( tm, Source = matrix )
+    Allocate( tm, Source = A )
     tm%daggered = .Not. tm%daggered
     
   End Function matrix_dagger
@@ -328,13 +328,13 @@ Contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Over ridding routines
 
-  Subroutine matrix_create_real( matrix, m, n, source_matrix )
+  Subroutine matrix_create_real( A, m, n, source_matrix )
 
     !! Create the data for a real MxN matrix. The distribution is the same as the provided source matrix.
 
     Use, Intrinsic :: ieee_arithmetic, Only : ieee_value, ieee_signaling_nan
 
-    Class( real_distributed_matrix ), Intent(   Out ) :: matrix
+    Class( real_distributed_matrix ), Intent(   Out ) :: A
     Integer                         , Intent( In    ) :: m
     Integer                         , Intent( In    ) :: n
     Class(      distributed_matrix ), Intent( In    ) :: source_matrix
@@ -357,27 +357,27 @@ Contains
 
     Call source_matrix%matrix_map%get_data( ctxt = ctxt )
 
-    Call matrix%matrix_map%set( source_matrix%matrix_map%proc_mapping, ctxt, m, n, mb, nb, 0, 0, lda )
+    Call A%matrix_map%set( source_matrix%matrix_map%proc_mapping, ctxt, m, n, mb, nb, 0, 0, lda )
 
-    Call set_local_to_global( matrix%local_to_global_rows, m, mb, myprow, nprow, lda )
-    Call set_local_to_global( matrix%local_to_global_cols, n, nb, mypcol, npcol, sda )
+    Call set_local_to_global( A%local_to_global_rows, m, mb, myprow, nprow, lda )
+    Call set_local_to_global( A%local_to_global_cols, n, nb, mypcol, npcol, sda )
 
-    Call set_global_to_local( matrix%global_to_local_rows, m, mb, myprow, nprow )
-    Call set_global_to_local( matrix%global_to_local_cols, n, nb, mypcol, npcol )
+    Call set_global_to_local( A%global_to_local_rows, m, mb, myprow, nprow )
+    Call set_global_to_local( A%global_to_local_cols, n, nb, mypcol, npcol )
 
-    Allocate( matrix%data( 1:lda, 1:sda  ) )
+    Allocate( A%data( 1:lda, 1:sda  ) )
     ! Initialise with signalling NANs - this should be done more carefully but this will do for now
-    matrix%data = ieee_value( matrix%data, ieee_signaling_nan )
+    A%data = ieee_value( A%data, ieee_signaling_nan )
 
   End Subroutine matrix_create_real
 
-  Subroutine matrix_create_complex( matrix, m, n, source_matrix )
+  Subroutine matrix_create_complex( A, m, n, source_matrix )
 
     !! Create the data for a complex MxN matrix. The distribution is the same as the provided source matrix.
 
     Use, Intrinsic :: ieee_arithmetic, Only : ieee_value, ieee_signaling_nan
 
-    Class( complex_distributed_matrix ), Intent(   Out ) :: matrix
+    Class( complex_distributed_matrix ), Intent(   Out ) :: A
     Integer                            , Intent( In    ) :: m
     Integer                            , Intent( In    ) :: n
     Class(         distributed_matrix ), Intent( In    ) :: source_matrix
@@ -400,17 +400,17 @@ Contains
 
     Call source_matrix%matrix_map%get_data( ctxt = ctxt )
 
-    Call matrix%matrix_map%set( source_matrix%matrix_map%proc_mapping, ctxt, m, n, mb, nb, 0, 0, lda )
+    Call A%matrix_map%set( source_matrix%matrix_map%proc_mapping, ctxt, m, n, mb, nb, 0, 0, lda )
 
-    Call set_local_to_global( matrix%local_to_global_rows, m, mb, myprow, nprow, lda )
-    Call set_local_to_global( matrix%local_to_global_cols, n, nb, mypcol, npcol, sda )
+    Call set_local_to_global( A%local_to_global_rows, m, mb, myprow, nprow, lda )
+    Call set_local_to_global( A%local_to_global_cols, n, nb, mypcol, npcol, sda )
 
-    Call set_global_to_local( matrix%global_to_local_rows, m, mb, myprow, nprow )
-    Call set_global_to_local( matrix%global_to_local_cols, n, nb, mypcol, npcol )
+    Call set_global_to_local( A%global_to_local_rows, m, mb, myprow, nprow )
+    Call set_global_to_local( A%global_to_local_cols, n, nb, mypcol, npcol )
 
-    Allocate( matrix%data( 1:lda, 1:sda  ) )
+    Allocate( A%data( 1:lda, 1:sda  ) )
     ! Initialise with signalling NANs - this should be done more carefully but this will do for now
-    matrix%data = Cmplx( ieee_value( 0.0_wp, ieee_signaling_nan ), &
+    A%data = Cmplx( ieee_value( 0.0_wp, ieee_signaling_nan ), &
          ieee_value( 0.0_wp, ieee_signaling_nan ), wp )
         
   End Subroutine matrix_create_complex
