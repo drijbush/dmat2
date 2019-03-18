@@ -28,22 +28,25 @@ Module distributed_matrix_module
      Logical                             , Private :: daggered = .False.     !! If true use the matrix in daggered form
    Contains
      ! Public methods that are NOT overridden
-     Procedure, Public :: get_maps        => matrix_get_maps                 !! Get all the mapping arrays
-     Procedure, Public :: global_to_local => matrix_global_to_local          !! Get an array for mapping global indices to local  ones
-     Procedure, Public :: local_to_global => matrix_local_to_global          !! Get an array for mapping local  indices to global ones
-     Procedure, Public :: size            => matrix_size                     !! Get the dimensions of the matrix
-     Procedure, Public :: get_comm        => matrix_communicator             !! get the communicator containing the processes holding the matrix
+     Procedure, Public :: get_maps             => matrix_get_maps            !! Get all the mapping arrays
+     Procedure, Public :: global_to_local      => matrix_global_to_local     !! Get an array for mapping global indices to local  ones
+     Procedure, Public :: local_to_global      => matrix_local_to_global     !! Get an array for mapping local  indices to global ones
+     Procedure, Public :: size                 => matrix_size                !! Get the dimensions of the matrix
+     Procedure, Public :: get_comm             => matrix_communicator        !! Get the communicator containing the processes holding the matrix
+     Generic  , Public :: Operator( .Dagger. ) => matrix_dagger              !! Apply the dagger operator to the matrix
      ! Public methods that are overridden
      Procedure( create     ), Deferred :: create                             !! Create storage for the data of the matrix 
      Procedure( local_size ), Deferred :: local_size                         !! Get the dimensions of the local part of the matrix
+     ! Private implementations
+     Procedure, Private :: matrix_dagger                                     !! Apply the dagger operator to the matrix
   End type distributed_matrix
 
   Type, Extends( distributed_matrix ), Public :: real_distributed_matrix
      !! An instance of a distributed matrix that holds real data
      Real( wp ), Dimension( :, : ), Allocatable, Private    :: data          
    Contains
-     Procedure, Public :: create => matrix_create_real                       !! Create storage for the data of the matrix 
-     Procedure, Public :: local_size => matrix_local_size_real               !! Get the dimensions of the local part of the matrix
+     Procedure, Public :: create     => matrix_create_real              !! Create storage for the data of the matrix 
+     Procedure, Public :: local_size => matrix_local_size_real          !! Get the dimensions of the local part of the matrix
 !!$     Procedure, Private   :: diag_r               => matrix_diag_real
 !!$     Generic              :: diag                 => diag_r
 !!$     Procedure, Private   :: dagger_r             => matrix_dagger_real
@@ -82,7 +85,7 @@ Module distributed_matrix_module
      !! An instance of a distributed matrix that holds complex data
      Complex( wp ), Dimension( :, : ), Allocatable, Private :: data          
    Contains
-     Procedure, Public :: create => matrix_create_complex                    !! Create storage for the data of the matrix 
+     Procedure, Public :: create     => matrix_create_complex                !! Create storage for the data of the matrix 
      Procedure, Public :: local_size => matrix_local_size_complex            !! Get the dimensions of the local part of the matrix
 !!$     Procedure, Private   :: diag_c               => matrix_diag_complex
 !!$     Generic              :: diag                 => diag_c
@@ -307,7 +310,22 @@ Contains
     
   End Function matrix_communicator
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  Pure Function matrix_dagger( matrix ) Result( tm )
+
+    !! Apply the dagger operator to the matrix
+    !  Note this does NOT do any communication. Instead we simply set the flag
+    !  saying that until further notice the matrix should be used in tranposed form
+    
+    Class( distributed_matrix ), Allocatable :: tm
+
+    Class( distributed_matrix ), Intent( In ) :: matrix
+
+    Allocate( tm, Source = matrix )
+    tm%daggered = .Not. tm%daggered
+    
+  End Function matrix_dagger
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Over ridding routines
 
   Subroutine matrix_create_real( matrix, m, n, source_matrix )
