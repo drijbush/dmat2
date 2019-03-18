@@ -2,8 +2,6 @@ Module proc_mapping_module
 
   !! Module to deal with the MPI processes used by dmat2
 
-  Use mpi
-
   Implicit None
 
   Type, Public :: proc_mapping
@@ -11,9 +9,12 @@ Module proc_mapping_module
      Character( Len = 128 ), Private   :: name                         !! Name of the processor map
      Integer               , Private   :: communicator                 !! The communicator spanning the processors used
    Contains
-     Procedure, Private :: set_proc_mapping => set_proc_mapping        !! Set a processor map
-     Procedure, Public  :: print            => print_proc_mapping      !! Print information about a processor to stdout
-     Procedure, Public  :: get_comm         => get_comm_proc_mapping   !! Get the communicator used by the processor map
+     ! Public methods
+     Procedure, Public  :: print    => print_proc_mapping      !! Print information about a processor to stdout
+     Procedure, Public  :: get_comm => get_comm_proc_mapping   !! Get the communicator used by the processor map
+     Generic  , Public  :: set      => set_proc_mapping        !! Set a processor map
+     ! Private Implementations
+     Procedure, Private :: set_proc_mapping                    
   End Type proc_mapping
 
   Public :: proc_mapping_init
@@ -50,7 +51,7 @@ Contains
 
     !! Print information about a processor to stdout
 
-    Use mpi
+    Use mpi, Only : mpi_comm_size, mpi_comm_rank
     
     Class( proc_mapping ), Intent( In ) :: map
 
