@@ -234,6 +234,7 @@ Module distributed_matrix_module
        Complex( wp ), Dimension( m:, p: ), Intent(   Out ) :: data
      End Subroutine get_global_complex
      Function binary_op( A, B ) Result( C )
+       !! A binary operation between two base class objects
        Import :: distributed_matrix
        Implicit None
        Class( distributed_matrix ), Allocatable  :: C
@@ -241,6 +242,7 @@ Module distributed_matrix_module
        Class( distributed_matrix ), Intent( In ) :: B
      End Function binary_op
      Function real_binary_op( A, B ) Result( C )
+       !! A binary operation between a real matrix and the base class
        Import ::      distributed_matrix
        Import :: real_distributed_matrix
        Implicit None
@@ -249,6 +251,7 @@ Module distributed_matrix_module
        Class(      distributed_matrix ), Intent( In ) :: B
      End Function real_binary_op
      Function complex_binary_op( A, B ) Result( C )
+       !! A binary operation between a complex matrix and the base class
        Import ::         distributed_matrix
        Import :: complex_distributed_matrix
        Implicit None
@@ -766,6 +769,8 @@ Contains
   ! Multiplication routines
 
   Function real_multiply( A, B ) Result( C )
+
+    !! Multiply a real matrix by something yet to be determined
   
     Class(      distributed_matrix ), Allocatable :: C
 
@@ -779,6 +784,8 @@ Contains
 
   Function complex_multiply( A, B ) Result( C )
   
+    !! Multiply a complex matrix by something yet to be determined
+
     Class(      distributed_matrix ), Allocatable :: C
 
     Class( complex_distributed_matrix ), Intent( In ) :: A
@@ -791,6 +798,8 @@ Contains
 
   Function real_multiply_real( A, B ) Result( C )
 
+    !! Multiply a real matrix by a real matrix
+    
     Class(      distributed_matrix ), Allocatable :: C
 
     Class( real_distributed_matrix ), Intent( In ) :: A
@@ -855,6 +864,8 @@ Contains
      
   Function real_multiply_complex( A, B ) Result( C )
 
+    !! Multiply a real matrix by complex matrix - ILLEGAL
+
     Class(         distributed_matrix ), Allocatable :: C
 
     Class(    real_distributed_matrix ), Intent( In ) :: A
@@ -868,6 +879,8 @@ Contains
 
   Function complex_multiply_real( A, B ) Result( C )
 
+    !! Multiply a complex matrix by real matrix - ILLEGAL
+
     Class(         distributed_matrix ), Allocatable :: C
 
     Class( complex_distributed_matrix ), Intent( In ) :: A
@@ -880,6 +893,8 @@ Contains
   End Function complex_multiply_real
 
   Function complex_multiply_complex( A, B ) Result( C )
+
+    !! Multiply a complex matrix by complex matrix
 
     Class(         distributed_matrix ), Allocatable :: C
 
