@@ -31,18 +31,19 @@ Module distributed_matrix_module
      Procedure, Public :: get_maps        => matrix_get_maps                 !! Get all the mapping arrays
      Procedure, Public :: global_to_local => matrix_global_to_local          !! Get an array for mapping global indices to local  ones
      Procedure, Public :: local_to_global => matrix_local_to_global          !! Get an array for mapping local  indices to global ones
-     Procedure, Public :: size            => matrix_size                     !! Get the dimensions of the array
+     Procedure, Public :: size            => matrix_size                     !! Get the dimensions of the matrix
      Procedure, Public :: get_comm        => matrix_communicator             !! get the communicator containing the processes holding the matrix
      ! Public methods that are overridden
-     Procedure( create ), Deferred :: create                                 !! Create storage for the data of the matrix 
-!!$     Procedure          :: local_size      => matrix_local_size
+     Procedure( create     ), Deferred :: create                             !! Create storage for the data of the matrix 
+     Procedure( local_size ), Deferred :: local_size                         !! Get the dimensions of the local part of the matrix
   End type distributed_matrix
 
   Type, Extends( distributed_matrix ), Public :: real_distributed_matrix
      !! An instance of a distributed matrix that holds real data
-     Real( wp ), Dimension( :, : ), Allocatable, Private    :: data          !! Create storage for the data of the matrix 
+     Real( wp ), Dimension( :, : ), Allocatable, Private    :: data          
    Contains
-     Procedure, Public :: create => matrix_create_real
+     Procedure, Public :: create => matrix_create_real                       !! Create storage for the data of the matrix 
+     Procedure, Public :: local_size => matrix_local_size_real               !! Get the dimensions of the local part of the matrix
 !!$     Procedure, Private   :: diag_r               => matrix_diag_real
 !!$     Generic              :: diag                 => diag_r
 !!$     Procedure, Private   :: dagger_r             => matrix_dagger_real
@@ -82,6 +83,7 @@ Module distributed_matrix_module
      Complex( wp ), Dimension( :, : ), Allocatable, Private :: data          
    Contains
      Procedure, Public :: create => matrix_create_complex                    !! Create storage for the data of the matrix 
+     Procedure, Public :: local_size => matrix_local_size_complex            !! Get the dimensions of the local part of the matrix
 !!$     Procedure, Private   :: diag_c               => matrix_diag_complex
 !!$     Generic              :: diag                 => diag_c
 !!$     Procedure, Private   :: dagger_c             => matrix_dagger_complex
@@ -136,6 +138,7 @@ Module distributed_matrix_module
 
   Abstract Interface
      Subroutine create( matrix, m, n, source_matrix )
+       !! Create storage for the data of the matrix
        Import :: distributed_matrix
        Implicit None
        Class( distributed_matrix ), Intent(   Out ) :: matrix
@@ -143,15 +146,30 @@ Module distributed_matrix_module
        Integer                    , Intent( In    ) :: n
        Class( distributed_matrix ), Intent( In    ) :: source_matrix
      End Subroutine create
+     Function local_size( A, dim ) Result( n )
+       !! Get the dimensions of the local part of the matrix
+       Import :: distributed_matrix
+       Implicit None
+       Integer                                   :: n
+       Class( distributed_matrix ), Intent( In ) :: A
+       Integer                    , Intent( In ) :: dim
+     End Function local_size
  End Interface
   
 Contains
 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Non-type bound procedures
+
   Subroutine distributed_matrix_init
+    !! Initialise the matrix system
   End Subroutine distributed_matrix_init
 
   Subroutine distributed_matrix_comm_to_base( comm, base_matrix )
 
+    !! Converts an MPI communicator into the data structures
+    !! reuired to describe a matrix mapped onto it
+    
     Integer                      , Intent( In    ) :: comm
     Class  ( distributed_matrix ), Intent(   Out ) :: base_matrix 
 
@@ -169,19 +187,29 @@ Contains
 
   Subroutine distributed_matrix_finalise
 
+    !! Finalise the matrix system
+
     Call matrix_mapping_finalise
     
   End Subroutine distributed_matrix_finalise
 
   Subroutine distributed_matrix_set_default_blocking( bfac )
 
+    !! Set the default blocking factor
+    ! Yuck, global state. Should eventually get rid of this and instead have an optional argument to the create routine
+    
     Integer, Intent( In ) :: bfac
 
     block_fac = bfac
     
   End Subroutine distributed_matrix_set_default_blocking
 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Methods implemented on the base type and inherited by the extended types
+
   Subroutine matrix_get_maps( matrix, gl_rows, gl_cols, lg_rows, lg_cols )
+
+    !! For the given matrix get all the mapping arrays
 
     Class( distributed_matrix )         , Intent( In    ) :: matrix
     Integer, Dimension( : ), Allocatable, Intent(   Out ) :: gl_rows
@@ -198,6 +226,9 @@ Contains
   End Subroutine matrix_get_maps
 
   Function matrix_global_to_local( A, what ) Result( gl_indexing )
+
+    !! For the given matrix get an array for mapping global indices to local  ones
+    !! Get row mapping arrays if WHAT='C' or 'c', row ones if it is equal to 'R' or 'r'
 
     Integer, Dimension( : ), Allocatable :: gl_indexing
     
@@ -217,6 +248,9 @@ Contains
   
   Function matrix_local_to_global( A, what ) Result( lg_indexing )
 
+    !! For the given matrix get an array for mapping local indices to global  ones
+    !! Get row mapping arrays if WHAT='C' or 'c', row ones if it is equal to 'R' or 'r'
+
     Integer, Dimension( : ), Allocatable :: lg_indexing
     
     Class( distributed_matrix ), Intent( In ) :: A
@@ -233,17 +267,9 @@ Contains
 
   End Function matrix_local_to_global
 
-  Function matrix_communicator( A ) Result( c )
-
-    Integer :: c
-
-    Class( distributed_matrix ), Intent( In ) :: A
-
-    c = A%matrix_map%get_comm()
-    
-  End Function matrix_communicator
-
   Function matrix_size( A, dim ) Result( n )
+
+    !! Get the dimensions of the matrix
 
     Integer :: n
 
@@ -263,15 +289,30 @@ Contains
        
     Else
 
-       Stop "Ilegal dimension in matrix_local_size"
+       Stop "Ilegal dimension in matrix_size"
        
     End If
 
   End Function matrix_size
 
+  Function matrix_communicator( A ) Result( c )
+
+    !! Get the communicator containing the processes holding the matrix
+
+    Integer :: c
+
+    Class( distributed_matrix ), Intent( In ) :: A
+
+    c = A%matrix_map%get_comm()
+    
+  End Function matrix_communicator
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Over ridding routines
 
   Subroutine matrix_create_real( matrix, m, n, source_matrix )
+
+    !! Create the data for a real MxN matrix. The distribution is the same as the provided source matrix.
 
     Use, Intrinsic :: ieee_arithmetic, Only : ieee_value, ieee_signaling_nan
 
@@ -310,66 +351,11 @@ Contains
     ! Initialise with signalling NANs - this should be done more carefully but this will do for now
     matrix%data = ieee_value( matrix%data, ieee_signaling_nan )
 
-  Contains
-
-    Subroutine set_local_to_global( loc_to_glob, n, nb, myp, np, da )
-      
-      Integer, Dimension( : ), Allocatable, Intent(   Out ) :: loc_to_glob
-      Integer                             , Intent( In    ) :: n
-      Integer                             , Intent( In    ) :: nb
-      Integer                             , Intent( In    ) :: myp
-      Integer                             , Intent( In    ) :: np
-      Integer                             , Intent( In    ) :: da
-      
-      Integer :: i_glob, i_loc, skip, start
-      
-      Allocate( loc_to_glob( 1:da ) )
-      
-      skip =  np * nb
-      
-      i_loc = 1
-      start = myp * nb + 1
-      Do While( start <= n )
-         Do i_glob = start, Min( start + nb - 1, n )
-            loc_to_glob( i_loc ) = i_glob
-            i_loc = i_loc + 1
-         End Do
-         start = start + skip
-      End Do
-
-    End Subroutine set_local_to_global
-  
-    Subroutine set_global_to_local( glob_to_loc, n, nb, myp, np )
-
-      Integer, Dimension( : ), Allocatable, Intent(   Out ) :: glob_to_loc
-      Integer                             , Intent( In    ) :: n
-      Integer                             , Intent( In    ) :: nb
-      Integer                             , Intent( In    ) :: myp
-      Integer                             , Intent( In    ) :: np
-      
-      Integer :: i_glob, i_loc, skip, start
-
-      Allocate( glob_to_loc( 1:n ) )
-      
-      glob_to_loc = DISTRIBUTED_MATRIX_NOT_ME
-      
-      skip =  np * nb
-      
-      i_loc = 1
-      start = myp * nb + 1
-      Do While( start <= n )
-         Do i_glob = start, Min( start + nb - 1, n )
-            glob_to_loc( i_glob ) = i_loc
-            i_loc = i_loc + 1
-         End Do
-         start = start + skip
-      End Do
-
-    End Subroutine set_global_to_local
-    
   End Subroutine matrix_create_real
 
   Subroutine matrix_create_complex( matrix, m, n, source_matrix )
+
+    !! Create the data for a complex MxN matrix. The distribution is the same as the provided source matrix.
 
     Use, Intrinsic :: ieee_arithmetic, Only : ieee_value, ieee_signaling_nan
 
@@ -408,91 +394,115 @@ Contains
     ! Initialise with signalling NANs - this should be done more carefully but this will do for now
     matrix%data = Cmplx( ieee_value( 0.0_wp, ieee_signaling_nan ), &
          ieee_value( 0.0_wp, ieee_signaling_nan ), wp )
-    
-  Contains
-
-    Subroutine set_local_to_global( loc_to_glob, n, nb, myp, np, da )
-      
-      Integer, Dimension( : ), Allocatable, Intent(   Out ) :: loc_to_glob
-      Integer                             , Intent( In    ) :: n
-      Integer                             , Intent( In    ) :: nb
-      Integer                             , Intent( In    ) :: myp
-      Integer                             , Intent( In    ) :: np
-      Integer                             , Intent( In    ) :: da
-      
-      Integer :: i_glob, i_loc, skip, start
-      
-      Allocate( loc_to_glob( 1:da ) )
-      
-      skip =  np * nb
-      
-      i_loc = 1
-      start = myp * nb + 1
-      Do While( start <= n )
-         Do i_glob = start, Min( start + nb - 1, n )
-            loc_to_glob( i_loc ) = i_glob
-            i_loc = i_loc + 1
-         End Do
-         start = start + skip
-      End Do
-
-    End Subroutine set_local_to_global
-  
-    Subroutine set_global_to_local( glob_to_loc, n, nb, myp, np )
-
-      Integer, Dimension( : ), Allocatable, Intent(   Out ) :: glob_to_loc
-      Integer                             , Intent( In    ) :: n
-      Integer                             , Intent( In    ) :: nb
-      Integer                             , Intent( In    ) :: myp
-      Integer                             , Intent( In    ) :: np
-      
-      Integer :: i_glob, i_loc, skip, start
-
-      Allocate( glob_to_loc( 1:n ) )
-      
-      glob_to_loc = DISTRIBUTED_MATRIX_NOT_ME
-      
-      skip =  np * nb
-      
-      i_loc = 1
-      start = myp * nb + 1
-      Do While( start <= n )
-         Do i_glob = start, Min( start + nb - 1, n )
-            glob_to_loc( i_glob ) = i_loc
-            i_loc = i_loc + 1
-         End Do
-         start = start + skip
-      End Do
-
-    End Subroutine set_global_to_local
-    
+        
   End Subroutine matrix_create_complex
+  
+  Function matrix_local_size_real( A, dim ) Result( n )
 
-!!$  Function matrix_local_size( A, dim ) Result( n )
-!!$
-!!$    Integer :: n
-!!$
-!!$    Class( distributed_matrix ), Intent( In ) :: A
-!!$    Integer                    , Intent( In ) :: dim
-!!$
-!!$    If( dim <= 2 ) Then
-!!$
-!!$       Select Type( A )
-!!$       Class Default
-!!$          Stop "Illegal type in matrix_local_size"
-!!$       Class is ( real_distributed_matrix )
-!!$          n = Size( A%data, Dim = dim )
-!!$       Class is ( complex_distributed_matrix )
-!!$          n = Size( A%data, Dim = dim )
-!!$       End Select
-!!$
-!!$    Else
-!!$
-!!$       Stop "Ilegal dimension in matrix_local_size"
-!!$
-!!$    End If
-!!$       
-!!$  End Function matrix_local_size
+    !! Get the dimensions of the local part of the matrix
+
+    Integer :: n
+
+    Class( real_distributed_matrix ), Intent( In ) :: A
+    Integer                    , Intent( In ) :: dim
+
+    If( dim <= 2 ) Then
+
+       n = Size( A%data, Dim = dim )
+
+    Else
+
+       Stop "Ilegal dimension in matrix_local_size"
+
+    End If
+       
+  End Function matrix_local_size_real
+
+  Function matrix_local_size_complex( A, dim ) Result( n )
+
+    !! Get the dimensions of the local part of the matrix
+
+    Integer :: n
+
+    Class( complex_distributed_matrix ), Intent( In ) :: A
+    Integer                    , Intent( In ) :: dim
+
+    If( dim <= 2 ) Then
+
+       n = Size( A%data, Dim = dim )
+
+    Else
+
+       Stop "Ilegal dimension in matrix_local_size"
+
+    End If
+       
+  End Function matrix_local_size_complex
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Auxiliary routines
+  
+  Subroutine set_local_to_global( loc_to_glob, n, nb, myp, np, da )
+
+    !! Generate an array mapping the local indices to global ones
+    
+    Integer, Dimension( : ), Allocatable, Intent(   Out ) :: loc_to_glob !! The indices
+    Integer                             , Intent( In    ) :: n           !! The size of the dimension
+    Integer                             , Intent( In    ) :: nb          !! the blocking factor
+    Integer                             , Intent( In    ) :: myp         !! My processor coordinate
+    Integer                             , Intent( In    ) :: np          !! The number of processors along this dimensions
+    Integer                             , Intent( In    ) :: da          !! How big the mapping array need be
+    
+    Integer :: i_glob, i_loc, skip, start
+    
+    Allocate( loc_to_glob( 1:da ) )
+    
+    skip =  np * nb
+    
+    i_loc = 1
+    start = myp * nb + 1
+    Do While( start <= n )
+       Do i_glob = start, Min( start + nb - 1, n )
+          loc_to_glob( i_loc ) = i_glob
+          i_loc = i_loc + 1
+       End Do
+       start = start + skip
+    End Do
+    
+  End Subroutine set_local_to_global
+  
+  Subroutine set_global_to_local( glob_to_loc, n, nb, myp, np )
+    
+    !! Generate an array mapping the global indices to local ones
+    !! If this process does not hold a given local index the entry is set to DISTRIBUTED_MATRIX_NOT_ME
+
+    Integer, Dimension( : ), Allocatable, Intent(   Out ) :: glob_to_loc !! The indices
+    Integer                             , Intent( In    ) :: n           !! The size of the dimension
+    Integer                             , Intent( In    ) :: nb          !! the blocking factor
+    Integer                             , Intent( In    ) :: myp         !! My processor coordinate
+    Integer                             , Intent( In    ) :: np          !! The number of processors along this dimensions
+    
+    Integer :: i_glob, i_loc, skip, start
+    
+    Allocate( glob_to_loc( 1:n ) )
+    
+    glob_to_loc = DISTRIBUTED_MATRIX_NOT_ME
+    
+    skip =  np * nb
+    
+    i_loc = 1
+    start = myp * nb + 1
+    Do While( start <= n )
+       Do i_glob = start, Min( start + nb - 1, n )
+          glob_to_loc( i_glob ) = i_loc
+          i_loc = i_loc + 1
+       End Do
+       start = start + skip
+    End Do
+    
+  End Subroutine set_global_to_local
+
+
   
 
 
