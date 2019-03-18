@@ -1,5 +1,7 @@
 Module numbers_module
- 
+
+  !! Little module to set the precision of real numbers that we shall use
+  
   Implicit None 
   
   Integer, Public, Parameter :: wp = Selected_real_kind( 14, 70 )
