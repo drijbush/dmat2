@@ -7,7 +7,7 @@ Module distributed_matrix_module
 !!$  Use mpi
   
   Use numbers_module       , Only : wp
-  Use Scalapack_interfaces , Only : numroc
+  Use Scalapack_interfaces , Only : numroc, pdgemm, pzgemm
   Use matrix_mapping_module, Only : matrix_mapping, &
        matrix_mapping_init, matrix_mapping_comm_to_base, matrix_mapping_finalise
 
@@ -36,15 +36,19 @@ Module distributed_matrix_module
      Generic  , Public :: Operator( .Dagger. ) => matrix_dagger              !! Apply the dagger operator to the matrix
      Generic  , Public :: set_by_global        => set_global_real, set_global_complex !! Set a matrix using global indexing
      Generic  , Public :: get_by_global        => get_global_real, get_global_complex !! Get from a matrix using global indexing
+     Generic  , Public :: Operator( * )        => multiply                   !! Multiply two matrices together
      ! Public methods that are overridden
      Procedure( create     ), Deferred, Public :: create                     !! Create storage for the data of the matrix 
      Procedure( local_size ), Deferred, Public :: local_size                 !! Get the dimensions of the local part of the matrix
      ! Private implementations
-     Procedure, Private :: matrix_dagger                                     !! Apply the dagger operator to the matrix
+     Procedure,                                 Private :: matrix_dagger           !! Apply the dagger operator to the matrix
      Procedure( set_global_real    ), Deferred, Private :: set_global_real         !! Set values with a real    array using global indexing
      Procedure( set_global_complex ), Deferred, Private :: set_global_complex      !! Set values with a complex array using global indexing
      Procedure( get_global_real    ), Deferred, Private :: get_global_real         !! Get values from a real    array using global indexing
      Procedure( get_global_complex ), Deferred, Private :: get_global_complex      !! Get values from a complex array using global indexing
+     Procedure(         binary_op ), Deferred, Private :: multiply
+     Procedure(    real_binary_op ), Deferred, Pass( B ), Private :: real_multiply
+     Procedure( complex_binary_op ), Deferred, Pass( B ), Private :: complex_multiply
   End type distributed_matrix
 
   Type, Extends( distributed_matrix ), Public :: real_distributed_matrix
@@ -59,6 +63,9 @@ Module distributed_matrix_module
      Procedure, Private :: set_global_complex => real_matrix_set_global_complex
      Procedure, Private :: get_global_real    => real_matrix_get_global_real
      Procedure, Private :: get_global_complex => real_matrix_get_global_complex
+     Procedure, Private :: multiply           => real_multiply
+     Procedure, Pass( B ), Private :: real_multiply    => real_multiply_real
+     Procedure, Pass( B ), Private :: complex_multiply => complex_multiply_real
 !!$     Procedure, Private   :: diag_r               => matrix_diag_real
 !!$     Generic              :: diag                 => diag_r
 !!$     Procedure, Private   :: dagger_r             => matrix_dagger_real
@@ -105,6 +112,9 @@ Module distributed_matrix_module
      Procedure, Private :: set_global_complex => complex_matrix_set_global_complex
      Procedure, Private :: get_global_real    => complex_matrix_get_global_real
      Procedure, Private :: get_global_complex => complex_matrix_get_global_complex
+     Procedure, Private :: multiply           => complex_multiply
+     Procedure, Pass( B ), Private :: real_multiply    => real_multiply_complex
+     Procedure, Pass( B ), Private :: complex_multiply => complex_multiply_complex
 !!$     Procedure, Private   :: diag_c               => matrix_diag_complex
 !!$     Generic              :: diag                 => diag_c
 !!$     Procedure, Private   :: dagger_c             => matrix_dagger_complex
@@ -223,6 +233,29 @@ Module distributed_matrix_module
        Integer                           , Intent( In    ) :: q
        Complex( wp ), Dimension( m:, p: ), Intent(   Out ) :: data
      End Subroutine get_global_complex
+     Function binary_op( A, B ) Result( C )
+       Import :: distributed_matrix
+       Implicit None
+       Class( distributed_matrix ), Allocatable  :: C
+       Class( distributed_matrix ), Intent( In ) :: A
+       Class( distributed_matrix ), Intent( In ) :: B
+     End Function binary_op
+     Function real_binary_op( A, B ) Result( C )
+       Import ::      distributed_matrix
+       Import :: real_distributed_matrix
+       Implicit None
+       Class(      distributed_matrix ), Allocatable  :: C
+       Class( real_distributed_matrix ), Intent( In ) :: A
+       Class(      distributed_matrix ), Intent( In ) :: B
+     End Function real_binary_op
+     Function complex_binary_op( A, B ) Result( C )
+       Import ::         distributed_matrix
+       Import :: complex_distributed_matrix
+       Implicit None
+       Class(         distributed_matrix ), Allocatable  :: C
+       Class( complex_distributed_matrix ), Intent( In ) :: A
+       Class(         distributed_matrix ), Intent( In ) :: B
+     End Function complex_binary_op
   End Interface
   
 Contains
@@ -633,7 +666,6 @@ Contains
     Integer :: handle
     Integer :: rsize, error
     
-    ! THIS NEEDS OPTIMISATION!!
     data = 0.0_wp
     Do j_glob = p, q
        j_loc = A%global_to_local_cols( j_glob )
@@ -710,7 +742,6 @@ Contains
     Integer :: csize, handle
     Integer :: error
     
-    ! THIS NEEDS OPTIMISATION!!
     data = 0.0_wp
     Do j_glob = p, q
        j_loc = A%global_to_local_cols( j_glob )
@@ -731,6 +762,187 @@ Contains
     Call MPI_Allreduce( MPI_In_place, data, Size( data ), MPI_double_complex, MPI_Sum, A%matrix_map%get_comm(), error )
        
   End Subroutine complex_matrix_get_global_complex
+
+  ! Multiplication routines
+
+  Function real_multiply( A, B ) Result( C )
+  
+    Class(      distributed_matrix ), Allocatable :: C
+
+    Class( real_distributed_matrix ), Intent( In ) :: A
+    Class(      distributed_matrix ), Intent( In ) :: B
+
+    ! We know what A is. Now use dispatch on B to pick out what it is
+    C = B%real_multiply( A )
+    
+  End Function real_multiply
+
+  Function complex_multiply( A, B ) Result( C )
+  
+    Class(      distributed_matrix ), Allocatable :: C
+
+    Class( complex_distributed_matrix ), Intent( In ) :: A
+    Class(         distributed_matrix ), Intent( In ) :: B
+
+    ! We know what A is. Now use dispatch on B to pick out what it is
+    C = B%complex_multiply( A )
+    
+  End Function complex_multiply
+
+  Function real_multiply_real( A, B ) Result( C )
+
+    Class(      distributed_matrix ), Allocatable :: C
+
+    Class( real_distributed_matrix ), Intent( In ) :: A
+    Class( real_distributed_matrix ), Intent( In ) :: B
+
+    Class( real_distributed_matrix ), Allocatable :: T
+
+    Integer :: ma, na
+    Integer :: mb, nb
+    Integer :: m, n, k
+
+    Character :: t1, t2
+
+    ! Give C the same mapping as A
+    Allocate( T, Source = A )
+
+    ! There must be a neater way ...
+    Deallocate( T%data )
+    Deallocate( T%local_to_global_rows )
+    Deallocate( T%local_to_global_cols )
+    Deallocate( T%global_to_local_rows )
+    Deallocate( T%global_to_local_cols )
+    T%daggered = .False.
+    
+    t1 = Merge( 'T', 'N', A%daggered )
+    t2 = Merge( 'T', 'N', B%daggered )
+    
+    Call A%matrix_map%get_data( m = ma, n = na )
+    Call B%matrix_map%get_data( m = mb, n = nb )
+    
+    If( t1 == 'N' .And. t2 == 'N' ) Then
+       m = ma
+       n = nb
+       k = na
+    Else If( t1 == 'T' .And. t2 == 'N' ) Then
+       m = na
+       n = nb
+       k = ma
+    Else If( t1 == 'N' .And. t2 == 'T' ) Then
+       m = ma
+       n = mb
+       k = na
+    Else If( t1 == 'T' .And. t2 == 'T' ) Then
+       m = na
+       n = mb
+       k = ma
+    Else
+       Stop 'How did we get here in real_multiply_real???'
+    End If
+
+    ! Hacky?
+!!$    Call matrix_create( T, m, n, A )
+    Call T%create( m, n, A )
+    
+    Call pdgemm( t1, t2, m, n, k, 1.0_wp, A%data, 1, 1, A%matrix_map%get_descriptor(), &
+                                          B%data, 1, 1, B%matrix_map%get_descriptor(), &
+                                  0.0_wp, T%data, 1, 1, T%matrix_map%get_descriptor() )
+
+    C = T
+    
+  End Function real_multiply_real
+     
+  Function real_multiply_complex( A, B ) Result( C )
+
+    Class(         distributed_matrix ), Allocatable :: C
+
+    Class(    real_distributed_matrix ), Intent( In ) :: A
+    Class( complex_distributed_matrix ), Intent( In ) :: B
+
+    Stop "Illegal combination of arguments in real_multiply_complex"
+    Deallocate( C )
+    Write( *, * ) A%data, B%data
+
+  End Function real_multiply_complex
+
+  Function complex_multiply_real( A, B ) Result( C )
+
+    Class(         distributed_matrix ), Allocatable :: C
+
+    Class( complex_distributed_matrix ), Intent( In ) :: A
+    Class(    real_distributed_matrix ), Intent( In ) :: B
+
+    Stop "Illegal combination of arguments in complex_multiply_real"
+    Deallocate( C )
+    Write( *, * ) A%data, B%data
+    
+  End Function complex_multiply_real
+
+  Function complex_multiply_complex( A, B ) Result( C )
+
+    Class(         distributed_matrix ), Allocatable :: C
+
+    Class( complex_distributed_matrix ), Intent( In ) :: A
+    Class( complex_distributed_matrix ), Intent( In ) :: B
+
+    Class( complex_distributed_matrix ), Allocatable :: T
+    
+    Integer :: ma, na
+    Integer :: mb, nb
+    Integer :: m, n, k
+
+    Character :: t1, t2
+
+    ! Give C the same mapping as A
+    Allocate( T, Source = A )
+
+    ! There must be a neater way ...
+    Deallocate( T%data )
+    Deallocate( T%local_to_global_rows )
+    Deallocate( T%local_to_global_cols )
+    Deallocate( T%global_to_local_rows )
+    Deallocate( T%global_to_local_cols )
+    T%daggered = .False.
+    
+    t1 = Merge( 'C', 'N', A%daggered )
+    t2 = Merge( 'C', 'N', B%daggered )
+       
+    Call A%matrix_map%get_data( m = ma, n = na )
+    Call B%matrix_map%get_data( m = mb, n = nb )
+
+    If( t1 == 'N' .And. t2 == 'N' ) Then
+       m = ma
+       n = nb
+       k = na
+    Else If( t1 == 'C' .And. t2 == 'N' ) Then
+       m = na
+       n = nb
+       k = ma
+    Else If( t1 == 'N' .And. t2 == 'C' ) Then
+       m = ma
+       n = mb
+       k = na
+    Else If( t1 == 'C' .And. t2 == 'C' ) Then
+       m = na
+       n = mb
+       k = ma
+    Else
+       Stop 'How did we get here in matrix_multiply_complex???'
+    End If
+    
+    ! Hacky?
+!!$    Call matrix_create( T, m, n, A )
+    Call T%create( m, n, A )
+
+    Call pzgemm( t1, t2, m, n, k, ( 1.0_wp, 0.0_wp ), A%data, 1, 1, A%matrix_map%get_descriptor(), &
+                                                      B%data, 1, 1, B%matrix_map%get_descriptor(), &
+                                  ( 0.0_wp, 0.0_wp ), T%data, 1, 1, T%matrix_map%get_descriptor() )
+
+    C = T
+
+  End Function complex_multiply_complex
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Auxiliary routines

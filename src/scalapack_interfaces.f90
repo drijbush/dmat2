@@ -14,6 +14,54 @@ Module scalapack_interfaces
        Integer, Intent( In ) :: nprocs
      End Function numroc
 
+     Subroutine pdgemm( ta, tb, m, n, k, alpha, A, ia, ja, descA, B, ib, jb, descB, beta, C, ic, jc, descC )
+       Import :: wp
+       Implicit None
+       Character                   , Intent( In    ) :: ta
+       Character                   , Intent( In    ) :: tb
+       Integer                     , Intent( In    ) :: m
+       Integer                     , Intent( In    ) :: n
+       Integer                     , Intent( In    ) :: k
+       Real( wp )                  , Intent( In    ) :: alpha
+       Real( wp ), Dimension(  *  ), Intent( In    ) :: A
+       Integer                     , Intent( In    ) :: ia
+       Integer                     , Intent( In    ) :: ja
+       Integer,    Dimension( 1:9 ), Intent( In    ) :: descA
+       Real( wp ), Dimension(  *  ), Intent( In    ) :: B
+       Integer                     , Intent( In    ) :: ib
+       Integer                     , Intent( In    ) :: jb
+       Integer,    Dimension( 1:9 ), Intent( In    ) :: descB
+       Real( wp )                  , Intent( In    ) :: beta
+       Real( wp ), Dimension(  *  ), Intent( InOut ) :: C
+       Integer                     , Intent( In    ) :: ic
+       Integer                     , Intent( In    ) :: jc
+       Integer,    Dimension( 1:9 ), Intent( In    ) :: descC
+     End Subroutine pdgemm
+
+     Subroutine pzgemm( ta, tb, m, n, k, alpha, A, ia, ja, descA, B, ib, jb, descB, beta, C, ic, jc, descC )
+       Import :: wp
+       Implicit None
+       Character                      , Intent( In    ) :: ta
+       Character                      , Intent( In    ) :: tb
+       Integer                        , Intent( In    ) :: m
+       Integer                        , Intent( In    ) :: n
+       Integer                        , Intent( In    ) :: k
+       Complex( wp )                  , Intent( In    ) :: alpha
+       Complex( wp ), Dimension(  *  ), Intent( In    ) :: A
+       Integer                        , Intent( In    ) :: ia
+       Integer                        , Intent( In    ) :: ja
+       Integer,       Dimension( 1:9 ), Intent( In    ) :: descA
+       Complex( wp ), Dimension(  *  ), Intent( In    ) :: B
+       Integer                        , Intent( In    ) :: ib
+       Integer                        , Intent( In    ) :: jb
+       Integer,       Dimension( 1:9 ), Intent( In    ) :: descB
+       Complex( wp )                  , Intent( In    ) :: beta
+       Complex( wp ), Dimension(  *  ), Intent( InOut ) :: C
+       Integer                        , Intent( In    ) :: ic
+       Integer                        , Intent( In    ) :: jc
+       Integer,       Dimension( 1:9 ), Intent( In    ) :: descC
+     End Subroutine pzgemm
+
 !!$     Subroutine pdsyevd( jobz, uplo, n, a, ia, ja, desca, w, z, iz, jz, descz, work, lwork, iwork, liwork, info )
 !!$       Import :: wp
 !!$       Implicit None
