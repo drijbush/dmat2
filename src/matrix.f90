@@ -34,19 +34,26 @@ Module distributed_matrix_module
      Procedure, Public :: size                 => matrix_size                !! Get the dimensions of the matrix
      Procedure, Public :: get_comm             => matrix_communicator        !! Get the communicator containing the processes holding the matrix
      Generic  , Public :: Operator( .Dagger. ) => matrix_dagger              !! Apply the dagger operator to the matrix
+     Generic  , Public :: set_by_global        => set_global_real, set_global_complex !! Set a matrix using global indexing
      ! Public methods that are overridden
-     Procedure( create     ), Deferred :: create                             !! Create storage for the data of the matrix 
-     Procedure( local_size ), Deferred :: local_size                         !! Get the dimensions of the local part of the matrix
+     Procedure( create     ), Deferred, Public :: create                     !! Create storage for the data of the matrix 
+     Procedure( local_size ), Deferred, Public :: local_size                 !! Get the dimensions of the local part of the matrix
      ! Private implementations
      Procedure, Private :: matrix_dagger                                     !! Apply the dagger operator to the matrix
+     Procedure( set_global_real    ), Deferred, Private :: set_global_real         !! Set values with a real    array using global indexing
+     Procedure( set_global_complex ), Deferred, Private :: set_global_complex      !! set_values with a complex array using global indexing
   End type distributed_matrix
 
   Type, Extends( distributed_matrix ), Public :: real_distributed_matrix
      !! An instance of a distributed matrix that holds real data
      Real( wp ), Dimension( :, : ), Allocatable, Private    :: data          
    Contains
-     Procedure, Public :: create     => matrix_create_real              !! Create storage for the data of the matrix 
-     Procedure, Public :: local_size => matrix_local_size_real          !! Get the dimensions of the local part of the matrix
+     ! Public methods
+     Procedure, Public :: create        => matrix_create_real              !! Create storage for the data of the matrix 
+     Procedure, Public :: local_size    => matrix_local_size_real          !! Get the dimensions of the local part of the matrix
+     ! Private implementations
+     Procedure, Private :: set_global_real    => real_matrix_set_global_real
+     Procedure, Private :: set_global_complex => real_matrix_set_global_complex
 !!$     Procedure, Private   :: diag_r               => matrix_diag_real
 !!$     Generic              :: diag                 => diag_r
 !!$     Procedure, Private   :: dagger_r             => matrix_dagger_real
@@ -85,8 +92,12 @@ Module distributed_matrix_module
      !! An instance of a distributed matrix that holds complex data
      Complex( wp ), Dimension( :, : ), Allocatable, Private :: data          
    Contains
-     Procedure, Public :: create     => matrix_create_complex                !! Create storage for the data of the matrix 
-     Procedure, Public :: local_size => matrix_local_size_complex            !! Get the dimensions of the local part of the matrix
+     ! Public methods
+     Procedure, Public :: create     => matrix_create_complex                 !! Create storage for the data of the matrix 
+     Procedure, Public :: local_size => matrix_local_size_complex             !! Get the dimensions of the local part of the matrix
+     ! Private implementations
+     Procedure, Private :: set_global_real    => complex_matrix_set_global_real
+     Procedure, Private :: set_global_complex => complex_matrix_set_global_complex
 !!$     Procedure, Private   :: diag_c               => matrix_diag_complex
 !!$     Generic              :: diag                 => diag_c
 !!$     Procedure, Private   :: dagger_c             => matrix_dagger_complex
@@ -157,7 +168,31 @@ Module distributed_matrix_module
        Class( distributed_matrix ), Intent( In ) :: A
        Integer                    , Intent( In ) :: dim
      End Function local_size
- End Interface
+     Subroutine set_global_real( A, m, n, p, q, data )
+       !! Set values with a real    array using global indexing
+       Import :: wp
+       Import :: distributed_matrix
+       Implicit None
+       Class( distributed_matrix )    , Intent( InOut ) :: A
+       Integer                        , Intent( In    ) :: m
+       Integer                        , Intent( In    ) :: n
+       Integer                        , Intent( In    ) :: p
+       Integer                        , Intent( In    ) :: q
+       Real( wp ), Dimension( m:, p: ), Intent( In    ) :: data
+     End Subroutine set_global_real
+     Subroutine set_global_complex( A, m, n, p, q, data )
+       !! Set values with a complex array using global indexing
+       Import :: wp
+       Import :: distributed_matrix
+       Implicit None
+       Class( distributed_matrix )       , Intent( InOut ) :: A
+       Integer                           , Intent( In    ) :: m
+       Integer                           , Intent( In    ) :: n
+       Integer                           , Intent( In    ) :: p
+       Integer                           , Intent( In    ) :: q
+       Complex( wp ), Dimension( m:, p: ), Intent( In    ) :: data
+     End Subroutine set_global_complex
+  End Interface
   
 Contains
 
@@ -326,7 +361,7 @@ Contains
   End Function matrix_dagger
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ! Over ridding routines
+  ! Over-ridding routines
 
   Subroutine matrix_create_real( A, m, n, source_matrix )
 
@@ -456,6 +491,95 @@ Contains
     End If
        
   End Function matrix_local_size_complex
+
+  Subroutine real_matrix_set_global_real( A, m, n, p, q, data )
+
+    !! Sets the data ( m:n, p:q ) in the global matrix
+
+    Class( real_distributed_matrix ), Intent( InOut ) :: A
+    Integer                         , Intent( In    ) :: m
+    Integer                         , Intent( In    ) :: n
+    Integer                         , Intent( In    ) :: p
+    Integer                         , Intent( In    ) :: q
+    Real( wp ), Dimension( m:, p: ) , Intent( In    ) :: data
+
+    Integer :: i_glob, j_glob
+    Integer :: i_loc , j_loc
+
+    ! Could be optimised by introducing ranges for the mapping arryas
+
+    Do j_glob = p, q
+       j_loc = A%global_to_local_cols( j_glob )
+       If( j_loc == distributed_matrix_NOT_ME ) Cycle
+       Do i_glob = m, n
+          i_loc = A%global_to_local_rows( i_glob )
+          If( i_loc == distributed_matrix_NOT_ME ) Cycle
+          A%data( i_loc, j_loc ) = data( i_glob, j_glob )
+       End Do
+    End Do
+       
+  End Subroutine real_matrix_set_global_real
+
+  Subroutine real_matrix_set_global_complex( A, m, n, p, q, data )
+
+    !! Sets the data ( m:n, p:q ) in the global matrix
+
+    Class( real_distributed_matrix )  , Intent( InOut ) :: A
+    Integer                           , Intent( In    ) :: m
+    Integer                           , Intent( In    ) :: n
+    Integer                           , Intent( In    ) :: p
+    Integer                           , Intent( In    ) :: q
+    Complex( wp ), Dimension( m:, p: ), Intent( In    ) :: data
+
+    Stop "Trying to set real matrix with complex data in real_matrix_set_global_complex"
+    ! Shut the compiler up about unused vars
+    Write( *, * ) A%data, m, n, p, q, data
+
+  End Subroutine real_matrix_set_global_complex
+
+  Subroutine complex_matrix_set_global_real( A, m, n, p, q, data )
+
+    !! Sets the data ( m:n, p:q ) in the global matrix
+
+    Class( complex_distributed_matrix ), Intent( InOut ) :: A
+    Integer                            , Intent( In    ) :: m
+    Integer                            , Intent( In    ) :: n
+    Integer                            , Intent( In    ) :: p
+    Integer                            , Intent( In    ) :: q
+    Real( wp ), Dimension( m:, p: )    , Intent( In    ) :: data
+
+    Stop "Trying to set real matrix with complex data in real_matrix_set_global_complex"
+    Write( *, * ) A%data, m, n, p, q, data
+
+  End Subroutine complex_matrix_set_global_real
+
+  Subroutine complex_matrix_set_global_complex( A, m, n, p, q, data )
+
+    !! Sets the data ( m:n, p:q ) in the global matrix
+
+    Class( complex_distributed_matrix ), Intent( InOut ) :: A
+    Integer                            , Intent( In    ) :: m
+    Integer                            , Intent( In    ) :: n
+    Integer                            , Intent( In    ) :: p
+    Integer                            , Intent( In    ) :: q
+    Complex( wp ), Dimension( m:, p: ) , Intent( In    ) :: data
+
+    Integer :: i_glob, j_glob
+    Integer :: i_loc , j_loc
+
+    ! Could be optimised by introducing ranges for the mapping arryas
+    
+    Do j_glob = p, q
+       j_loc = A%global_to_local_cols( j_glob )
+       If( j_loc == distributed_matrix_NOT_ME ) Cycle
+       Do i_glob = m, n
+          i_loc = A%global_to_local_rows( i_glob )
+          If( i_loc == distributed_matrix_NOT_ME ) Cycle
+          A%data( i_loc, j_loc ) = data( i_glob, j_glob )
+       End Do
+    End Do
+       
+  End Subroutine complex_matrix_set_global_complex
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Auxiliary routines
