@@ -849,7 +849,7 @@ Contains
                                   0.0_wp, T%data, 1, 1, T%matrix_map%get_descriptor() )
 
     ! And store the result
-    Allocate( C, Source = T )
+    C = T
     
   End Function real_multiply_real
      
@@ -892,7 +892,7 @@ Contains
     Class( complex_distributed_matrix ), Intent( In ) :: A
     Class( complex_distributed_matrix ), Intent( In ) :: B
 
-    Class( complex_distributed_matrix ), Allocatable :: T
+    Type( complex_distributed_matrix ) :: T
     
     Integer :: ma, na
     Integer :: mb, nb
@@ -900,17 +900,6 @@ Contains
 
     Character :: t1, t2
 
-    ! Give C the same mapping as A
-    Allocate( T, Source = A )
-
-    ! There must be a neater way ...
-    Deallocate( T%data )
-    Deallocate( T%local_to_global_rows )
-    Deallocate( T%local_to_global_cols )
-    Deallocate( T%global_to_local_rows )
-    Deallocate( T%global_to_local_cols )
-    T%daggered = .False.
-    
     t1 = Merge( 'C', 'N', A%daggered )
     t2 = Merge( 'C', 'N', B%daggered )
        
@@ -937,8 +926,6 @@ Contains
        Stop 'How did we get here in matrix_multiply_complex???'
     End If
     
-    ! Hacky?
-!!$    Call matrix_create( T, m, n, A )
     Call T%create( m, n, A )
 
     Call pzgemm( t1, t2, m, n, k, ( 1.0_wp, 0.0_wp ), A%data, 1, 1, A%matrix_map%get_descriptor(), &
@@ -946,7 +933,7 @@ Contains
                                   ( 0.0_wp, 0.0_wp ), T%data, 1, 1, T%matrix_map%get_descriptor() )
 
     C = T
-
+    
   End Function complex_multiply_complex
 
 
