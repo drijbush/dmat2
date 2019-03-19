@@ -105,7 +105,8 @@ Contains
 
     ! Kill all blacs contexts i use, but not the MPI subsytem
     ! ( as indicated by the argument being non-zero )
-    Call blacs_exit( 1 )
+    ! Unfortunately this means restating the BLACS seems impossible grrrr....
+!!$    Call blacs_exit( 1 )
     
   End Subroutine matrix_mapping_finalise
 
