@@ -805,7 +805,7 @@ Contains
     Class( real_distributed_matrix ), Intent( In ) :: A
     Class( real_distributed_matrix ), Intent( In ) :: B
 
-    Class( real_distributed_matrix ), Allocatable :: T
+    Type( real_distributed_matrix ) :: T
 
     Integer :: ma, na
     Integer :: mb, nb
@@ -813,17 +813,7 @@ Contains
 
     Character :: t1, t2
 
-    ! Give C the same mapping as A
-    Allocate( T, Source = A )
-
-    ! There must be a neater way ...
-    Deallocate( T%data )
-    Deallocate( T%local_to_global_rows )
-    Deallocate( T%local_to_global_cols )
-    Deallocate( T%global_to_local_rows )
-    Deallocate( T%global_to_local_cols )
-    T%daggered = .False.
-    
+    ! Work out the dimensions of the result
     t1 = Merge( 'T', 'N', A%daggered )
     t2 = Merge( 'T', 'N', B%daggered )
     
@@ -850,15 +840,16 @@ Contains
        Stop 'How did we get here in real_multiply_real???'
     End If
 
-    ! Hacky?
-!!$    Call matrix_create( T, m, n, A )
+    ! Create a result matrix of the right type
     Call T%create( m, n, A )
-    
+
+    ! Do the multiplication
     Call pdgemm( t1, t2, m, n, k, 1.0_wp, A%data, 1, 1, A%matrix_map%get_descriptor(), &
                                           B%data, 1, 1, B%matrix_map%get_descriptor(), &
                                   0.0_wp, T%data, 1, 1, T%matrix_map%get_descriptor() )
 
-    C = T
+    ! And store the result
+    Allocate( C, Source = T )
     
   End Function real_multiply_real
      
