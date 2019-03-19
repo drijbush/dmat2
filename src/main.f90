@@ -130,6 +130,9 @@ Contains
     Cm  = AmT * Bm
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
+       Write( *, * )  Am%size( 1 ),  Am%size( 2 )
+       Write( *, * ) AmT%size( 1 ), AmT%size( 2 )
+       Write( *, * )  Cm%size( 1 ),  Cm%size( 2 )
        Write( *, * ) 'Error in real matmul TN ', Maxval( Abs( C - tmp ) )
     End If
     Call distributed_matrix_finalise
