@@ -383,14 +383,25 @@ Contains
 
     If( dim <= 2 ) Then
 
-       Select Case( dim )
-       Case Default
-          Stop "Ilegal dimension in matrix_size"
-       Case( 1 )
-          Call A%matrix_map%get_data( m = n )
-       Case( 2 )
-          Call A%matrix_map%get_data( n = n )
-       End Select
+       If( .Not. A%daggered ) Then
+          Select Case( dim )
+          Case Default
+             Stop "Ilegal dimension in matrix_size"
+          Case( 1 )
+             Call A%matrix_map%get_data( m = n )
+          Case( 2 )
+             Call A%matrix_map%get_data( n = n )
+          End Select
+       Else
+          Select Case( dim )
+          Case Default
+             Stop "Ilegal dimension in matrix_size"
+          Case( 1 )
+             Call A%matrix_map%get_data( n = n )
+          Case( 2 )
+             Call A%matrix_map%get_data( m = n )
+          End Select
+       End If
        
     Else
 
