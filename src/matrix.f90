@@ -911,6 +911,7 @@ Contains
 
     Character :: t1, t2
 
+    ! Work out the shape of the result
     t1 = Merge( 'C', 'N', A%daggered )
     t2 = Merge( 'C', 'N', B%daggered )
        

@@ -1,19 +1,31 @@
 Module scalapack_interfaces
- 
+
+  !! Interfaces to the linear algebra routines
+
   Use numbers_module, Only : wp
 
-  Interface 
+  Implicit None
+  
+  Interface
+
+     !! Number of rows or columns distributed along this dimension
  
      Pure Function numroc( n, nb, iproc, isrcproc, nprocs  ) Result( loc_n )
        Implicit None
        Integer               :: loc_n
-       Integer, Intent( In ) :: n
-       Integer, Intent( In ) :: nb
-       Integer, Intent( In ) :: iproc
-       Integer, Intent( In ) :: isrcproc
-       Integer, Intent( In ) :: nprocs
+       Integer, Intent( In ) :: n         !! Length of Dimension
+       Integer, Intent( In ) :: nb        !! Blocking Factor
+       Integer, Intent( In ) :: iproc     !! Me
+       Integer, Intent( In ) :: isrcproc  !! First proc holding the dim
+       Integer, Intent( In ) :: nprocs    !! number of procs holding the dim
      End Function numroc
 
+  End Interface
+
+  Interface
+
+     !! Matrix multiplies
+  
      Subroutine pdgemm( ta, tb, m, n, k, alpha, A, ia, ja, descA, B, ib, jb, descB, beta, C, ic, jc, descC )
        Import :: wp
        Implicit None
@@ -62,6 +74,12 @@ Module scalapack_interfaces
        Integer,       Dimension( 1:9 ), Intent( In    ) :: descC
      End Subroutine pzgemm
 
+  End Interface 
+
+  Interface
+
+     !! Matrix diagonalisation routines
+
      Subroutine pdsyevd( jobz, uplo, n, a, ia, ja, desca, w, z, iz, jz, descz, work, lwork, iwork, liwork, info )
        Import :: wp
        Implicit None
@@ -107,7 +125,7 @@ Module scalapack_interfaces
        Integer                        , Intent( In    ) :: liwork
        Integer                        , Intent( In    ) :: info
      End Subroutine pzheevd
- 
-  End Interface
+
+  End Interface 
 
 End Module scalapack_interfaces
