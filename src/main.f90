@@ -34,6 +34,7 @@ Program test_distributed_matrix
   Call test_real_matmul_NN
   Call test_real_matmul_TN
   Call test_real_matmul_NT
+  Call test_real_matmul_TT
   Call test_complex_matmul_NN
   
   Call mpi_finalize( error )
@@ -56,22 +57,9 @@ Contains
     Type( real_distributed_matrix ) :: base
     Class( distributed_matrix ), Allocatable :: Am, Bm, Cm
 
-    Integer :: ma, na
-    Integer :: mb, nb
-    Integer :: mc, nc
-
-    ma = m
-    na = k
-
-    mb = k
-    nb = n
-
-    mc = m
-    nc = n
-    
-    Allocate( A( 1:ma, 1:na ) )
-    Allocate( B( 1:mb, 1:nb ) )
-    Allocate( C( 1:mc, 1:nc ) )
+    Allocate( A( 1:m, 1:k ) )
+    Allocate( B( 1:k, 1:n ) )
+    Allocate( C( 1:m, 1:n ) )
     If( me == 0 ) Then
        Call Random_number( A )
        Call Random_number( B )
@@ -88,12 +76,12 @@ Contains
     Call distributed_matrix_comm_to_base( mpi_comm_world, base )
     Allocate( real_distributed_matrix :: Am )
     Allocate( real_distributed_matrix :: Bm )
-    Call Am%create( ma, na, base )
-    Call Am%set_by_global( 1, ma, 1, na, A )
-    Call Bm%create( mb, nb, Am )
-    Call Bm%set_by_global( 1, mb, 1, nb, B )
+    Call Am%create( m, k, base )
+    Call Am%set_by_global( 1, m, 1, k, A )
+    Call Bm%create( k, n, Am )
+    Call Bm%set_by_global( 1, k, 1, n, B )
     Cm = Am * Bm
-    Call Cm%get_by_global( 1, mc, 1, nc, tmp )
+    Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
        Write( *, * ) 'Error in real matmul NN ', Maxval( Abs( C - tmp ) )
     End If
@@ -154,7 +142,7 @@ Contains
     
     Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
 
-   Use numbers_module           , Only : wp
+    Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, real_distributed_matrix, &
          distributed_matrix_init, distributed_matrix_comm_to_base, distributed_matrix_finalise, &
          distributed_matrix_set_default_blocking
@@ -166,19 +154,6 @@ Contains
     Type( real_distributed_matrix ) :: base
     Class( distributed_matrix ), Allocatable :: Am, Bm, BmT, Cm
 
-    Integer :: ma, na
-    Integer :: mb, nb
-    Integer :: mc, nc
-
-    ma = m
-    na = k
-
-    mb = n
-    nb = k
-
-    mc = m
-    nc = n
-    
     Allocate( A( 1:m, 1:k ) )
     Allocate( B( 1:n, 1:k ) )
     Allocate( C( 1:m, 1:n ) )
@@ -186,7 +161,6 @@ Contains
        Call Random_number( A )
        Call Random_number( B )
        C = Matmul( A, Transpose( B ) )
-       Write( *, * ) '!!!!!!', Shape( Matmul( A, Transpose( B ) ) )
     End If
     Call mpi_bcast( A, Size( A ), mpi_double_precision, 0, mpi_comm_world, error )
     Call mpi_bcast( B, Size( B ), mpi_double_precision, 0, mpi_comm_world, error )
@@ -205,7 +179,6 @@ Contains
     Call Bm%set_by_global( 1, n, 1, k, B )
     BmT = .Dagger. Bm
     Cm = Am * BmT
-    Write( *, * ) mc, nc, Cm%size( 1 ), Cm%size( 2 )
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
        Write( *, * ) 'Error in real matmul NT ', Maxval( Abs( C - tmp ) )
@@ -213,6 +186,56 @@ Contains
     Call distributed_matrix_finalise
 
   End Subroutine test_real_matmul_NT
+
+  Subroutine test_real_matmul_TT
+    
+    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+
+    Use numbers_module           , Only : wp
+    Use distributed_matrix_module, Only : distributed_matrix, real_distributed_matrix, &
+         distributed_matrix_init, distributed_matrix_comm_to_base, distributed_matrix_finalise, &
+         distributed_matrix_set_default_blocking
+
+    Implicit None
+    
+    Real( wp ), Dimension( :, : ), Allocatable :: A, B, C, tmp
+
+    Type( real_distributed_matrix ) :: base
+    Class( distributed_matrix ), Allocatable :: Am, AmT, Bm, BmT, Cm
+
+    Allocate( A( 1:k, 1:m ) )
+    Allocate( B( 1:n, 1:k ) )
+    Allocate( C( 1:m, 1:n ) )
+    If( me == 0 ) Then
+       Call Random_number( A )
+       Call Random_number( B )
+       C = Matmul( Transpose( A ), Transpose( B ) )
+    End If
+    Call mpi_bcast( A, Size( A ), mpi_double_precision, 0, mpi_comm_world, error )
+    Call mpi_bcast( B, Size( B ), mpi_double_precision, 0, mpi_comm_world, error )
+    Call mpi_bcast( C, Size( C ), mpi_double_precision, 0, mpi_comm_world, error )
+
+    Allocate( tmp( 1:m, 1:n ) )
+    
+    Call distributed_matrix_init
+    Call distributed_matrix_set_default_blocking( n_block )
+    Call distributed_matrix_comm_to_base( mpi_comm_world, base )
+    Allocate( real_distributed_matrix :: Am )
+    Allocate( real_distributed_matrix :: Bm )
+    Call Am%create( k, m, base )
+    Call Am%set_by_global( 1, k, 1, m, A )
+    Call Bm%create( n, k, Am )
+    Call Bm%set_by_global( 1, n, 1, k, B )
+    AmT = .Dagger. Am
+    BmT = .Dagger. Bm
+    Cm = AmT * BmT
+    Call Cm%get_by_global( 1, m, 1, n, tmp )
+    If( me == 0 ) Then
+       Write( *, * ) 'Error in real matmul TT ', Maxval( Abs( C - tmp ) )
+    End If
+    Call distributed_matrix_finalise
+
+  End Subroutine test_real_matmul_TT
 
   Subroutine test_complex_matmul_NN
     
