@@ -487,7 +487,6 @@ Contains
     Use ks_matrix_module, Only : ks_matrix, ks_matrix_init, ks_matrix_comm_to_base, &
          ks_matrix_finalise
     Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
-    Use distributed_matrix_module, Only : distributed_matrix_set_default_blocking
 
     Real( wp ), Dimension( :, : ), Allocatable :: A, B, C, tmp
 
@@ -508,8 +507,7 @@ Contains
     
     Allocate( tmp( 1:m, 1:n ) )
 
-    Call ks_matrix_init
-    Call distributed_matrix_set_default_blocking( n_block )
+    Call ks_matrix_init( n_block )
     Call ks_matrix_comm_to_base( mpi_comm_world, base )
     Call Am%create( .False., m, k, base )
     Call Am%set_by_global( 1, m, 1, k, A )
@@ -531,7 +529,6 @@ Contains
     Use ks_matrix_module, Only : ks_matrix, ks_matrix_init, ks_matrix_comm_to_base, &
          ks_matrix_finalise
     Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
-    Use distributed_matrix_module, Only : distributed_matrix_set_default_blocking
 
     Real( wp ), Dimension( :, : ), Allocatable :: A, B, C, tmp
 
@@ -552,8 +549,7 @@ Contains
     
     Allocate( tmp( 1:m, 1:n ) )
 
-    Call ks_matrix_init
-    Call distributed_matrix_set_default_blocking( n_block )
+    Call ks_matrix_init( n_block )
     Call ks_matrix_comm_to_base( mpi_comm_world, base )
     Call Am%create( .False., k, m, base )
     Call Am%set_by_global( 1, k, 1, m, A )
@@ -576,7 +572,6 @@ Contains
     Use ks_matrix_module, Only : ks_matrix, ks_matrix_init, ks_matrix_comm_to_base, &
          ks_matrix_finalise
     Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
-    Use distributed_matrix_module, Only : distributed_matrix_set_default_blocking
 
     Complex( wp ), Dimension( :, : ), Allocatable :: A, B, C, tmp
 
@@ -605,8 +600,7 @@ Contains
     
     Allocate( tmp( 1:m, 1:n ) )
 
-    Call ks_matrix_init
-    Call distributed_matrix_set_default_blocking( n_block )
+    Call ks_matrix_init( n_block )
     Call ks_matrix_comm_to_base( mpi_comm_world, base )
     Call Am%create( .True., k, m, base )
     Call Am%set_by_global( 1, k, 1, m, A )

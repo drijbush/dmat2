@@ -37,13 +37,20 @@ Contains
   !##########################################################################################################
   ! Non-type bound procedures
 
-  Subroutine ks_matrix_init
+  Subroutine ks_matrix_init( nb )
 
-    !! Initialise the matrix system
+    !! Initialise the matrix system and optionally sets the default blocking factor
 
-    Use distributed_matrix_module, Only : distributed_matrix_init
+    Use distributed_matrix_module, Only : distributed_matrix_init, &
+         distributed_matrix_set_default_blocking
+
+    Integer, Intent( In ), Optional :: nb !! Set a default blocking factor
 
     Call distributed_matrix_init
+    
+    If( Present( nb ) ) Then
+       Call distributed_matrix_set_default_blocking( nb )
+    End If
 
   End Subroutine ks_matrix_init
 
