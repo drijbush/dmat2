@@ -4,8 +4,6 @@ Module distributed_matrix_module
   !  Once compilers become more mature submodule would be a good way to keep this one under control
   !  once for real, one for complex
 
-!!$  Use mpi
-  
   Use numbers_module       , Only : wp
   Use Scalapack_interfaces , Only : numroc, pdgemm, pzgemm
   Use matrix_mapping_module, Only : matrix_mapping, &
@@ -263,7 +261,7 @@ Module distributed_matrix_module
   
 Contains
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !####################################################################
   ! Non-type bound procedures
 
   Subroutine distributed_matrix_init
@@ -309,7 +307,7 @@ Contains
     
   End Subroutine distributed_matrix_set_default_blocking
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !###################################################################################
   ! Methods implemented on the base type and inherited by the extended types
 
   Subroutine matrix_get_maps( A, gl_rows, gl_cols, lg_rows, lg_cols )
@@ -438,7 +436,7 @@ Contains
     
   End Function matrix_dagger
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !##########################################################################################
   ! Over-ridding routines
 
   Subroutine matrix_create_real( A, m, n, source_matrix )
@@ -949,7 +947,7 @@ Contains
   End Function complex_multiply_complex
 
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !##########################################################################
   ! Auxiliary routines
   
   Subroutine set_local_to_global( loc_to_glob, n, nb, myp, np, da )

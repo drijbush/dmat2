@@ -17,8 +17,8 @@ Module ks_matrix_module
      Procedure, Public  :: create               => ks_matrix_create                     !! Create a ks_matrix
      Generic  , Public  :: Operator( .Dagger. ) => dagger                               !! Dagger a ks_matrix
      Generic  , Public  :: Operator( * )        => multiply                             !! multiply 2 ks_matrix's
-     Generic  , Public  :: set_by_global        => set_global_real, set_global_complex  !! Set by global indices
-     Generic  , Public  :: get_by_global        => get_global_real, get_global_complex  !! Get using global indices
+     Generic  , Public  :: set_by_global        => set_global_real, set_global_complex  !! Set elements by global indices
+     Generic  , Public  :: get_by_global        => get_global_real, get_global_complex  !! Get elements using global indices
      ! Private implementations
      Procedure, Private :: dagger               => ks_matrix_dagger
      Procedure, Private :: multiply             => ks_matrix_mult
@@ -33,6 +33,9 @@ Module ks_matrix_module
   Public :: ks_matrix_finalise
 
 Contains
+
+  !##########################################################################################################
+  ! Non-type bound procedures
 
   Subroutine ks_matrix_init
 
@@ -70,6 +73,9 @@ Contains
     Call distributed_matrix_finalise
     
   End Subroutine ks_matrix_finalise
+
+  !##########################################################################################################
+  ! Type bound procedures
 
   Subroutine ks_matrix_create( A, is_complex, m, n, source_matrix )
 

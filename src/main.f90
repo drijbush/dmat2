@@ -1,5 +1,6 @@
 Program test_distributed_matrix
 
+  Use numbers_module, Only : wp
   Use mpi, Only : mpi_init, mpi_finalize, mpi_comm_rank, mpi_comm_size, mpi_bcast, &
        mpi_comm_world, mpi_integer
   
@@ -10,7 +11,9 @@ Program test_distributed_matrix
   Integer :: n_block
   Integer :: error
 
-  Character( Len = 18 ), Parameter :: format = '( a, t30, g26.20 )'
+  Character( Len = 26 ), Parameter :: format = '( a, t35, g26.20, t65, a )'
+
+  Real( wp ), Parameter :: tol = 1.0e-12_wp
   
   Call mpi_init( error )
 
@@ -36,6 +39,9 @@ Program test_distributed_matrix
   Call test_complex_matmul_TN
   Call test_complex_matmul_NT
   Call test_complex_matmul_TT
+
+  Call test_ks_matrix_matmul_real_NN
+  Call test_ks_matrix_matmul_real_TN
   
   Call mpi_finalize( error )
 
@@ -83,7 +89,8 @@ Contains
     Cm = Am * Bm
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in real matmul NN ', Maxval( Abs( C - tmp ) )
+       Write( *, format ) 'Error in real matmul NN ', Maxval( Abs( C - tmp ) ), &
+            Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
 
@@ -132,7 +139,8 @@ Contains
     Cm  = AmT * Bm
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in real matmul TN ', Maxval( Abs( C - tmp ) )
+       Write( *, format ) 'Error in real matmul TN ', Maxval( Abs( C - tmp ) ), &
+            Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
 
@@ -181,7 +189,8 @@ Contains
     Cm = Am * BmT
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in real matmul NT ', Maxval( Abs( C - tmp ) )
+       Write( *, format ) 'Error in real matmul NT ', Maxval( Abs( C - tmp ) ), &
+            Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
 
@@ -231,7 +240,8 @@ Contains
     Cm = AmT * BmT
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in real matmul TT ', Maxval( Abs( C - tmp ) )
+       Write( *, format ) 'Error in real matmul TT ', Maxval( Abs( C - tmp ) ), &
+            Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
 
@@ -287,7 +297,8 @@ Contains
     Cm = Am * Bm
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in complex matmul NN ', Maxval( Abs( C - tmp ) )
+       Write( *, format ) 'Error in complex matmul NN ', Maxval( Abs( C - tmp ) ), &
+            Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
 
@@ -344,7 +355,8 @@ Contains
     Cm  = AmT * Bm
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in complex matmul TN ', Maxval( Abs( C - tmp ) )
+       Write( *, format ) 'Error in complex matmul TN ', Maxval( Abs( C - tmp ) ), &
+            Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
 
@@ -401,7 +413,8 @@ Contains
     Cm = Am * BmT
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in complex matmul NT ', Maxval( Abs( C - tmp ) )
+       Write( *, format ) 'Error in complex matmul NT ', Maxval( Abs( C - tmp ) ), &
+            Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
 
@@ -459,10 +472,100 @@ Contains
     Cm = AmT * BmT
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in complex matmul TT ', Maxval( Abs( C - tmp ) )
+       Write( *, format ) 'Error in complex matmul TT ', Maxval( Abs( C - tmp ) ), &
+            Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
 
   End Subroutine test_complex_matmul_TT
+
+  Subroutine test_ks_matrix_matmul_real_NN
+
+    Use numbers_module  , Only : wp
+    Use ks_matrix_module, Only : ks_matrix, ks_matrix_init, ks_matrix_comm_to_base, &
+         ks_matrix_finalise
+    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+    Use distributed_matrix_module, Only : distributed_matrix_set_default_blocking
+
+    Real( wp ), Dimension( :, : ), Allocatable :: A, B, C, tmp
+
+    Type( ks_matrix ) :: base
+    Type( ks_matrix ) :: Am, Bm, Cm
+
+    Allocate( A( 1:m, 1:k ) )
+    Allocate( B( 1:k, 1:n ) )
+    Allocate( C( 1:m, 1:n ) )
+    If( me == 0 ) Then
+       Call Random_number( A )
+       Call Random_number( B )
+       C = Matmul( A, B )
+    End If
+    Call mpi_bcast( A, Size( A ), mpi_double_precision, 0, mpi_comm_world, error )
+    Call mpi_bcast( B, Size( B ), mpi_double_precision, 0, mpi_comm_world, error )
+    Call mpi_bcast( C, Size( C ), mpi_double_precision, 0, mpi_comm_world, error )
+    
+    Allocate( tmp( 1:m, 1:n ) )
+
+    Call ks_matrix_init
+    Call distributed_matrix_set_default_blocking( n_block )
+    Call ks_matrix_comm_to_base( mpi_comm_world, base )
+    Call Am%create( .False., m, k, base )
+    Call Am%set_by_global( 1, m, 1, k, A )
+    Call Bm%create( .False., k, n, Am )
+    Call Bm%set_by_global( 1, k, 1, n, B )
+    Cm = Am * Bm
+    Call Cm%get_by_global( 1, m, 1, n, tmp )
+    If( me == 0 ) Then
+       Write( *, format ) 'Error in real ks_matmul NN ', Maxval( Abs( C - tmp ) ), &
+            Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
+    End If
+    Call ks_matrix_finalise
+
+  End Subroutine test_ks_matrix_matmul_real_NN
+
+  Subroutine test_ks_matrix_matmul_real_TN
+
+    Use numbers_module  , Only : wp
+    Use ks_matrix_module, Only : ks_matrix, ks_matrix_init, ks_matrix_comm_to_base, &
+         ks_matrix_finalise
+    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+    Use distributed_matrix_module, Only : distributed_matrix_set_default_blocking
+
+    Real( wp ), Dimension( :, : ), Allocatable :: A, B, C, tmp
+
+    Type( ks_matrix ) :: base
+    Type( ks_matrix ) :: Am, Bm, Cm, AmT
+
+    Allocate( A( 1:k, 1:m ) )
+    Allocate( B( 1:k, 1:n ) )
+    Allocate( C( 1:m, 1:n ) )
+    If( me == 0 ) Then
+       Call Random_number( A )
+       Call Random_number( B )
+       C = Matmul( Transpose( A ), B )
+    End If
+    Call mpi_bcast( A, Size( A ), mpi_double_precision, 0, mpi_comm_world, error )
+    Call mpi_bcast( B, Size( B ), mpi_double_precision, 0, mpi_comm_world, error )
+    Call mpi_bcast( C, Size( C ), mpi_double_precision, 0, mpi_comm_world, error )
+    
+    Allocate( tmp( 1:m, 1:n ) )
+
+    Call ks_matrix_init
+    Call distributed_matrix_set_default_blocking( n_block )
+    Call ks_matrix_comm_to_base( mpi_comm_world, base )
+    Call Am%create( .False., k, m, base )
+    Call Am%set_by_global( 1, k, 1, m, A )
+    Call Bm%create( .False., k, n, Am )
+    Call Bm%set_by_global( 1, k, 1, n, B )
+    AmT = .Dagger. Am
+    Cm = AmT * Bm
+    Call Cm%get_by_global( 1, m, 1, n, tmp )
+    If( me == 0 ) Then
+       Write( *, format ) 'Error in real ks_matmul TN ', Maxval( Abs( C - tmp ) ), &
+            Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
+    End If
+    Call ks_matrix_finalise
+    
+  End Subroutine test_ks_matrix_matmul_real_TN
 
 End Program test_distributed_matrix
