@@ -42,6 +42,8 @@ Program test_distributed_matrix
 
   Call test_ks_matrix_matmul_real_NN
   Call test_ks_matrix_matmul_real_TN
+
+  Call test_ks_matrix_matmul_complex_TN
   
   Call mpi_finalize( error )
 
@@ -567,5 +569,58 @@ Contains
     Call ks_matrix_finalise
     
   End Subroutine test_ks_matrix_matmul_real_TN
+
+  Subroutine test_ks_matrix_matmul_complex_TN
+
+    Use numbers_module  , Only : wp
+    Use ks_matrix_module, Only : ks_matrix, ks_matrix_init, ks_matrix_comm_to_base, &
+         ks_matrix_finalise
+    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+    Use distributed_matrix_module, Only : distributed_matrix_set_default_blocking
+
+    Complex( wp ), Dimension( :, : ), Allocatable :: A, B, C, tmp
+
+    Real( wp ), Dimension( :, : ), Allocatable :: rand1, rand2
+
+    Type( ks_matrix ) :: base
+    Type( ks_matrix ) :: Am, Bm, Cm, AmT
+
+    Allocate( A( 1:k, 1:m ) )
+    Allocate( B( 1:k, 1:n ) )
+    Allocate( C( 1:m, 1:n ) )
+    If( me == 0 ) Then
+        Allocate( rand1( 1:k, 1:m ), rand2( 1:k, 1:m ) )
+       Call Random_number( rand1 ); Call Random_number( rand2 ) 
+       A = Cmplx( rand1, rand2, wp )
+       Deallocate( rand1, rand2 )
+       Allocate( rand1( 1:k, 1:n ), rand2( 1:k, 1:n ) )
+       Call Random_number( rand1 ); Call Random_number( rand2 ) 
+       B = Cmplx( rand1, rand2, wp )
+       Deallocate( rand1, rand2 )
+       C = Matmul( Conjg( Transpose( A ) ), B )
+    End If
+    Call mpi_bcast( A, Size( A ), mpi_double_complex, 0, mpi_comm_world, error )
+    Call mpi_bcast( B, Size( B ), mpi_double_complex, 0, mpi_comm_world, error )
+    Call mpi_bcast( C, Size( C ), mpi_double_complex, 0, mpi_comm_world, error )
+    
+    Allocate( tmp( 1:m, 1:n ) )
+
+    Call ks_matrix_init
+    Call distributed_matrix_set_default_blocking( n_block )
+    Call ks_matrix_comm_to_base( mpi_comm_world, base )
+    Call Am%create( .True., k, m, base )
+    Call Am%set_by_global( 1, k, 1, m, A )
+    Call Bm%create( .True., k, n, Am )
+    Call Bm%set_by_global( 1, k, 1, n, B )
+    AmT = .Dagger. Am
+    Cm = AmT * Bm
+    Call Cm%get_by_global( 1, m, 1, n, tmp )
+    If( me == 0 ) Then
+       Write( *, format ) 'Error in complex ks_matmul TN ', Maxval( Abs( C - tmp ) ), &
+            Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
+    End If
+    Call ks_matrix_finalise
+    
+  End Subroutine test_ks_matrix_matmul_complex_TN
 
 End Program test_distributed_matrix
