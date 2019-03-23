@@ -1,10 +1,10 @@
 PROG =	dmat2
 
-SRCS =	main.f90 matrix.f90 matrix_mapping.f90 numbers.f90 proc_mapping.f90 \
-	scalapack_interfaces.f90
+SRCS =	ks_matrix_module.f90 main.f90 matrix.f90 matrix_mapping.f90 \
+	numbers.f90 proc_mapping.f90 scalapack_interfaces.f90
 
-OBJS =	main.o matrix.o matrix_mapping.o numbers.o proc_mapping.o \
-	scalapack_interfaces.o
+OBJS =	ks_matrix_module.o main.o matrix.o matrix_mapping.o numbers.o \
+	proc_mapping.o scalapack_interfaces.o
 
 LIBS =-lblacs-openmpi -lblacsF77init-openmpi -lscalapack-openmpi -llapack -lblas	
 
@@ -29,7 +29,8 @@ clean:
 .f90.o:
 	$(F90) $(F90FLAGS) -c $<
 
-main.o: matrix.o numbers.o
+ks_matrix_module.o: matrix.o numbers.o
+main.o: ks_matrix_module.o matrix.o numbers.o
 matrix.o: matrix_mapping.o numbers.o scalapack_interfaces.o
 matrix_mapping.o: numbers.o proc_mapping.o
 proc_mapping.o: 
