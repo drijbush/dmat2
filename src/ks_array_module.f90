@@ -191,9 +191,11 @@ Contains
        A%my_k_points( ks )%info = source%my_k_points( ks )%info
           Allocate( A%my_k_points( ks )%data( 1:1 ) )
           A%my_k_points( ks )%data( 1 )%label = 1
-          Call A%my_k_points( ks )%data( 1 )%matrix%create( &
-               A%my_k_points( ks )%info%k_type == K_POINT_COMPLEX, &
-               m, n, source%my_k_points( ks )%data( 1 )%matrix )
+          If( m /= NO_DATA .And. n /= NO_DATA ) Then
+             Call A%my_k_points( ks )%data( 1 )%matrix%create( &
+                  A%my_k_points( ks )%info%k_type == K_POINT_COMPLEX, &
+                  m, n, source%my_k_points( ks )%data( 1 )%matrix )
+          End If
           A%my_k_points( ks )%communicator = source%my_k_points( ks )%communicator 
     End Do
 
