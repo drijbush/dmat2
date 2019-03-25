@@ -880,8 +880,8 @@ Contains
     Use numbers_module , Only : wp
     Use ks_array_module, Only : ks_array, ks_array_init, ks_array_comm_to_base, ks_array_finalise, &
          K_POINT_REAL, K_POINT_COMPLEX
-    Use mpi            , Only : mpi_bcast, mpi_comm_world, mpi_double_complex, mpi_double_precision, &
-         MPI_Logical
+    Use mpi            , Only : mpi_bcast, mpi_comm_world, mpi_double_complex, mpi_double_precision
+         
 
     Real   ( wp ), Dimension( :, :, :, : ), Allocatable :: A_r, B_r, C_r
     Complex( wp ), Dimension( :, :, :, : ), Allocatable :: A_c, B_c, C_c
@@ -891,7 +891,7 @@ Contains
 
     Real( wp ), Dimension( :, : ), Allocatable :: rand1, rand2
 
-    Real( wp ) :: max_diff
+    Real( wp ) :: max_diff, this_diff
     Real( wp ) :: rand
 
     Type( ks_array ) :: base
@@ -908,12 +908,20 @@ Contains
     Allocate( A_c( 1:m, 1:k, 1:nk, 1:ns ) )
     Allocate( B_c( 1:k, 1:n, 1:nk, 1:ns ) )
     Allocate( C_c( 1:m, 1:n, 1:nk, 1:ns ) )
+    A_r = Huge( 1.0_wp )
+    B_r = Huge( 1.0_wp )
+    C_r = Huge( 1.0_wp )
+    A_c = Huge( 1.0_wp )
+    B_c = Huge( 1.0_wp )
+    C_c = Huge( 1.0_wp )
     If( me == 0 ) Then
+       Do kpoint = 1, nk
+          k_points( :, kpoint ) = [ kpoint - 1, 0, 0 ]
+          Call Random_number( rand )
+          k_types( kpoint ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
+       End Do
        Do spin = 1, ns
           Do kpoint = 1, nk
-             k_points( :, kpoint ) = [ kpoint - 1, 0, 0 ]
-             Call Random_number( rand )
-             k_types( kpoint ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
              If( k_types( kpoint ) == K_POINT_REAL ) Then
                 ! Real
                 Call Random_number( A_r( :, :, kpoint, spin ) )
@@ -938,7 +946,7 @@ Contains
     End If
 
     Call mpi_bcast( k_points, Size( k_points ), mpi_integer, 0, mpi_comm_world, error )
-    Call mpi_bcast( k_types , Size( k_types  ), mpi_logical, 0, mpi_comm_world, error )
+    Call mpi_bcast( k_types , Size( k_types  ), mpi_integer, 0, mpi_comm_world, error )
     
     Call mpi_bcast( A_r, Size( A_r ), mpi_double_precision, 0, mpi_comm_world, error )
     Call mpi_bcast( B_r, Size( B_r ), mpi_double_precision, 0, mpi_comm_world, error )
@@ -970,17 +978,18 @@ Contains
 
     Cm = Am * Bm
 
-    Call cm%print_info( 'Cm - the result matrix', 9999 )
+    Call Cm%print_info( 'Cm - the result matrix', 9999 )
     max_diff = -1.0_wp
     Do spin = 1, ns
        Do kpoint = 1, nk
           If( k_types( kpoint ) == K_POINT_REAL ) Then
-             Call Cm%get_by_global( spin, k_points( :, kpoint ), 1, m, 1, n, tmp_r ) 
-             max_diff = Max( max_diff, Maxval( Abs( C_r( :, :, kpoint, spin ) - tmp_r ) ) )
+             Call Cm%get_by_global( spin, k_points( :, kpoint ), 1, m, 1, n, tmp_r )
+             this_diff = Maxval( Abs( C_r( :, :, kpoint, spin ) - tmp_r ) )
           Else
              Call Cm%get_by_global( spin, k_points( :, kpoint ), 1, m, 1, n, tmp_c ) 
-             max_diff = Max( max_diff, Maxval( Abs( C_c( :, :, kpoint, spin ) - tmp_c ) ) )
+             this_diff = Maxval( Abs( C_c( :, :, kpoint, spin ) - tmp_c ) )
           End If
+          max_diff = Max( this_diff, max_diff )
        End Do
     End Do
     If( me == 0 ) Then

@@ -299,7 +299,6 @@ Contains
   Subroutine distributed_matrix_set_default_blocking( bfac )
 
     !! Set the default blocking factor
-    ! Yuck, global state. Should eventually get rid of this and instead have an optional argument to the create routine
     
     Integer, Intent( In ) :: bfac
 
