@@ -546,15 +546,13 @@ Contains
 
   Function ks_array_dagger( A ) Result( tA )
 
-!!$    Type( ks_array ), Allocatable :: tA
     Type( ks_array ) :: tA
 
     Class( ks_array ), Intent( In ) :: A
 
     Integer :: my_ks, my_irrep
 
-!!$    Allocate( tA )
-!!$    tA = A
+    Call tA%create( NO_DATA, NO_DATA, A )
     
     Do my_ks = 1, Size( A%my_k_points )
        ! Irreps will need more thought - worrk currenly as burnt into as 1
@@ -570,7 +568,6 @@ Contains
 
   Function ks_array_mult( A, B ) Result( C )
 
-!!$    Type( ks_array ), Allocatable :: C
     Type( ks_array ) :: C
 
     Class( ks_array ), Intent( In ) :: A
@@ -578,8 +575,6 @@ Contains
 
     Integer :: my_ks, my_irrep
 
-!!$    Allocate( C )
-!!$    C = A
     Call C%create( NO_DATA, NO_DATA, A )
     
     Do my_ks = 1, Size( A%my_k_points )
