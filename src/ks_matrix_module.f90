@@ -13,12 +13,14 @@ Module ks_matrix_module
      Class( distributed_matrix ), Allocatable, Private :: matrix
    Contains
      ! Public methods
-     ! Methods at all levels
-     Procedure, Public  :: create               => ks_matrix_create                     !! Create a ks_matrix
-     Generic  , Public  :: Operator( .Dagger. ) => dagger                               !! Dagger a ks_matrix
-     Generic  , Public  :: Operator( * )        => multiply                             !! multiply 2 ks_matrix's
-     Generic  , Public  :: set_by_global        => set_global_real, set_global_complex  !! Set elements by global indices
-     Generic  , Public  :: get_by_global        => get_global_real, get_global_complex  !! Get elements using global indices
+     Procedure, Public :: create               => ks_matrix_create                     !! Create a ks_matrix
+     Generic  , Public :: Operator( .Dagger. ) => dagger                               !! Dagger a ks_matrix
+     Generic  , Public :: Operator( * )        => multiply                             !! multiply 2 ks_matrix's
+     Generic  , Public :: set_by_global        => set_global_real, set_global_complex  !! Set elements by global indices
+     Generic  , Public :: get_by_global        => get_global_real, get_global_complex  !! Get elements using global indices
+     Procedure, Public :: get_comm             => ks_matrix_communicator               !! Get the communicator containing the processes holding the matrix
+     Procedure, Public :: global_to_local      => ks_matrix_global_to_local            !! Get an array for mapping global indices to local  ones
+     Procedure, Public :: local_to_global      => ks_matrix_local_to_global            !! Get an array for mapping local  indices to global ones
      ! Private implementations
      Procedure, Private :: dagger               => ks_matrix_dagger
      Procedure, Private :: multiply             => ks_matrix_mult
@@ -179,5 +181,45 @@ Contains
     Call A%matrix%get_by_global( m, n, p, q, data )
 
   End Subroutine ks_matrix_get_global_complex
+
+  Function ks_matrix_communicator( A ) Result( c )
+
+    !! Get the communicator containing the processes holding the matrix
+
+    Integer :: c
+
+    Class( ks_matrix ), Intent( In ) :: A
+
+    c = A%matrix%get_comm()
+    
+  End Function ks_matrix_communicator
+
+  Function ks_matrix_global_to_local( A, what ) Result( gl_indexing )
+
+    !! For the given matrix get an array for mapping global indices to local  ones
+    !! Get row mapping arrays if WHAT='C' or 'c', row ones if it is equal to 'R' or 'r'
+
+    Integer, Dimension( : ), Allocatable :: gl_indexing
+    
+    Class( ks_matrix   ), Intent( In ) :: A
+    Character( Len = * ), Intent( In ) :: what
+
+    gl_indexing = A%matrix%global_to_local( what )
+
+  End Function ks_matrix_global_to_local
+  
+  Function ks_matrix_local_to_global( A, what ) Result( lg_indexing )
+
+    !! For the given matrix get an array for mapping local indices to global  ones
+    !! Get row mapping arrays if WHAT='C' or 'c', row ones if it is equal to 'R' or 'r'
+
+    Integer, Dimension( : ), Allocatable :: lg_indexing
+    
+    Class( ks_matrix   ), Intent( In ) :: A
+    Character( Len = * ), Intent( In ) :: what
+
+    lg_indexing = A%matrix%local_to_global( what )
+
+  End Function ks_matrix_local_to_global
 
 End Module ks_matrix_module

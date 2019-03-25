@@ -3,6 +3,7 @@ Program test_distributed_matrix
   Use numbers_module, Only : wp
   Use mpi, Only : mpi_init, mpi_finalize, mpi_comm_rank, mpi_comm_size, mpi_bcast, &
        mpi_comm_world, mpi_integer
+  Use ks_array_module, Only : ks_array
   
   Implicit None
 
@@ -31,6 +32,7 @@ Program test_distributed_matrix
   Call mpi_bcast( k , 1, mpi_integer, 0, mpi_comm_world, error )
   Call mpi_bcast( n_block, 1, mpi_integer, 0, mpi_comm_world, error )
 
+  ! Distributed matrix tests
   Call test_real_matmul_NN
   Call test_real_matmul_TN
   Call test_real_matmul_NT
@@ -40,13 +42,15 @@ Program test_distributed_matrix
   Call test_complex_matmul_NT
   Call test_complex_matmul_TT
 
+  ! KSmatrix tests
   Call test_ks_matrix_matmul_real_NN
   Call test_ks_matrix_matmul_real_TN
   Call test_ks_matrix_matmul_real_NT
   Call test_ks_matrix_matmul_real_TT
-
   Call test_ks_matrix_matmul_complex_NN
   Call test_ks_matrix_matmul_complex_TN
+  Call test_ks_matrix_matmul_complex_NT
+  Call test_ks_matrix_matmul_complex_TT
   
   Call mpi_finalize( error )
 
@@ -760,5 +764,108 @@ Contains
     Call ks_matrix_finalise
     
   End Subroutine test_ks_matrix_matmul_complex_TN
+
+  Subroutine test_ks_matrix_matmul_complex_NT
+
+    Use numbers_module  , Only : wp
+    Use ks_matrix_module, Only : ks_matrix, ks_matrix_init, ks_matrix_comm_to_base, &
+         ks_matrix_finalise
+    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+
+    Complex( wp ), Dimension( :, : ), Allocatable :: A, B, C, tmp
+
+    Real( wp ), Dimension( :, : ), Allocatable :: rand1, rand2
+
+    Type( ks_matrix ) :: base
+    Type( ks_matrix ) :: Am, Bm, Cm, BmT
+
+    Allocate( A( 1:m, 1:k ) )
+    Allocate( B( 1:n, 1:k ) )
+    Allocate( C( 1:m, 1:n ) )
+    If( me == 0 ) Then
+        Allocate( rand1( 1:m, 1:k ), rand2( 1:m, 1:k ) )
+       Call Random_number( rand1 ); Call Random_number( rand2 ) 
+       A = Cmplx( rand1, rand2, wp )
+       Deallocate( rand1, rand2 )
+       Allocate( rand1( 1:n, 1:k ), rand2( 1:n, 1:k ) )
+       Call Random_number( rand1 ); Call Random_number( rand2 ) 
+       B = Cmplx( rand1, rand2, wp )
+       Deallocate( rand1, rand2 )
+       C = Matmul( A, Conjg( Transpose( B ) ) )
+    End If
+    Call mpi_bcast( A, Size( A ), mpi_double_complex, 0, mpi_comm_world, error )
+    Call mpi_bcast( B, Size( B ), mpi_double_complex, 0, mpi_comm_world, error )
+    Call mpi_bcast( C, Size( C ), mpi_double_complex, 0, mpi_comm_world, error )
+    
+    Allocate( tmp( 1:m, 1:n ) )
+
+    Call ks_matrix_init( n_block )
+    Call ks_matrix_comm_to_base( mpi_comm_world, base )
+    Call Am%create( .True., m, k, base )
+    Call Am%set_by_global( 1, m, 1, k, A )
+    Call Bm%create( .True., n, k, Am )
+    Call Bm%set_by_global( 1, n, 1, k, B )
+    BmT = .Dagger. Bm
+    Cm = Am * BmT
+    Call Cm%get_by_global( 1, m, 1, n, tmp )
+    If( me == 0 ) Then
+       Write( *, format ) 'Error in complex ks_matmul NT ', Maxval( Abs( C - tmp ) ), &
+            Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
+    End If
+    Call ks_matrix_finalise
+    
+  End Subroutine test_ks_matrix_matmul_complex_NT
+
+  Subroutine test_ks_matrix_matmul_complex_TT
+
+    Use numbers_module  , Only : wp
+    Use ks_matrix_module, Only : ks_matrix, ks_matrix_init, ks_matrix_comm_to_base, &
+         ks_matrix_finalise
+    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+
+    Complex( wp ), Dimension( :, : ), Allocatable :: A, B, C, tmp
+
+    Real( wp ), Dimension( :, : ), Allocatable :: rand1, rand2
+
+    Type( ks_matrix ) :: base
+    Type( ks_matrix ) :: Am, Bm, Cm, AmT, BmT
+
+    Allocate( A( 1:k, 1:m ) )
+    Allocate( B( 1:n, 1:k ) )
+    Allocate( C( 1:m, 1:n ) )
+    If( me == 0 ) Then
+        Allocate( rand1( 1:k, 1:m ), rand2( 1:k, 1:m ) )
+       Call Random_number( rand1 ); Call Random_number( rand2 ) 
+       A = Cmplx( rand1, rand2, wp )
+       Deallocate( rand1, rand2 )
+       Allocate( rand1( 1:n, 1:k ), rand2( 1:n, 1:k ) )
+       Call Random_number( rand1 ); Call Random_number( rand2 ) 
+       B = Cmplx( rand1, rand2, wp )
+       Deallocate( rand1, rand2 )
+       C = Matmul( Conjg( Transpose( A ) ), Conjg( Transpose( B ) ) )
+    End If
+    Call mpi_bcast( A, Size( A ), mpi_double_complex, 0, mpi_comm_world, error )
+    Call mpi_bcast( B, Size( B ), mpi_double_complex, 0, mpi_comm_world, error )
+    Call mpi_bcast( C, Size( C ), mpi_double_complex, 0, mpi_comm_world, error )
+    
+    Allocate( tmp( 1:m, 1:n ) )
+
+    Call ks_matrix_init( n_block )
+    Call ks_matrix_comm_to_base( mpi_comm_world, base )
+    Call Am%create( .True., k, m, base )
+    Call Am%set_by_global( 1, k, 1, m, A )
+    Call Bm%create( .True., n, k, Am )
+    Call Bm%set_by_global( 1, n, 1, k, B )
+    AmT = .Dagger. Am
+    BmT = .Dagger. Bm
+    Cm = AmT * BmT
+    Call Cm%get_by_global( 1, m, 1, n, tmp )
+    If( me == 0 ) Then
+       Write( *, format ) 'Error in complex ks_matmul TT ', Maxval( Abs( C - tmp ) ), &
+            Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
+    End If
+    Call ks_matrix_finalise
+    
+  End Subroutine test_ks_matrix_matmul_complex_TT
 
 End Program test_distributed_matrix
