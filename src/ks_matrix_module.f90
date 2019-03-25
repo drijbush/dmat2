@@ -75,23 +75,57 @@ Contains
     
   End Subroutine ks_matrix_comm_to_base
 
-  Subroutine ks_matrix_remap_data( matrix, parent_communicator, remapped_matrix )
+  Subroutine ks_matrix_remap_data( A, parent_communicator, B )
 
-    Use distributed_matrix_module, Only : distributed_matrix_remap_data, real_distributed_matrix, complex_distributed_matrix
+    ! Issues here because either in the ource or remapped
+    ! matrix a process may not actually hold any part of it
+    ! and so the unallocated actual argument doesn't contain
+    ! any information about what it is
 
-    Type   ( ks_matrix ), Allocatable, Intent( In    ) :: matrix
+    Use distributed_matrix_module, Only : distributed_matrix_remap_data
+
+    Type   ( ks_matrix ), Allocatable, Intent( In    ) :: A
     Integer             ,              Intent( In    ) :: parent_communicator
-    Type   ( ks_matrix ), Allocatable, Intent( InOut ) :: remapped_matrix
+    Type   ( ks_matrix ), Allocatable, Intent( InOut ) :: B
 
-    Associate( Mm => matrix%matrix, Rm => remapped_matrix%matrix )
-      Select Type( Mm )
-      Type is ( real_distributed_matrix )
-         Select Type( Rm )
-         Type is ( real_distributed_matrix )
-            Call distributed_matrix_remap_data( Mm, parent_communicator, Rm )
-         End Select
-      End Select
-    End Associate
+    Type( ks_matrix ), Allocatable :: dummy_A, dummy_B
+
+    Logical :: p_A, p_B
+
+    p_A = Allocated( A )
+    p_B = Allocated( A )
+
+    ! One of A or B must be present to define the data type of what is being redistributed
+    If( .Not. p_A .And. .Not. p_B ) Then
+       Stop "Must specify one of the matrices in ks_matrix_remap_data"
+    End If
+
+    ! Both matrices MUST be of the same type. Thus if one is not specified
+    ! create a dummy with the same type as one that is present
+    If( .Not. p_A ) Then
+       Allocate( dummy_A, Source = B )
+    End If
+    If( .Not. p_B ) Then
+       Allocate( dummy_B, Source = A )
+    End If
+
+    ! Now can call remap data routines, carefully indicating which
+    ! arguments are dummies because this process
+
+    If     (       p_A .And. p_B ) Then
+       Call distributed_matrix_remap_data(       A%matrix, .False., parent_communicator,        B%matrix, .False. )
+
+    Else If( .Not. p_A .And. p_B ) Then
+       Call distributed_matrix_remap_data( dummy_A%matrix, .True. , parent_communicator,        B%matrix, .False. )
+
+    Else If(       p_A .And. .Not. p_B ) Then
+       Call distributed_matrix_remap_data(       A%matrix, .False. , parent_communicator, dummy_B%matrix, .True.  )
+
+    Else
+       Stop "Must specify one of the matrices in ks_matrix_remap_data"
+    End If
+
+
     
   End Subroutine ks_matrix_remap_data
 

@@ -2287,8 +2287,16 @@ Contains
           Stop "Inconsistent matrix sizes in matrix_remap_data_real"
        End If
     End If
-    m = m_A
-    n = n_A
+
+    If( p_A ) Then
+       m = m_A
+       n = n_A
+    Else If( p_T ) Then
+       m = m_T
+       n = n_T
+    Else
+       Stop "In matrix_remap_data_real got to an impossible place!"
+    End If
 
     ! Call the redistribution routine supplying dummy arrays as required
     If     (       p_A .And.       p_T ) Then
@@ -2307,6 +2315,8 @@ Contains
     End If
 
     B = T
+
+    ! Need to exit the created BLACS context IMPORTANT MUST DO!!
     
   End Subroutine real_remap_real
   
@@ -2373,8 +2383,16 @@ Contains
           Stop "Inconsistent matrix sizes in matrix_remap_data_complex"
        End If
     End If
-    m = m_A
-    n = n_A
+
+    If( p_A ) Then
+       m = m_A
+       n = n_A
+    Else If( p_T ) Then
+       m = m_T
+       n = n_T
+    Else
+       Stop "In matrix_remap_data_real got to an impossible place!"
+    End If
 
     ! Call the redistribution routine supplying dummy arrays as required
     If     (       p_A .And.       p_T ) Then
@@ -2393,6 +2411,8 @@ Contains
     End If
 
     B = T
+
+    ! Need to exit the created BLACS context IMPORTANT MUST DO!!
 
   End Subroutine complex_remap_complex
   

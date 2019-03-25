@@ -458,7 +458,7 @@ Contains
              Allocate( split_ks_matrix )
              split_ks_matrix = split_A%my_k_points( this_ks )%data( 1 )%matrix
           End If
-          Call ks_matrix_remap_data( A%parent_communicator, this_ks_matrix, split_ks_matrix )
+          Call ks_matrix_remap_data( this_ks_matrix, A%parent_communicator, split_ks_matrix )
           If( this_ks /= NOT_ME ) Then
              split_A%my_k_points( this_ks )%data( 1 )%matrix = split_ks_matrix
              Deallocate( split_ks_matrix ) ! Important as an deallocated matrix indicates no data on this process in the remap routine
