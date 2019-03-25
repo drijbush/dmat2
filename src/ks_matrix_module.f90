@@ -16,6 +16,7 @@ Module ks_matrix_module
      Procedure, Public :: create               => ks_matrix_create                     !! Create a ks_matrix
      Generic  , Public :: Operator( .Dagger. ) => dagger                               !! Dagger a ks_matrix
      Generic  , Public :: Operator( * )        => multiply                             !! multiply 2 ks_matrix's
+     Procedure, Public :: size                 => ks_matrix_size                       !! Get the dimensions of the matrix
      Generic  , Public :: set_by_global        => set_global_real, set_global_complex  !! Set elements by global indices
      Generic  , Public :: get_by_global        => get_global_real, get_global_complex  !! Get elements using global indices
      Procedure, Public :: get_comm             => ks_matrix_communicator               !! Get the communicator containing the processes holding the matrix
@@ -32,6 +33,7 @@ Module ks_matrix_module
 
   Public :: ks_matrix_init
   Public :: ks_matrix_comm_to_base
+  Public :: ks_matrix_remap_data
   Public :: ks_matrix_finalise
 
 Contains
@@ -72,6 +74,26 @@ Contains
     Call distributed_matrix_comm_to_base( comm, base_matrix%matrix )
     
   End Subroutine ks_matrix_comm_to_base
+
+  Subroutine ks_matrix_remap_data( matrix, parent_communicator, remapped_matrix )
+
+    Use distributed_matrix_module, Only : distributed_matrix_remap_data, real_distributed_matrix, complex_distributed_matrix
+
+    Type   ( ks_matrix ), Allocatable, Intent( In    ) :: matrix
+    Integer             ,              Intent( In    ) :: parent_communicator
+    Type   ( ks_matrix ), Allocatable, Intent( InOut ) :: remapped_matrix
+
+    Associate( Mm => matrix%matrix, Rm => remapped_matrix%matrix )
+      Select Type( Mm )
+      Type is ( real_distributed_matrix )
+         Select Type( Rm )
+         Type is ( real_distributed_matrix )
+            Call distributed_matrix_remap_data( Mm, parent_communicator, Rm )
+         End Select
+      End Select
+    End Associate
+    
+  End Subroutine ks_matrix_remap_data
 
   Subroutine ks_matrix_finalise
 
@@ -129,6 +151,17 @@ Contains
     C%matrix = A%matrix * B%matrix
 
   End Function ks_matrix_mult
+
+  Function ks_matrix_size( A, dim ) Result( n )
+
+    Integer :: n
+    
+    Class( ks_matrix ), Intent( In ) :: A
+    Integer           , Intent( In ) :: dim
+
+    n = A%matrix%size( dim )
+    
+  End Function ks_matrix_size
 
   Subroutine ks_matrix_set_global_real( A, m, n, p, q, data )
     

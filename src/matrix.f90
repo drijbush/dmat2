@@ -151,7 +151,7 @@ Module distributed_matrix_module
   Public :: distributed_matrix_comm_to_base
   Public :: distributed_matrix_finalise
   Public :: distributed_matrix_set_default_blocking
-!!$  Public :: distributed_matrix_remap_data
+  Public :: distributed_matrix_remap_data
   
   Private
 
@@ -160,10 +160,10 @@ Module distributed_matrix_module
   Integer, Parameter, Private :: default_block_fac = 4
   Integer,            Private :: block_fac = default_block_fac
 
-!!$  Interface distributed_matrix_remap_data
-!!$     Procedure matrix_remap_data_real
-!!$     Procedure matrix_remap_data_complex
-!!$  End Interface distributed_matrix_remap_data
+  Interface distributed_matrix_remap_data
+     Procedure real_remap_real
+     Procedure complex_remap_complex
+  End Interface distributed_matrix_remap_data
 
   Abstract Interface
      Subroutine create( A, m, n, source_matrix )
@@ -2223,158 +2223,178 @@ Contains
 !!$    End Do
 !!$
 !!$  End Subroutine matrix_set_to_identity_complex
-!!$
-!!$  Subroutine matrix_remap_data_real( parent_comm, A, B )
-!!$
-!!$    Integer                        ,              Intent( In    ) :: parent_comm
-!!$    Type( real_distributed_matrix ), Allocatable, Intent( In    ) :: A
-!!$    Type( real_distributed_matrix ), Allocatable, Intent( InOut ) :: B
-!!$
-!!$    Type( matrix_mapping ) :: mapping
-!!$
-!!$    Real( wp ), Dimension( 1:1, 1:1 ) :: dum_a, dum_b
-!!$
-!!$    Integer, Dimension( 1:9 ) :: desc_A, desc_b
-!!$    
-!!$    Integer :: m, n
-!!$    Integer :: m_A, n_A
-!!$    Integer :: m_B, n_B
-!!$    Integer :: parent_ctxt
-!!$
-!!$    Logical :: p_A, p_B
-!!$
-!!$    p_A = Allocated( A )
-!!$    p_B = Allocated( B )
-!!$    
-!!$    If( .Not. p_A .And. .Not. p_B ) Then
-!!$       Stop "In matrix_remap_data_real one of A or B must be supplied"
-!!$    End If
-!!$    
-!!$    ! Generate a context fron the parent_communicator
-!!$    Call matrix_mapping_comm_to_base( parent_comm, mapping )
-!!$    Call mapping%get_data( ctxt = parent_ctxt )
-!!$
-!!$    m = -1
-!!$    n = -1
-!!$    ! Get sizes and descriptors for the matrices
-!!$    ! The redistrib routine use -1 to indicate no data on this process
-!!$    If( p_A ) Then
-!!$       Call A%matrix_map%get_data( m = m, n = n )
-!!$       desc_A = A%matrix_map%get_descriptor()
-!!$    Else
-!!$       m_A    = -1
-!!$       n_A    = -1
-!!$       desc_A = -1
-!!$    End If
-!!$    
-!!$    If( p_B ) Then
-!!$       Call B%matrix_map%get_data( m = m, n = n )
-!!$       desc_B = B%matrix_map%get_descriptor()
-!!$    Else
-!!$       m_B    = -1
-!!$       n_B    = -1
-!!$       desc_B = -1
-!!$    End If
-!!$
-!!$    If( m_A /= -1 .And. n_A /= -1 .And. m_B /= -1 .And. n_B /= - 1 ) Then
-!!$       If( m_A /= m_B .Or. n_A /= n_B ) Then
-!!$          Stop "Inconsistent matrix sizes in matrix_remap_data_real"
-!!$       End If
-!!$    End If
-!!$
-!!$    ! Call the redistribution routine supplying dummy arrays as required
-!!$    If     (       p_A .And.       p_B ) Then
-!!$       Call pdgemr2d( m, n, A%data, 1, 1, desc_A, B%data, 1, 1, desc_B, parent_ctxt )
-!!$
-!!$    Else If(       p_A .And. .Not. p_B ) Then
-!!$       Call pdgemr2d( m, n, A%data, 1, 1, desc_A, dum_B , 1, 1, desc_B, parent_ctxt )
-!!$
-!!$    Else If( .Not. p_A .And.       p_B ) Then
-!!$       Call pdgemr2d( m, n, dum_A , 1, 1, desc_A, B%data, 1, 1, desc_B, parent_ctxt )
-!!$
-!!$    Else If( .Not. p_A .And. .Not. p_B ) Then
-!!$       ! Shouldn't get here due to error check above
-!!$       Stop "In matrix_remap_data_real got to an impossible place!"
-!!$
-!!$    End If
-!!$
-!!$  End Subroutine matrix_remap_data_real
-!!$  
-!!$  Subroutine matrix_remap_data_complex( parent_comm, A, B )
-!!$
-!!$    Integer                           ,              Intent( In    ) :: parent_comm
-!!$    Type( complex_distributed_matrix ), Allocatable, Intent( In    ) :: A
-!!$    Type( complex_distributed_matrix ), Allocatable, Intent( InOut ) :: B
-!!$
-!!$    Type( matrix_mapping ) :: mapping
-!!$
-!!$    Complex( wp ), Dimension( 1:1, 1:1 ) :: dum_a, dum_b
-!!$
-!!$    Integer, Dimension( 1:9 ) :: desc_A, desc_b
-!!$    
-!!$    Integer :: m, n
-!!$    Integer :: m_A, n_A
-!!$    Integer :: m_B, n_B
-!!$    Integer :: parent_ctxt
-!!$
-!!$    Logical :: p_A, p_B
-!!$
-!!$    p_A = Allocated( A )
-!!$    p_B = Allocated( B )
-!!$    
-!!$    If( .Not. p_A .And. .Not. p_B ) Then
-!!$       Stop "In matrix_remap_data_complex one of A or B must be supplied"
-!!$    End If
-!!$    
-!!$    ! Generate a context fron the parent_communicator
-!!$    Call matrix_mapping_comm_to_base( parent_comm, mapping )
-!!$    Call mapping%get_data( ctxt = parent_ctxt )
-!!$
-!!$    m = -1
-!!$    n = -1
-!!$    ! Get sizes and descriptors for the matrices
-!!$    ! The redistrib routine use -1 to indicate no data on this process
-!!$    If( p_A ) Then
-!!$       Call A%matrix_map%get_data( m = m, n = n )
-!!$       desc_A = A%matrix_map%get_descriptor()
-!!$    Else
-!!$       m_A    = -1
-!!$       n_A    = -1
-!!$       desc_A = -1
-!!$    End If
-!!$    
-!!$    If( p_B ) Then
-!!$       Call B%matrix_map%get_data( m = m, n = n )
-!!$       desc_B = B%matrix_map%get_descriptor()
-!!$    Else
-!!$       m_B    = -1
-!!$       n_B    = -1
-!!$       desc_B = -1
-!!$    End If
-!!$
-!!$    If( m_A /= -1 .And. n_A /= -1 .And. m_B /= -1 .And. n_B /= - 1 ) Then
-!!$       If( m_A /= m_B .Or. n_A /= n_B ) Then
-!!$          Stop "Inconsistent matrix sizes in matrix_remap_data_complex"
-!!$       End If
-!!$    End If
-!!$
-!!$    ! Call the redistribution routine supplying dummy arrays as required
-!!$    If     (       p_A .And.       p_B ) Then
-!!$       Call pzgemr2d( m, n, A%data, 1, 1, desc_A, B%data, 1, 1, desc_B, parent_ctxt )
-!!$
-!!$    Else If(       p_A .And. .Not. p_B ) Then
-!!$       Call pzgemr2d( m, n, A%data, 1, 1, desc_A, dum_B , 1, 1, desc_B, parent_ctxt )
-!!$
-!!$    Else If( .Not. p_A .And.       p_B ) Then
-!!$       Call pzgemr2d( m, n, dum_A , 1, 1, desc_A, B%data, 1, 1, desc_B, parent_ctxt )
-!!$
-!!$    Else If( .Not. p_A .And. .Not. p_B ) Then
-!!$       ! Shouldn't get here due to error check above
-!!$       Stop "In matrix_remap_data_complex got to an impossible place!"
-!!$
-!!$    End If
-!!$
-!!$  End Subroutine matrix_remap_data_complex
-!!$  
+
+  Subroutine real_remap_real( A, parent_comm, B )
+
+    Use Scalapack_interfaces, Only : pdgemr2d
+    
+    Type( real_distributed_matrix ), Allocatable, Intent( In    ) :: A
+    Integer                         ,              Intent( In    ) :: parent_comm
+    Type( real_distributed_matrix ), Allocatable, Intent( InOut ) :: B
+
+    Type( real_distributed_matrix ), Allocatable :: T
+
+    Type( matrix_mapping ) :: mapping
+
+    Real( wp ), Dimension( 1:1, 1:1 ) :: dum_a, dum_T
+
+    Integer, Dimension( 1:9 ) :: desc_A, desc_T
+    
+    Integer :: m, n
+    Integer :: m_A, n_A
+    Integer :: m_T, n_T
+    Integer :: parent_ctxt
+
+    Logical :: p_A, p_T
+
+    T = B
+    
+    p_A = Allocated( A )
+    p_T = Allocated( B )
+    
+    If( .Not. p_A .And. .Not. p_T ) Then
+       Stop "In matrix_remap_data_real one of A or B must be supplied"
+    End If
+    
+    ! Generate a context fron the parent_communicator
+    Call matrix_mapping_comm_to_base( parent_comm, mapping )
+    Call mapping%get_data( ctxt = parent_ctxt )
+
+    m = -1
+    n = -1
+    ! Get sizes and descriptors for the matrices
+    ! The redistrib routine use -1 to indicate no data on this process
+    If( p_A ) Then
+       Call A%matrix_map%get_data( m = m_A, n = n_A )
+       desc_A = A%matrix_map%get_descriptor()
+    Else
+       m_A    = -1
+       n_A    = -1
+       desc_A = -1
+    End If
+    
+    If( p_T ) Then
+       Call B%matrix_map%get_data( m = m_T, n = n_T )
+       desc_T = B%matrix_map%get_descriptor()
+    Else
+       m_T    = -1
+       n_T    = -1
+       desc_T = -1
+    End If
+
+    If( m_A /= -1 .And. n_A /= -1 .And. m_T /= -1 .And. n_T /= - 1 ) Then
+       If( m_A /= m_T .Or. n_A /= n_T ) Then
+          Stop "Inconsistent matrix sizes in matrix_remap_data_real"
+       End If
+    End If
+    m = m_A
+    n = n_A
+
+    ! Call the redistribution routine supplying dummy arrays as required
+    If     (       p_A .And.       p_T ) Then
+       Call pdgemr2d( m, n, A%data, 1, 1, desc_A, T%data, 1, 1, desc_T, parent_ctxt )
+
+    Else If(       p_A .And. .Not. p_T ) Then
+       Call pdgemr2d( m, n, A%data, 1, 1, desc_A, dum_T , 1, 1, desc_T, parent_ctxt )
+
+    Else If( .Not. p_A .And.       p_T ) Then
+       Call pdgemr2d( m, n, dum_A , 1, 1, desc_A, T%data, 1, 1, desc_T, parent_ctxt )
+
+    Else If( .Not. p_A .And. .Not. p_T ) Then
+       ! Shouldn't get here due to error check above
+       Stop "In matrix_remap_data_real got to an impossible place!"
+
+    End If
+
+    B = T
+    
+  End Subroutine real_remap_real
+  
+  Subroutine complex_remap_complex( A, parent_comm, B )
+
+    Use Scalapack_interfaces, Only : pzgemr2d
+
+    Type( complex_distributed_matrix ), Allocatable, Intent( In    ) :: A
+    Integer                            ,              Intent( In    ) :: parent_comm
+    Type( complex_distributed_matrix ), Allocatable, Intent( InOut ) :: B
+
+    Type( complex_distributed_matrix ), Allocatable :: T
+    
+    Type( matrix_mapping ) :: mapping
+
+    Complex( wp ), Dimension( 1:1, 1:1 ) :: dum_a, dum_T
+
+    Integer, Dimension( 1:9 ) :: desc_A, desc_T
+    
+    Integer :: m, n
+    Integer :: m_A, n_A
+    Integer :: m_T, n_T
+    Integer :: parent_ctxt
+
+    Logical :: p_A, p_T
+
+    T = B
+
+    p_A = Allocated( A )
+    p_T = Allocated( T )
+    
+    If( .Not. p_A .And. .Not. p_T ) Then
+       Stop "In matrix_remap_data_complex one of A or B must be supplied"
+    End If
+    
+    ! Generate a context fron the parent_communicator
+    Call matrix_mapping_comm_to_base( parent_comm, mapping )
+    Call mapping%get_data( ctxt = parent_ctxt )
+
+    m = -1
+    n = -1
+    ! Get sizes and descriptors for the matrices
+    ! The redistrib routine use -1 to indicate no data on this process
+    If( p_A ) Then
+       Call A%matrix_map%get_data( m = m_A, n = n_A )
+       desc_A = A%matrix_map%get_descriptor()
+    Else
+       m_A    = -1
+       n_A    = -1
+       desc_A = -1
+    End If
+    
+    If( p_T ) Then
+       Call T%matrix_map%get_data( m = m_T, n = n_T )
+       desc_T = T%matrix_map%get_descriptor()
+    Else
+       m_T    = -1
+       n_T    = -1
+       desc_T = -1
+    End If
+
+    If( m_A /= -1 .And. n_A /= -1 .And. m_T /= -1 .And. n_T /= - 1 ) Then
+       If( m_A /= m_T .Or. n_A /= n_T ) Then
+          Stop "Inconsistent matrix sizes in matrix_remap_data_complex"
+       End If
+    End If
+    m = m_A
+    n = n_A
+
+    ! Call the redistribution routine supplying dummy arrays as required
+    If     (       p_A .And.       p_T ) Then
+       Call pzgemr2d( m, n, A%data, 1, 1, desc_A, T%data, 1, 1, desc_T, parent_ctxt )
+
+    Else If(       p_A .And. .Not. p_T ) Then
+       Call pzgemr2d( m, n, A%data, 1, 1, desc_A, dum_T , 1, 1, desc_T, parent_ctxt )
+
+    Else If( .Not. p_A .And.       p_T ) Then
+       Call pzgemr2d( m, n, dum_A , 1, 1, desc_A, T%data, 1, 1, desc_T, parent_ctxt )
+
+    Else If( .Not. p_A .And. .Not. p_T ) Then
+       ! Shouldn't get here due to error check above
+       Stop "In matrix_remap_data_complex got to an impossible place!"
+
+    End If
+
+    B = T
+
+  End Subroutine complex_remap_complex
+  
 End Module distributed_matrix_module
  

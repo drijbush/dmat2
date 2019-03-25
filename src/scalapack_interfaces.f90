@@ -126,6 +126,42 @@ Module scalapack_interfaces
        Integer                        , Intent( In    ) :: info
      End Subroutine pzheevd
 
-  End Interface 
+  End Interface
+
+  Interface
+
+     !! Redistribution routines
+
+     Subroutine pdgemr2d( m, n, a, ia, ja, desca, b, ib, jb, descb, ictxt )
+       Import wp
+       Integer                     , Intent( In    ) :: m
+       Integer                     , Intent( In    ) :: n
+       Real( wp ), Dimension( *   ), Intent( In    ) :: a
+       Integer                     , Intent( In    ) :: ia
+       Integer                     , Intent( In    ) :: ja
+       Integer   , Dimension( 1:9 ), Intent( In    ) :: desca
+       Real( wp ), Dimension( *   ), Intent(   Out ) :: b
+       Integer                     , Intent( In    ) :: ib
+       Integer                     , Intent( In    ) :: jb
+       Integer   , Dimension( 1:9 ), Intent( In    ) :: descb
+       Integer                     , Intent( In    ) :: ictxt
+     End Subroutine pdgemr2d
+      
+     Subroutine pzgemr2d( m, n, a, ia, ja, desca, b, ib, jb, descb, ictxt )
+       Import wp
+       Integer                        , Intent( In    ) :: m
+       Integer                        , Intent( In    ) :: n
+       Complex( wp ), Dimension( *   ), Intent( In    ) :: a
+       Integer                        , Intent( In    ) :: ia
+       Integer                        , Intent( In    ) :: ja
+       Integer      , Dimension( 1:9 ), Intent( In    ) :: desca
+       Complex( wp ), Dimension( *   ), Intent(   Out ) :: b
+       Integer                        , Intent( In    ) :: ib
+       Integer                        , Intent( In    ) :: jb
+       Integer      , Dimension( 1:9 ), Intent( In    ) :: descb
+       Integer                        , Intent( In    ) :: ictxt
+     End Subroutine pzgemr2d
+      
+  End Interface
 
 End Module scalapack_interfaces

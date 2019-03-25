@@ -305,170 +305,170 @@ Contains
     
   End Subroutine ks_array_print_info
 
-!!$  Subroutine ks_array_split_ks( A, complex_weight, split_A, redistribute )
-!!$
-!!$    ! Split a ks_array A so the resulting ks_array is k point distributed
-!!$
-!!$    Use mpi
-!!$    
-!!$    Class( ks_array     ), Intent( In    ) :: A
-!!$    Real ( wp           ), Intent( In    ) :: complex_weight
-!!$    Type ( ks_array     ), Intent(   Out ) :: split_A
-!!$    Logical, Optional    , Intent( In    ) :: redistribute
-!!$
-!!$    Type( ks_matrix ), Allocatable :: this_ks_matrix
-!!$    Type( ks_matrix ), Allocatable :: split_ks_matrix
-!!$
-!!$    Type( ks_matrix ) :: base_matrix
-!!$
-!!$    Real( wp ), Dimension( : ), Allocatable :: weights
-!!$
-!!$    Integer, Dimension( : ), Allocatable :: n_procs_ks
-!!$    Integer, Dimension( : ), Allocatable :: my_ks
-!!$    Integer, Dimension( : ), Allocatable :: this_k_indices
-!!$
-!!$    Integer :: m, n
-!!$    Integer :: n_ks
-!!$    Integer :: n_procs_parent, me_parent, my_colour, k_comm, n_my_ks
-!!$    Integer :: this_k_type, this_s
-!!$    Integer :: top_rank
-!!$    Integer :: cost
-!!$    Integer :: error
-!!$    Integer :: ks, this_ks
-!!$
-!!$    Logical :: loc_redist
-!!$
-!!$    If( Present( redistribute ) ) Then
-!!$       loc_redist = redistribute
-!!$    Else
-!!$       loc_redist =.True.
-!!$    End If
-!!$
-!!$    ! Set up stuff relevant to all k points
-!!$    split_A%all_k_point_info    = A%all_k_point_info
-!!$    split_A%parent_communicator = A%parent_communicator
-!!$
-!!$    ! Now split the k points and return the new structure in split_A
-!!$
-!!$    ! First split the communicator
-!!$    ! Generate an array for the weights
-!!$    n_ks = Size( split_A%all_k_point_info )
-!!$    Allocate( weights( 1:n_ks ) )
-!!$    Do ks = 1, n_ks
-!!$       weights( ks ) = Merge( 1.0_wp, complex_weight, split_A%all_k_point_info( ks )%k_type == K_POINT_REAL )
-!!$    End Do
-!!$    ! Makes a difference if somehow somebody has all k points complex
-!!$    weights = weights / Minval( weights )
-!!$
-!!$    !THIS WHOLE SPLITTING STRATEGY PROBABLY NEEDS MORE THOUGHT
-!!$    Call MPI_Comm_size( split_A%parent_communicator, n_procs_parent, error )
-!!$    Call MPI_Comm_rank( split_A%parent_communicator,      me_parent, error )
-!!$    cost = Nint( Sum( weights ) )
-!!$    ! Scale up weights so fits inside the parent comm
-!!$    Allocate( n_procs_ks( 1:n_ks ) )
-!!$    n_procs_ks = Nint( weights * ( n_procs_parent / cost ) )
-!!$
-!!$    ! Two possible cases
-!!$
-!!$    k_split_strategy: If( cost <= n_procs_parent ) Then
-!!$       
-!!$       ! 1) There are sufficent processors for each k point to have its own, separate set if processors which work on it
-!!$       n_my_ks  = 1
-!!$       Allocate( my_ks( 1:n_my_ks ) ) 
-!!$
-!!$       ! Decide which group ( if any ) I am in can probably write this more neatly but lets keep
-!!$       ! it explicit as I'm getting a little confused
-!!$       If( me_parent > Sum( n_procs_ks ) - 1 ) Then
-!!$          my_colour  = MPI_UNDEFINED
-!!$          my_ks( 1 ) = INVALID
-!!$          n_my_ks    = 0
-!!$       Else
-!!$          top_rank = 0
-!!$          Do ks = 1, n_ks
-!!$             top_rank = top_rank + n_procs_ks( ks )
-!!$             If( me_parent < top_rank ) Then
-!!$                ! Colour for comm spliting
-!!$                my_colour = ks
-!!$                ! As in this strategy we only have 1 k point store which one it is
-!!$                my_ks( 1 ) = ks
-!!$                Exit
-!!$             End If
-!!$          End Do
-!!$       End If
-!!$
-!!$    Else
-!!$
-!!$       ! 2) Not enough procs to make distibuting matrices wortwhile. Just use a simple
-!!$       ! round robin assignment and do operations in serial
-!!$
-!!$       ! First work out how many ks points I will hold
-!!$       n_my_ks = n_ks / n_procs_parent
-!!$       If( n_my_ks * n_procs_parent < n_ks ) Then
-!!$          n_my_ks = n_my_ks + 1
-!!$       End If
-!!$       Allocate( my_ks( 1:n_my_ks ) )
-!!$
-!!$       ! Now assign them
-!!$       this_ks = 0
-!!$       Do ks = me_parent + 1, n_ks, n_procs_parent
-!!$          this_ks = this_ks + 1
-!!$          my_ks( this_ks ) = ks
-!!$       End Do
-!!$
-!!$       ! And colour my communicators, an mpi_comm_split is next
-!!$       my_colour = Merge( me_parent, MPI_UNDEFINED, me_parent < n_ks )
-!!$
-!!$    End If k_split_strategy
-!!$
-!!$    ! Can now split the communicator
-!!$    Call MPI_Comm_split( split_A%parent_communicator, my_colour, 0, k_comm, error )
-!!$
-!!$    ! Now start setting up the k points held by this set of processes (if any!)
-!!$    Allocate( split_A%my_k_points( 1:n_my_ks ) )
-!!$    Allocate( this_k_indices( 1:Size( A%all_k_point_info( 1 )%k_indices ) ) )
-!!$    Do ks = 1, n_my_ks
-!!$       split_A%my_k_points( ks )%info = split_A%all_k_point_info( my_ks( ks ) )
-!!$       ! Irreps not split yet hence no split at this level
-!!$       Allocate( split_A%my_k_points( ks )%data( 1:1 ) )
-!!$       split_A%my_k_points( ks )%data( 1 )%label = 1
-!!$       this_k_type    = split_A%all_k_point_info( my_ks( ks ) )%k_type
-!!$       this_s         = split_A%all_k_point_info( my_ks( ks ) )%spin
-!!$       this_k_indices = split_A%all_k_point_info( my_ks( ks ) )%k_indices
-!!$       ! Now need to generate a source matrix from the communicator - precisely what the init routine does!!
-!!$       Call ks_matrix_comm_to_base( k_comm, base_matrix )
-!!$       ! Need to get sizes for creation
-!!$       m = A%my_k_points( my_ks( ks ) )%data( 1 )%matrix%size( 1 )
-!!$       n = A%my_k_points( my_ks( ks ) )%data( 1 )%matrix%size( 2 )
-!!$       Call split_A%my_k_points( ks )%data( 1 )%matrix%create( this_k_type == K_POINT_COMPLEX, &
-!!$            m, n, base_matrix )
-!!$       split_A%my_k_points( ks )%communicator = base_matrix%get_comm()
-!!$    End Do
-!!$
-!!$    ! Finally if required redistribute the data from the all procs distribution into the split distribution
-!!$    ! Note all procs in parent comm must be involved as all hold data for the unsplit matrx
-!!$    If( loc_redist ) Then
-!!$       Allocate( this_ks_matrix )
-!!$       Do ks = 1, n_ks
-!!$          this_ks_matrix = A%my_k_points( ks )%data( 1 )%matrix
-!!$          ! Find out if I hold this in the split distribution
-!!$          ! Note indicate to the remap routine that we hod no data by having an unallocated array
-!!$          ! c.f. Null pointer in C type languages
-!!$          this_ks = split_A%get_my_ks_index( ks )
-!!$          If( this_ks /= NOT_ME ) Then
-!!$             Allocate( split_ks_matrix )
-!!$             split_ks_matrix = split_A%my_k_points( this_ks )%data( 1 )%matrix
-!!$          End If
-!!$          Call ks_matrix_remap_data( A%parent_communicator, this_ks_matrix, split_ks_matrix )
-!!$          If( this_ks /= NOT_ME ) Then
-!!$             split_A%my_k_points( this_ks )%data( 1 )%matrix = split_ks_matrix
-!!$             Deallocate( split_ks_matrix ) ! Important as an deallocated matrix indicates no data on this process in the remap routine
-!!$          End If
-!!$       End Do
-!!$       Deallocate( this_ks_matrix )
-!!$    End If
-!!$
-!!$  End Subroutine ks_array_split_ks
-!!$
+  Subroutine ks_array_split_ks( A, complex_weight, split_A, redistribute )
+
+    ! Split a ks_array A so the resulting ks_array is k point distributed
+
+    Use mpi, Only : MPI_Comm_size, MPI_Comm_rank, MPI_Comm_split, MPI_UNDEFINED
+    
+    Class( ks_array     ), Intent( In    ) :: A
+    Real ( wp           ), Intent( In    ) :: complex_weight
+    Type ( ks_array     ), Intent(   Out ) :: split_A
+    Logical, Optional    , Intent( In    ) :: redistribute
+
+    Type( ks_matrix ), Allocatable :: this_ks_matrix
+    Type( ks_matrix ), Allocatable :: split_ks_matrix
+
+    Type( ks_matrix ) :: base_matrix
+
+    Real( wp ), Dimension( : ), Allocatable :: weights
+
+    Integer, Dimension( : ), Allocatable :: n_procs_ks
+    Integer, Dimension( : ), Allocatable :: my_ks
+    Integer, Dimension( : ), Allocatable :: this_k_indices
+
+    Integer :: m, n
+    Integer :: n_ks
+    Integer :: n_procs_parent, me_parent, my_colour, k_comm, n_my_ks
+    Integer :: this_k_type, this_s
+    Integer :: top_rank
+    Integer :: cost
+    Integer :: error
+    Integer :: ks, this_ks
+
+    Logical :: loc_redist
+
+    If( Present( redistribute ) ) Then
+       loc_redist = redistribute
+    Else
+       loc_redist =.True.
+    End If
+
+    ! Set up stuff relevant to all k points
+    split_A%all_k_point_info    = A%all_k_point_info
+    split_A%parent_communicator = A%parent_communicator
+
+    ! Now split the k points and return the new structure in split_A
+
+    ! First split the communicator
+    ! Generate an array for the weights
+    n_ks = Size( split_A%all_k_point_info )
+    Allocate( weights( 1:n_ks ) )
+    Do ks = 1, n_ks
+       weights( ks ) = Merge( 1.0_wp, complex_weight, split_A%all_k_point_info( ks )%k_type == K_POINT_REAL )
+    End Do
+    ! Makes a difference if somehow somebody has all k points complex
+    weights = weights / Minval( weights )
+
+    !THIS WHOLE SPLITTING STRATEGY PROBABLY NEEDS MORE THOUGHT
+    Call MPI_Comm_size( split_A%parent_communicator, n_procs_parent, error )
+    Call MPI_Comm_rank( split_A%parent_communicator,      me_parent, error )
+    cost = Nint( Sum( weights ) )
+    ! Scale up weights so fits inside the parent comm
+    Allocate( n_procs_ks( 1:n_ks ) )
+    n_procs_ks = Nint( weights * ( n_procs_parent / cost ) )
+
+    ! Two possible cases
+
+    k_split_strategy: If( cost <= n_procs_parent ) Then
+       
+       ! 1) There are sufficent processors for each k point to have its own, separate set if processors which work on it
+       n_my_ks  = 1
+       Allocate( my_ks( 1:n_my_ks ) ) 
+
+       ! Decide which group ( if any ) I am in can probably write this more neatly but lets keep
+       ! it explicit as I'm getting a little confused
+       If( me_parent > Sum( n_procs_ks ) - 1 ) Then
+          my_colour  = MPI_UNDEFINED
+          my_ks( 1 ) = INVALID
+          n_my_ks    = 0
+       Else
+          top_rank = 0
+          Do ks = 1, n_ks
+             top_rank = top_rank + n_procs_ks( ks )
+             If( me_parent < top_rank ) Then
+                ! Colour for comm spliting
+                my_colour = ks
+                ! As in this strategy we only have 1 k point store which one it is
+                my_ks( 1 ) = ks
+                Exit
+             End If
+          End Do
+       End If
+
+    Else
+
+       ! 2) Not enough procs to make distibuting matrices wortwhile. Just use a simple
+       ! round robin assignment and do operations in serial
+
+       ! First work out how many ks points I will hold
+       n_my_ks = n_ks / n_procs_parent
+       If( n_my_ks * n_procs_parent < n_ks ) Then
+          n_my_ks = n_my_ks + 1
+       End If
+       Allocate( my_ks( 1:n_my_ks ) )
+
+       ! Now assign them
+       this_ks = 0
+       Do ks = me_parent + 1, n_ks, n_procs_parent
+          this_ks = this_ks + 1
+          my_ks( this_ks ) = ks
+       End Do
+
+       ! And colour my communicators, an mpi_comm_split is next
+       my_colour = Merge( me_parent, MPI_UNDEFINED, me_parent < n_ks )
+
+    End If k_split_strategy
+
+    ! Can now split the communicator
+    Call MPI_Comm_split( split_A%parent_communicator, my_colour, 0, k_comm, error )
+
+    ! Now start setting up the k points held by this set of processes (if any!)
+    Allocate( split_A%my_k_points( 1:n_my_ks ) )
+    Allocate( this_k_indices( 1:Size( A%all_k_point_info( 1 )%k_indices ) ) )
+    Do ks = 1, n_my_ks
+       split_A%my_k_points( ks )%info = split_A%all_k_point_info( my_ks( ks ) )
+       ! Irreps not split yet hence no split at this level
+       Allocate( split_A%my_k_points( ks )%data( 1:1 ) )
+       split_A%my_k_points( ks )%data( 1 )%label = 1
+       this_k_type    = split_A%all_k_point_info( my_ks( ks ) )%k_type
+       this_s         = split_A%all_k_point_info( my_ks( ks ) )%spin
+       this_k_indices = split_A%all_k_point_info( my_ks( ks ) )%k_indices
+       ! Now need to generate a source matrix from the communicator - precisely what the init routine does!!
+       Call ks_matrix_comm_to_base( k_comm, base_matrix )
+       ! Need to get sizes for creation
+       m = A%my_k_points( my_ks( ks ) )%data( 1 )%matrix%size( 1 )
+       n = A%my_k_points( my_ks( ks ) )%data( 1 )%matrix%size( 2 )
+       Call split_A%my_k_points( ks )%data( 1 )%matrix%create( this_k_type == K_POINT_COMPLEX, &
+            m, n, base_matrix )
+       split_A%my_k_points( ks )%communicator = base_matrix%get_comm()
+    End Do
+
+    ! Finally if required redistribute the data from the all procs distribution into the split distribution
+    ! Note all procs in parent comm must be involved as all hold data for the unsplit matrx
+    If( loc_redist ) Then
+       Allocate( this_ks_matrix )
+       Do ks = 1, n_ks
+          this_ks_matrix = A%my_k_points( ks )%data( 1 )%matrix
+          ! Find out if I hold this in the split distribution
+          ! Note indicate to the remap routine that we hod no data by having an unallocated array
+          ! c.f. Null pointer in C type languages
+          this_ks = split_A%get_my_ks_index( ks )
+          If( this_ks /= NOT_ME ) Then
+             Allocate( split_ks_matrix )
+             split_ks_matrix = split_A%my_k_points( this_ks )%data( 1 )%matrix
+          End If
+          Call ks_matrix_remap_data( A%parent_communicator, this_ks_matrix, split_ks_matrix )
+          If( this_ks /= NOT_ME ) Then
+             split_A%my_k_points( this_ks )%data( 1 )%matrix = split_ks_matrix
+             Deallocate( split_ks_matrix ) ! Important as an deallocated matrix indicates no data on this process in the remap routine
+          End If
+       End Do
+       Deallocate( this_ks_matrix )
+    End If
+
+  End Subroutine ks_array_split_ks
+
 !!$  Subroutine ks_array_diag( A, Q, E )
 !!$
 !!$    Use mpi
