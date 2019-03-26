@@ -266,6 +266,8 @@ Contains
 
   Subroutine free_matrix_mapping( map )
 
+    !! Frees any data associated with a matrix mapping
+
     Class( matrix_mapping ), Intent( InOut ) :: map
 
     Integer :: ctxt

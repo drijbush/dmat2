@@ -18,18 +18,21 @@ Module ks_array_module
   Integer, Private, Parameter :: NO_DATA = -3
 
   Type, Public :: ks_point_info
+     !! A type to hold the basic info about a k point
      Integer                              :: k_type
      Integer                              :: spin
      Integer, Dimension( : ), Allocatable :: k_indices
   End type ks_point_info
 
   Type, Private :: k_point_matrices
+     !! A wrapper for data at a k point - will eventually be used to create arrays when we deal with irreps
      ! External label - e.g. irrep number
      Integer                      :: label = INVALID
      Type( ks_matrix ) :: matrix
   End type k_point_matrices
 
   Type, Private :: k_point
+     !! This wraps the info and data for a given ks point
      Type( ks_point_info     )                              :: info
      ! This splitting allows irreps within this k point
      Type( k_point_matrices  ), Dimension( : ), Allocatable :: data
@@ -38,6 +41,7 @@ Module ks_array_module
   End type k_point
 
   Type, Public :: ks_array
+     !! An array of ks matrices, operations on which are (almost always) independent and hence parallelisable
      Type( ks_point_info ), Dimension( : ), Allocatable :: all_k_point_info
      ! this splitting allows multiple k points on this process
      Type( k_point       ), Dimension( : ), Allocatable :: my_k_points
@@ -46,13 +50,13 @@ Module ks_array_module
    Contains
      ! Public Methods
      ! Methods at all levels
-     Procedure, Public :: create               => ks_array_create
-     Procedure, Public :: split                => ks_array_split_ks
-     Generic  , Public :: Operator( .Dagger. ) => dagger
-     Generic  , Public :: Operator( * )        => multiply
-     Generic  , Public :: set_by_global        => set_by_global_r, set_by_global_c
-     Generic  , Public :: get_by_global        => get_by_global_r, get_by_global_c
-     Procedure, Public :: print_info           => ks_array_print_info
+     Procedure, Public :: create               => ks_array_create                   !! Create a ks_array
+     Procedure, Public :: split                => ks_array_split_ks                 !! Split the distribution so k point //ism can be used
+     Generic  , Public :: Operator( .Dagger. ) => dagger                            !! Dagger each element in the array
+     Generic  , Public :: Operator( * )        => multiply                          !! Multiply each element of the array with the corresponding element in another array
+     Generic  , Public :: set_by_global        => set_by_global_r, set_by_global_c  !! Set patches of an element
+     Generic  , Public :: get_by_global        => get_by_global_r, get_by_global_c  !! Get patches of an element
+     Procedure, Public :: print_info           => ks_array_print_info               !! print info about a KS_array
 !!$     Generic                       :: Operator( + )        => add, pre_add_diag, post_add_diag
 !!$     Generic                       :: Operator( - )        => subtract, post_subtract_diag
 !!$     Generic                       :: Operator( * )        => pre_scale, post_scale, &
@@ -96,25 +100,33 @@ Module ks_array_module
 !!$     Real( wp ), Dimension( : ), Allocatable :: evals
 !!$  End type eval_storage
 
-  Public :: ks_array_init
-  Public :: ks_array_comm_to_base
-  Public :: ks_array_finalise
+  Public :: ks_array_init         !! Initalise the KS arrays
+  Public :: ks_array_comm_to_base !! Turn an MPI communicator inot a base KS_array object
+  Public :: ks_array_finalise     !! Finalise the KS array mechanism
   
   Private
 
 Contains
 
   Subroutine ks_array_init
+
+    !! Initalise the KS arrays
+    
     Call ks_matrix_init
+
   End Subroutine ks_array_init
 
   Subroutine ks_array_comm_to_base( comm, n_spin, k_point_type, k_points, base_ks_array )
+
+    !! Turn an MPI communicator inot a base KS_array object
+    !! from which other KS_arrays can be created.
+    !! Note each element of the array will be distributed across all processes in the communicator
     
-    Integer                   , Intent( In    ) :: comm
-    Integer                   , Intent( In    ) :: n_spin
-    Integer, Dimension( :    ), Intent( In    ) :: k_point_type
-    Integer, Dimension( :, : ), Intent( In    ) :: k_points
-    Type( ks_array )          , Intent(   Out ) :: base_ks_array
+    Integer                   , Intent( In    ) :: comm             !! The communicator
+    Integer                   , Intent( In    ) :: n_spin           !! The number of spins
+    Integer, Dimension( :    ), Intent( In    ) :: k_point_type     !! the type of each k point
+    Integer, Dimension( :, : ), Intent( In    ) :: k_points         !! The labels for each k point
+    Type( ks_array )          , Intent(   Out ) :: base_ks_array    !! The resulting ks_array
 
     Type( ks_matrix ) :: base_matrix
     
@@ -159,11 +171,15 @@ Contains
 
   Subroutine ks_array_finalise
 
+    !! Finalise the KS array mechanism
+
     Call ks_matrix_finalise
     
   End Subroutine ks_array_finalise
 
   Subroutine ks_array_create( A, m, n, source )
+
+    !! Create a KS array
 
     ! M and N should be arrays to allow different sizes at each ks point,
     ! or more likely irrep!!!!!!!!
@@ -205,6 +221,9 @@ Contains
   End Subroutine ks_array_create
 
   Subroutine ks_array_print_info( A, name, verbosity )
+
+    !! Print information about an array, optionally with a title, and if the verbosity is high
+    !! enough report (>99) also how it is distributed across the processes
 
     Use mpi, Only : MPI_Comm_rank, MPI_Comm_size, MPI_Allreduce, MPI_IN_PLACE, MPI_INTEGER, MPI_SUM
 
@@ -308,14 +327,14 @@ Contains
 
   Subroutine ks_array_split_ks( A, complex_weight, split_A, redistribute )
 
-    ! Split a ks_array A so the resulting ks_array is k point distributed
+    !! Split a ks_array A so the resulting ks_array is k point distributed
 
     Use mpi, Only : MPI_Comm_size, MPI_Comm_rank, MPI_Comm_split, MPI_UNDEFINED
     
-    Class( ks_array     ), Intent( In    ) :: A
-    Real ( wp           ), Intent( In    ) :: complex_weight
-    Type ( ks_array     ), Intent(   Out ) :: split_A
-    Logical, Optional    , Intent( In    ) :: redistribute
+    Class( ks_array     ), Intent( In    ) :: A                 !! The array to be split
+    Real ( wp           ), Intent( In    ) :: complex_weight    !! The cost of complex points relative to real ones
+    Type ( ks_array     ), Intent(   Out ) :: split_A           !! The k point distributed matrix
+    Logical, Optional    , Intent( In    ) :: redistribute      !! By default the data associated with the matrix is redistributed
 
     Type( ks_matrix ), Allocatable :: this_ks_matrix
     Type( ks_matrix ), Allocatable :: split_ks_matrix
@@ -549,6 +568,8 @@ Contains
 
   Function ks_array_dagger( A ) Result( tA )
 
+    !! Form the Hermitian conjugate of the matrices (Tranpose for real data)
+
     Type( ks_array ) :: tA
 
     Class( ks_array ), Intent( In ) :: A
@@ -570,6 +591,8 @@ Contains
   End Function ks_array_dagger
 
   Function ks_array_mult( A, B ) Result( C )
+
+    !! Multiply the arays together element by element (i.e. matrix by matrix ) 
 
     Type( ks_array ) :: C
 
@@ -876,6 +899,8 @@ Contains
 
   Pure Function get_all_ks_index( A, my_ks ) Result( ks )
 
+    !! Given a local index into my list of ks points return the index in the full list
+    
     Integer :: ks
 
     Class( ks_array ), Intent( In ) :: A
@@ -892,6 +917,8 @@ Contains
   End Function get_all_ks_index
 
   Pure Function get_my_ks_index( A, ks ) Result( my_ks )
+
+    !! Given an index into the full list of ks points return an index into my local list
 
     Integer :: my_ks
 
@@ -915,6 +942,8 @@ Contains
 
   Pure Function get_ks( A, k, s ) Result( ks )
 
+    !! Given the label for a k point and spin return the index in the full ks point list
+
     Integer :: ks
 
     Class( ks_array )        , Intent( In ) :: A
@@ -931,13 +960,14 @@ Contains
     
   End Function get_ks
 
-  Subroutine ks_array_set_global_real( A, s, k, m, n, p, q, data )
+  Subroutine ks_array_set_global_real( A, k, s, m, n, p, q, data )
 
+    !! For the matrix with spin label s and k-point label k set the (m:n,p:q) patch 
     ! Need to overload for irreps
 
     Class( ks_array )              , Intent( InOut ) :: A
-    Integer                        , Intent( In    ) :: s
     Integer    , Dimension( : )    , Intent( In    ) :: k
+    Integer                        , Intent( In    ) :: s
     Integer                        , Intent( In    ) :: m
     Integer                        , Intent( In    ) :: n
     Integer                        , Intent( In    ) :: p
@@ -956,13 +986,14 @@ Contains
 
   End Subroutine ks_array_set_global_real
 
-  Subroutine ks_array_set_global_complex( A, s, k, m, n, p, q, data )
+  Subroutine ks_array_set_global_complex( A, k, s, m, n, p, q, data )
 
+    !! For the matrix with spin label s and k-point label k set the (m:n,p:q) patch 
     ! Need to overload for irreps
 
     Class( ks_array )                 , Intent( InOut ) :: A
-    Integer                           , Intent( In    ) :: s
     Integer    , Dimension( : )       , Intent( In    ) :: k
+    Integer                           , Intent( In    ) :: s
     Integer                           , Intent( In    ) :: m
     Integer                           , Intent( In    ) :: n
     Integer                           , Intent( In    ) :: p
@@ -981,17 +1012,18 @@ Contains
 
   End Subroutine ks_array_set_global_complex  
 
-  Subroutine ks_array_get_global_real( A, s, k, m, n, p, q, data )
+  Subroutine ks_array_get_global_real( A, k, s, m, n, p, q, data )
 
     Use mpi, Only : MPI_Comm_rank, MPI_Isend, MPI_INTEGER, MPI_recv, MPI_ANY_SOURCE, &
          MPI_Wait, MPI_STATUS_IGNORE, MPI_Bcast, MPI_Sizeof, MPI_Type_match_size, &
          MPI_TYPECLASS_REAL
 
+    !! For the matrix with spin label s and k-point label k get the (m:n,p:q) patch 
     ! Need to overload for irreps
 
     Class( ks_array )              , Intent( In    ) :: A
-    Integer                        , Intent( In    ) :: s
     Integer    , Dimension( : )    , Intent( In    ) :: k
+    Integer                        , Intent( In    ) :: s
     Integer                        , Intent( In    ) :: m
     Integer                        , Intent( In    ) :: n
     Integer                        , Intent( In    ) :: p
@@ -1047,7 +1079,9 @@ Contains
 
   End Subroutine ks_array_get_global_real
 
-  Subroutine ks_array_get_global_complex( A, s, k, m, n, p, q, data )
+  Subroutine ks_array_get_global_complex( A, k, s, m, n, p, q, data )
+
+    !! For the matrix with spin label s and k-point label k set the (m:n,p:q) patch 
 
     Use mpi, Only : MPI_Comm_rank, MPI_Isend, MPI_INTEGER, MPI_recv, MPI_ANY_SOURCE, &
          MPI_Wait, MPI_STATUS_IGNORE, MPI_Bcast, MPI_Sizeof, MPI_Type_match_size, &
@@ -1056,8 +1090,8 @@ Contains
     ! Need to overload for irreps
 
     Class( ks_array )                 , Intent( In    ) :: A
-    Integer                           , Intent( In    ) :: s
     Integer    , Dimension( : )       , Intent( In    ) :: k
+    Integer                           , Intent( In    ) :: s
     Integer                           , Intent( In    ) :: m
     Integer                           , Intent( In    ) :: n
     Integer                           , Intent( In    ) :: p
@@ -1115,6 +1149,9 @@ Contains
 
   Function ks_array_g_to_l( A, k, s, what ) Result( gl_indexing )
 
+    !! For the matrix with spin label S and k-point label K get the global to local indexing array
+    !! If WHAT == 'R' get the array for rows. If WHAT == 'C' get it for columns
+
     Integer, Dimension( : ), Allocatable :: gl_indexing
 
     Class( ks_array )          , Intent( In ) :: A
@@ -1138,6 +1175,9 @@ Contains
   End Function ks_array_g_to_l
 
   Function ks_array_l_to_g( A, k, s, what ) Result( lg_indexing )
+
+    !! For the matrix with spin label S and k-point label K get the local to global indexing array
+    !! If WHAT == 'R' get the array for rows. If WHAT == 'C' get it for columns
 
     Integer, Dimension( : ), Allocatable :: lg_indexing
 

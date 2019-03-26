@@ -975,11 +975,11 @@ Contains
     Do spin = 1, ns
        Do kpoint = 1, nk
           If( k_types( kpoint ) == K_POINT_REAL ) Then
-             Call Am%set_by_global( spin, k_points( :, kpoint ), 1, m, 1, k, A_r( :, :, kpoint, spin ) )
-             Call Bm%set_by_global( spin, k_points( :, kpoint ), 1, k, 1, n, B_r( :, :, kpoint, spin ) )
+             Call Am%set_by_global( k_points( :, kpoint ), spin, 1, m, 1, k, A_r( :, :, kpoint, spin ) )
+             Call Bm%set_by_global( k_points( :, kpoint ), spin, 1, k, 1, n, B_r( :, :, kpoint, spin ) )
           Else
-             Call Am%set_by_global( spin, k_points( :, kpoint ), 1, m, 1, k, A_c( :, :, kpoint, spin ) )
-             Call Bm%set_by_global( spin, k_points( :, kpoint ), 1, k, 1, n, B_c( :, :, kpoint, spin ) )
+             Call Am%set_by_global( k_points( :, kpoint ), spin, 1, m, 1, k, A_c( :, :, kpoint, spin ) )
+             Call Bm%set_by_global( k_points( :, kpoint ), spin, 1, k, 1, n, B_c( :, :, kpoint, spin ) )
           End If
        End Do
     End Do
@@ -991,10 +991,10 @@ Contains
     Do spin = 1, ns
        Do kpoint = 1, nk
           If( k_types( kpoint ) == K_POINT_REAL ) Then
-             Call Cm%get_by_global( spin, k_points( :, kpoint ), 1, m, 1, n, tmp_r )
+             Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, tmp_r )
              this_diff = Maxval( Abs( C_r( :, :, kpoint, spin ) - tmp_r ) )
           Else
-             Call Cm%get_by_global( spin, k_points( :, kpoint ), 1, m, 1, n, tmp_c ) 
+             Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, tmp_c ) 
              this_diff = Maxval( Abs( C_c( :, :, kpoint, spin ) - tmp_c ) )
           End If
           max_diff = Max( this_diff, max_diff )
@@ -1101,11 +1101,11 @@ Contains
     Do spin = 1, ns
        Do kpoint = 1, nk
           If( k_types( kpoint ) == K_POINT_REAL ) Then
-             Call Am%set_by_global( spin, k_points( :, kpoint ), 1, k, 1, m, A_r( :, :, kpoint, spin ) )
-             Call Bm%set_by_global( spin, k_points( :, kpoint ), 1, k, 1, n, B_r( :, :, kpoint, spin ) )
+             Call Am%set_by_global( k_points( :, kpoint ), spin, 1, k, 1, m, A_r( :, :, kpoint, spin ) )
+             Call Bm%set_by_global( k_points( :, kpoint ), spin, 1, k, 1, n, B_r( :, :, kpoint, spin ) )
           Else
-             Call Am%set_by_global( spin, k_points( :, kpoint ), 1, k, 1, m, A_c( :, :, kpoint, spin ) )
-             Call Bm%set_by_global( spin, k_points( :, kpoint ), 1, k, 1, n, B_c( :, :, kpoint, spin ) )
+             Call Am%set_by_global( k_points( :, kpoint ), spin, 1, k, 1, m, A_c( :, :, kpoint, spin ) )
+             Call Bm%set_by_global( k_points( :, kpoint ), spin, 1, k, 1, n, B_c( :, :, kpoint, spin ) )
           End If
        End Do
     End Do
@@ -1118,10 +1118,10 @@ Contains
     Do spin = 1, ns
        Do kpoint = 1, nk
           If( k_types( kpoint ) == K_POINT_REAL ) Then
-             Call Cm%get_by_global( spin, k_points( :, kpoint ), 1, m, 1, n, tmp_r )
+             Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, tmp_r )
              this_diff = Maxval( Abs( C_r( :, :, kpoint, spin ) - tmp_r ) )
           Else
-             Call Cm%get_by_global( spin, k_points( :, kpoint ), 1, m, 1, n, tmp_c ) 
+             Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, tmp_c ) 
              this_diff = Maxval( Abs( C_c( :, :, kpoint, spin ) - tmp_c ) )
           End If
           max_diff = Max( this_diff, max_diff )
@@ -1228,11 +1228,11 @@ Contains
     Do spin = 1, ns
        Do kpoint = 1, nk
           If( k_types( kpoint ) == K_POINT_REAL ) Then
-             Call Am%set_by_global( spin, k_points( :, kpoint ), 1, m, 1, k, A_r( :, :, kpoint, spin ) )
-             Call Bm%set_by_global( spin, k_points( :, kpoint ), 1, n, 1, k, B_r( :, :, kpoint, spin ) )
+             Call Am%set_by_global( k_points( :, kpoint ), spin, 1, m, 1, k, A_r( :, :, kpoint, spin ) )
+             Call Bm%set_by_global( k_points( :, kpoint ), spin, 1, n, 1, k, B_r( :, :, kpoint, spin ) )
           Else
-             Call Am%set_by_global( spin, k_points( :, kpoint ), 1, m, 1, k, A_c( :, :, kpoint, spin ) )
-             Call Bm%set_by_global( spin, k_points( :, kpoint ), 1, n, 1, k, B_c( :, :, kpoint, spin ) )
+             Call Am%set_by_global( k_points( :, kpoint ), spin, 1, m, 1, k, A_c( :, :, kpoint, spin ) )
+             Call Bm%set_by_global( k_points( :, kpoint ), spin, 1, n, 1, k, B_c( :, :, kpoint, spin ) )
           End If
        End Do
     End Do
@@ -1245,10 +1245,10 @@ Contains
     Do spin = 1, ns
        Do kpoint = 1, nk
           If( k_types( kpoint ) == K_POINT_REAL ) Then
-             Call Cm%get_by_global( spin, k_points( :, kpoint ), 1, m, 1, n, tmp_r )
+             Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, tmp_r )
              this_diff = Maxval( Abs( C_r( :, :, kpoint, spin ) - tmp_r ) )
           Else
-             Call Cm%get_by_global( spin, k_points( :, kpoint ), 1, m, 1, n, tmp_c ) 
+             Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, tmp_c ) 
              this_diff = Maxval( Abs( C_c( :, :, kpoint, spin ) - tmp_c ) )
           End If
           max_diff = Max( this_diff, max_diff )
@@ -1356,11 +1356,11 @@ Contains
     Do spin = 1, ns
        Do kpoint = 1, nk
           If( k_types( kpoint ) == K_POINT_REAL ) Then
-             Call Am%set_by_global( spin, k_points( :, kpoint ), 1, k, 1, m, A_r( :, :, kpoint, spin ) )
-             Call Bm%set_by_global( spin, k_points( :, kpoint ), 1, n, 1, k, B_r( :, :, kpoint, spin ) )
+             Call Am%set_by_global( k_points( :, kpoint ), spin, 1, k, 1, m, A_r( :, :, kpoint, spin ) )
+             Call Bm%set_by_global( k_points( :, kpoint ), spin, 1, n, 1, k, B_r( :, :, kpoint, spin ) )
           Else
-             Call Am%set_by_global( spin, k_points( :, kpoint ), 1, k, 1, m, A_c( :, :, kpoint, spin ) )
-             Call Bm%set_by_global( spin, k_points( :, kpoint ), 1, n, 1, k, B_c( :, :, kpoint, spin ) )
+             Call Am%set_by_global( k_points( :, kpoint ), spin, 1, k, 1, m, A_c( :, :, kpoint, spin ) )
+             Call Bm%set_by_global( k_points( :, kpoint ), spin, 1, n, 1, k, B_c( :, :, kpoint, spin ) )
           End If
        End Do
     End Do
@@ -1374,10 +1374,10 @@ Contains
     Do spin = 1, ns
        Do kpoint = 1, nk
           If( k_types( kpoint ) == K_POINT_REAL ) Then
-             Call Cm%get_by_global( spin, k_points( :, kpoint ), 1, m, 1, n, tmp_r )
+             Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, tmp_r )
              this_diff = Maxval( Abs( C_r( :, :, kpoint, spin ) - tmp_r ) )
           Else
-             Call Cm%get_by_global( spin, k_points( :, kpoint ), 1, m, 1, n, tmp_c ) 
+             Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, tmp_c ) 
              this_diff = Maxval( Abs( C_c( :, :, kpoint, spin ) - tmp_c ) )
           End If
           max_diff = Max( this_diff, max_diff )
@@ -1492,11 +1492,11 @@ Contains
     Do spin = 1, ns
        Do kpoint = 1, nk
           If( k_types( kpoint ) == K_POINT_REAL ) Then
-             Call Am%set_by_global( spin, k_points( :, kpoint ), 1, m, 1, k, A_r( :, :, kpoint, spin ) )
-             Call Bm%set_by_global( spin, k_points( :, kpoint ), 1, k, 1, n, B_r( :, :, kpoint, spin ) )
+             Call Am%set_by_global( k_points( :, kpoint ), spin, 1, m, 1, k, A_r( :, :, kpoint, spin ) )
+             Call Bm%set_by_global( k_points( :, kpoint ), spin, 1, k, 1, n, B_r( :, :, kpoint, spin ) )
           Else
-             Call Am%set_by_global( spin, k_points( :, kpoint ), 1, m, 1, k, A_c( :, :, kpoint, spin ) )
-             Call Bm%set_by_global( spin, k_points( :, kpoint ), 1, k, 1, n, B_c( :, :, kpoint, spin ) )
+             Call Am%set_by_global( k_points( :, kpoint ), spin, 1, m, 1, k, A_c( :, :, kpoint, spin ) )
+             Call Bm%set_by_global( k_points( :, kpoint ), spin, 1, k, 1, n, B_c( :, :, kpoint, spin ) )
           End If
        End Do
     End Do
@@ -1508,10 +1508,10 @@ Contains
     Do spin = 1, ns
        Do kpoint = 1, nk
           If( k_types( kpoint ) == K_POINT_REAL ) Then
-             Call Cm%get_by_global( spin, k_points( :, kpoint ), 1, m, 1, n, tmp_r )
+             Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, tmp_r )
              this_diff = Maxval( Abs( C_r( :, :, kpoint, spin ) - tmp_r ) )
           Else
-             Call Cm%get_by_global( spin, k_points( :, kpoint ), 1, m, 1, n, tmp_c ) 
+             Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, tmp_c ) 
              this_diff = Maxval( Abs( C_c( :, :, kpoint, spin ) - tmp_c ) )
           End If
           max_diff = Max( this_diff, max_diff )
@@ -1621,11 +1621,11 @@ Contains
     Do spin = 1, ns
        Do kpoint = 1, nk
           If( k_types( kpoint ) == K_POINT_REAL ) Then
-             Call Am%set_by_global( spin, k_points( :, kpoint ), 1, k, 1, m, A_r( :, :, kpoint, spin ) )
-             Call Bm%set_by_global( spin, k_points( :, kpoint ), 1, k, 1, n, B_r( :, :, kpoint, spin ) )
+             Call Am%set_by_global( k_points( :, kpoint ), spin, 1, k, 1, m, A_r( :, :, kpoint, spin ) )
+             Call Bm%set_by_global( k_points( :, kpoint ), spin, 1, k, 1, n, B_r( :, :, kpoint, spin ) )
           Else
-             Call Am%set_by_global( spin, k_points( :, kpoint ), 1, k, 1, m, A_c( :, :, kpoint, spin ) )
-             Call Bm%set_by_global( spin, k_points( :, kpoint ), 1, k, 1, n, B_c( :, :, kpoint, spin ) )
+             Call Am%set_by_global( k_points( :, kpoint ), spin, 1, k, 1, m, A_c( :, :, kpoint, spin ) )
+             Call Bm%set_by_global( k_points( :, kpoint ), spin, 1, k, 1, n, B_c( :, :, kpoint, spin ) )
           End If
        End Do
     End Do
@@ -1638,10 +1638,10 @@ Contains
     Do spin = 1, ns
        Do kpoint = 1, nk
           If( k_types( kpoint ) == K_POINT_REAL ) Then
-             Call Cm%get_by_global( spin, k_points( :, kpoint ), 1, m, 1, n, tmp_r )
+             Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, tmp_r )
              this_diff = Maxval( Abs( C_r( :, :, kpoint, spin ) - tmp_r ) )
           Else
-             Call Cm%get_by_global( spin, k_points( :, kpoint ), 1, m, 1, n, tmp_c ) 
+             Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, tmp_c ) 
              this_diff = Maxval( Abs( C_c( :, :, kpoint, spin ) - tmp_c ) )
           End If
           max_diff = Max( this_diff, max_diff )
@@ -1750,11 +1750,11 @@ Contains
     Do spin = 1, ns
        Do kpoint = 1, nk
           If( k_types( kpoint ) == K_POINT_REAL ) Then
-             Call Am%set_by_global( spin, k_points( :, kpoint ), 1, m, 1, k, A_r( :, :, kpoint, spin ) )
-             Call Bm%set_by_global( spin, k_points( :, kpoint ), 1, n, 1, k, B_r( :, :, kpoint, spin ) )
+             Call Am%set_by_global( k_points( :, kpoint ), spin, 1, m, 1, k, A_r( :, :, kpoint, spin ) )
+             Call Bm%set_by_global( k_points( :, kpoint ), spin, 1, n, 1, k, B_r( :, :, kpoint, spin ) )
           Else
-             Call Am%set_by_global( spin, k_points( :, kpoint ), 1, m, 1, k, A_c( :, :, kpoint, spin ) )
-             Call Bm%set_by_global( spin, k_points( :, kpoint ), 1, n, 1, k, B_c( :, :, kpoint, spin ) )
+             Call Am%set_by_global( k_points( :, kpoint ), spin, 1, m, 1, k, A_c( :, :, kpoint, spin ) )
+             Call Bm%set_by_global( k_points( :, kpoint ), spin, 1, n, 1, k, B_c( :, :, kpoint, spin ) )
           End If
        End Do
     End Do
@@ -1767,10 +1767,10 @@ Contains
     Do spin = 1, ns
        Do kpoint = 1, nk
           If( k_types( kpoint ) == K_POINT_REAL ) Then
-             Call Cm%get_by_global( spin, k_points( :, kpoint ), 1, m, 1, n, tmp_r )
+             Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, tmp_r )
              this_diff = Maxval( Abs( C_r( :, :, kpoint, spin ) - tmp_r ) )
           Else
-             Call Cm%get_by_global( spin, k_points( :, kpoint ), 1, m, 1, n, tmp_c ) 
+             Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, tmp_c ) 
              this_diff = Maxval( Abs( C_c( :, :, kpoint, spin ) - tmp_c ) )
           End If
           max_diff = Max( this_diff, max_diff )
@@ -1880,11 +1880,11 @@ Contains
     Do spin = 1, ns
        Do kpoint = 1, nk
           If( k_types( kpoint ) == K_POINT_REAL ) Then
-             Call Am%set_by_global( spin, k_points( :, kpoint ), 1, k, 1, m, A_r( :, :, kpoint, spin ) )
-             Call Bm%set_by_global( spin, k_points( :, kpoint ), 1, n, 1, k, B_r( :, :, kpoint, spin ) )
+             Call Am%set_by_global( k_points( :, kpoint ), spin, 1, k, 1, m, A_r( :, :, kpoint, spin ) )
+             Call Bm%set_by_global( k_points( :, kpoint ), spin, 1, n, 1, k, B_r( :, :, kpoint, spin ) )
           Else
-             Call Am%set_by_global( spin, k_points( :, kpoint ), 1, k, 1, m, A_c( :, :, kpoint, spin ) )
-             Call Bm%set_by_global( spin, k_points( :, kpoint ), 1, n, 1, k, B_c( :, :, kpoint, spin ) )
+             Call Am%set_by_global( k_points( :, kpoint ), spin, 1, k, 1, m, A_c( :, :, kpoint, spin ) )
+             Call Bm%set_by_global( k_points( :, kpoint ), spin, 1, n, 1, k, B_c( :, :, kpoint, spin ) )
           End If
        End Do
     End Do
@@ -1898,10 +1898,10 @@ Contains
     Do spin = 1, ns
        Do kpoint = 1, nk
           If( k_types( kpoint ) == K_POINT_REAL ) Then
-             Call Cm%get_by_global( spin, k_points( :, kpoint ), 1, m, 1, n, tmp_r )
+             Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, tmp_r )
              this_diff = Maxval( Abs( C_r( :, :, kpoint, spin ) - tmp_r ) )
           Else
-             Call Cm%get_by_global( spin, k_points( :, kpoint ), 1, m, 1, n, tmp_c ) 
+             Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, tmp_c ) 
              this_diff = Maxval( Abs( C_c( :, :, kpoint, spin ) - tmp_c ) )
           End If
           max_diff = Max( this_diff, max_diff )

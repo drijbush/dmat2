@@ -38,7 +38,7 @@ Module distributed_matrix_module
      ! Public methods that are overridden
      Procedure( create     ), Deferred, Public :: create                     !! Create storage for the data of the matrix 
      Procedure( local_size ), Deferred, Public :: local_size                 !! Get the dimensions of the local part of the matrix
-     Procedure( remap_op   ), Deferred, Public :: remap
+     Procedure( remap_op   ), Deferred, Public :: remap                      !! Remap the data to another distribution
      ! Private implementations
      Procedure,                                 Private :: matrix_dagger           !! Apply the dagger operator to the matrix
      Procedure( set_global_real    ), Deferred, Private :: set_global_real         !! Set values with a real    array using global indexing
@@ -59,7 +59,7 @@ Module distributed_matrix_module
      ! Public methods
      Procedure, Public :: create        => matrix_create_real              !! Create storage for the data of the matrix 
      Procedure, Public :: local_size    => matrix_local_size_real          !! Get the dimensions of the local part of the matrix
-     Procedure, Public :: remap         => real_remap
+     Procedure, Public :: remap         => real_remap                      !! Remap the data to another distribution
      ! Private implementations
      Procedure, Private :: set_global_real    => real_matrix_set_global_real
      Procedure, Private :: set_global_complex => real_matrix_set_global_complex
@@ -111,7 +111,7 @@ Module distributed_matrix_module
      ! Public methods
      Procedure, Public :: create     => matrix_create_complex                 !! Create storage for the data of the matrix 
      Procedure, Public :: local_size => matrix_local_size_complex             !! Get the dimensions of the local part of the matrix
-     Procedure, Public :: remap      => complex_remap
+     Procedure, Public :: remap      => complex_remap                         !! Remap the data to another distribution
      ! Private implementations
      Procedure, Private :: set_global_real    => complex_matrix_set_global_real
      Procedure, Private :: set_global_complex => complex_matrix_set_global_complex
@@ -2261,6 +2261,8 @@ Contains
 
   Subroutine real_remap( A, is_A_dummy, parent_comm, B, is_B_dummy )
 
+    !! Remap real data to another distribution
+
     Class( real_distributed_matrix ), Intent( In    ) :: A           !! Source Matrix
     Logical                         , Intent( In    ) :: is_A_dummy  !! If true the source is NOT on this process
     Integer                         , Intent( In    ) :: parent_comm !! A communicator that encompasses all the relevant processes
@@ -2272,6 +2274,8 @@ Contains
   End Subroutine real_remap
 
   Subroutine complex_remap( A, is_A_dummy, parent_comm, B, is_B_dummy )
+
+    !! Remap complex data to another distribution
 
     Class( complex_distributed_matrix ), Intent( In    ) :: A           !! Source Matrix
     Logical                            , Intent( In    ) :: is_A_dummy  !! If true the source is NOT on this process
@@ -2285,6 +2289,8 @@ Contains
 
   Subroutine complex_remap_real( A, is_A_dummy, parent_comm, B, is_B_dummy )
 
+    !! Remap complex data to real data held in another distribution - ILLEGAL
+
     Class( complex_distributed_matrix ), Intent( In    ) :: A           !! Source Matrix
     Logical                            , Intent( In    ) :: is_A_dummy  !! If true the source is NOT on this process
     Integer                            , Intent( In    ) :: parent_comm !! A communicator that encompasses all the relevant processes
@@ -2297,6 +2303,8 @@ Contains
   End Subroutine complex_remap_real
   
   Subroutine real_remap_complex( A, is_A_dummy, parent_comm, B, is_B_dummy )
+
+    !! Remap real data to complex data held in another distribution - ILLEGAL
 
     Class(    real_distributed_matrix ), Intent( In    ) :: A           !! Source Matrix
     Logical                            , Intent( In    ) :: is_A_dummy  !! If true the source is NOT on this process

@@ -31,10 +31,10 @@ Module ks_matrix_module
      Procedure, Private :: get_global_complex   => ks_matrix_get_global_complex
   End Type ks_matrix
 
-  Public :: ks_matrix_init
-  Public :: ks_matrix_comm_to_base
-  Public :: ks_matrix_remap_data
-  Public :: ks_matrix_finalise
+  Public :: ks_matrix_init          !! Initialise the ks matrix system and optionally sets the default blocking factor
+  Public :: ks_matrix_comm_to_base  !! Converts an MPI communicator into the data structures required to describe a ks matrix mapped onto it
+  Public :: ks_matrix_remap_data    !! Remap the data held by A onto the distribution described by B
+  Public :: ks_matrix_finalise      !! Finalise the matrix system
 
 Contains
 
@@ -60,9 +60,8 @@ Contains
 
   Subroutine ks_matrix_comm_to_base( comm, base_matrix )
 
-    !! Converts an MPI communicator into the data structures
-    !! required to describe a matrix mapped onto it
-
+    !! Generate a base ks_matrix object from an MPI communicator
+    
     Use distributed_matrix_module, Only : distributed_matrix_comm_to_base, &
          real_distributed_matrix
 
@@ -77,12 +76,13 @@ Contains
 
   Subroutine ks_matrix_remap_data( A, parent_communicator, B )
 
-    ! Issues here because either in the ource or remapped
+    !! Remap the data held by A onto the distribution described by B
+    !! Parent communicator contains both A and B
+
+    ! Issues here because either in the source or remapped
     ! matrix a process may not actually hold any part of it
     ! and so the unallocated actual argument doesn't contain
     ! any information about what it is
-
-!!$    Use distributed_matrix_module, Only : distributed_matrix_remap_data
 
     Type   ( ks_matrix ), Allocatable, Intent( In    ) :: A
     Integer             ,              Intent( In    ) :: parent_communicator
@@ -112,16 +112,13 @@ Contains
     ! Now can call remap data routines, carefully indicating which
     ! arguments are dummies because this process
 
-    If     (       p_A .And. p_B ) Then
-!!$       Call distributed_matrix_remap_data(       A%matrix, .False., parent_communicator,        B%matrix, .False. )
+    If     (       p_A .And.       p_B ) Then
        Call       A%matrix%remap( .False., parent_communicator,        B%matrix, .False. )
 
-    Else If( .Not. p_A .And. p_B ) Then
-!!$       Call distributed_matrix_remap_data( dummy_A%matrix, .True. , parent_communicator,        B%matrix, .False. )
+    Else If( .Not. p_A .And.       p_B ) Then
        Call dummy_A%matrix%remap( .True. , parent_communicator,        B%matrix, .False. )
 
     Else If(       p_A .And. .Not. p_B ) Then
-!!$       Call distributed_matrix_remap_data(       A%matrix, .False. , parent_communicator, dummy_B%matrix, .True.  )
        Call       A%matrix%remap( .False. , parent_communicator, dummy_B%matrix, .True.  )
 
     Else
@@ -132,7 +129,7 @@ Contains
 
   Subroutine ks_matrix_finalise
 
-    !! Finalise the matrix system
+    !! Finalise the ks matrix system
 
     Use distributed_matrix_module, Only : distributed_matrix_finalise
 
@@ -145,7 +142,7 @@ Contains
 
   Subroutine ks_matrix_create( A, is_complex, m, n, source_matrix )
 
-    !! Create a distributed matrix
+    !! Create a distributed ks matrix
 
     Use distributed_matrix_module, Only : real_distributed_matrix, &
          complex_distributed_matrix
@@ -167,6 +164,8 @@ Contains
   End Subroutine ks_matrix_create
 
   Function ks_matrix_dagger( A ) Result( tA )
+
+    !! Form the Hermitian conjugate of the matrix (Tranpose for real data)
     
     Type( ks_matrix ) :: tA
 
@@ -177,6 +176,8 @@ Contains
   End Function ks_matrix_dagger
 
   Function ks_matrix_mult( A, B ) Result( C )
+
+    !! Multiply two matrices together
     
     Type( ks_matrix ) :: C
 
@@ -189,6 +190,8 @@ Contains
 
   Function ks_matrix_size( A, dim ) Result( n )
 
+    !! Return the dimensions of the matrix
+
     Integer :: n
     
     Class( ks_matrix ), Intent( In ) :: A
@@ -199,6 +202,8 @@ Contains
   End Function ks_matrix_size
 
   Subroutine ks_matrix_set_global_real( A, m, n, p, q, data )
+
+    !! Set the (m:n,p:q) patch of the matrix using global indices
     
     Class( ks_matrix )             , Intent( InOut ) :: A
     Integer                        , Intent( In    ) :: m
@@ -213,6 +218,8 @@ Contains
 
   Subroutine ks_matrix_set_global_complex( A, m, n, p, q, data )
     
+    !! Set the (m:n,p:q) patch of the matrix using global indices
+
     Class( ks_matrix )                , Intent( InOut ) :: A
     Integer                           , Intent( In    ) :: m
     Integer                           , Intent( In    ) :: n
@@ -225,7 +232,9 @@ Contains
   End Subroutine ks_matrix_set_global_complex
 
   Subroutine ks_matrix_get_global_real( A, m, n, p, q, data )
-    
+
+    !! Get the (m:n,p:q) patch of the matrix using global indices
+   
     Class( ks_matrix )             , Intent( In    ) :: A
     Integer                        , Intent( In    ) :: m
     Integer                        , Intent( In    ) :: n
@@ -239,6 +248,8 @@ Contains
 
   Subroutine ks_matrix_get_global_complex( A, m, n, p, q, data )
     
+    !! Get the (m:n,p:q) patch of the matrix using global indices
+
     Class( ks_matrix )                , Intent( In    ) :: A
     Integer                           , Intent( In    ) :: m
     Integer                           , Intent( In    ) :: n
