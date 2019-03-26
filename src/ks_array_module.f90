@@ -5,8 +5,7 @@ Module ks_array_module
   ! Currently assume 1 - i.e. nosymada
   
   Use numbers_module  , Only : wp
-  Use ks_matrix_module, Only : ks_matrix_init, ks_matrix_comm_to_base, &
-       ks_matrix_finalise, ks_matrix_remap_data, ks_matrix
+  Use ks_matrix_module, Only : ks_matrix
 
   Implicit None
 
@@ -112,6 +111,8 @@ Contains
 
     !! Initalise the KS arrays
     
+    Use ks_matrix_module, Only : ks_matrix_init
+
     Call ks_matrix_init
 
   End Subroutine ks_array_init
@@ -121,6 +122,8 @@ Contains
     !! Turn an MPI communicator inot a base KS_array object
     !! from which other KS_arrays can be created.
     !! Note each element of the array will be distributed across all processes in the communicator
+    
+    Use ks_matrix_module, Only : ks_matrix_comm_to_base
     
     Integer                   , Intent( In    ) :: comm             !! The communicator
     Integer                   , Intent( In    ) :: n_spin           !! The number of spins
@@ -172,6 +175,8 @@ Contains
   Subroutine ks_array_finalise
 
     !! Finalise the KS array mechanism
+
+    Use ks_matrix_module, Only : ks_matrix_finalise
 
     Call ks_matrix_finalise
     
@@ -329,7 +334,8 @@ Contains
 
     !! Split a ks_array A so the resulting ks_array is k point distributed
 
-    Use mpi, Only : MPI_Comm_size, MPI_Comm_rank, MPI_Comm_split, MPI_UNDEFINED
+    Use mpi             , Only : MPI_Comm_size, MPI_Comm_rank, MPI_Comm_split, MPI_UNDEFINED
+    Use ks_matrix_module, Only : ks_matrix_comm_to_base, ks_matrix_remap_data
     
     Class( ks_array     ), Intent( In    ) :: A                 !! The array to be split
     Real ( wp           ), Intent( In    ) :: complex_weight    !! The cost of complex points relative to real ones
