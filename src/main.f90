@@ -1777,7 +1777,7 @@ Contains
        End Do
     End Do
     If( me == 0 ) Then
-       Write( *, format ) 'Error in ks_array matmul NN ', max_diff, &
+       Write( *, format ) 'Error in ks_array matmul NT ', max_diff, &
             Merge( 'Passed', 'FAILED', max_diff < tol )
     End If
 

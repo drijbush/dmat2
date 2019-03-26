@@ -477,7 +477,7 @@ Contains
 
     !! Create the data for a real MxN matrix. The distribution is the same as the provided source matrix.
 
-    Use, Intrinsic :: ieee_arithmetic, Only : ieee_value, ieee_signaling_nan
+    Use, Intrinsic :: ieee_arithmetic, Only : ieee_value, ieee_support_nan, ieee_signaling_nan
 
     Class( real_distributed_matrix ), Intent(   Out ) :: A
     Integer                         , Intent( In    ) :: m
@@ -512,7 +512,11 @@ Contains
 
     Allocate( A%data( 1:lda, 1:sda  ) )
     ! Initialise with signalling NANs - this should be done more carefully but this will do for now
-    A%data = ieee_value( A%data, ieee_signaling_nan )
+    If( ieee_support_nan( A%data ) ) Then
+       A%data = ieee_value( A%data, ieee_signaling_nan )
+    Else
+       A%data = Huge( A%data )
+    End If
 
   End Subroutine matrix_create_real
 
@@ -520,7 +524,7 @@ Contains
 
     !! Create the data for a complex MxN matrix. The distribution is the same as the provided source matrix.
 
-    Use, Intrinsic :: ieee_arithmetic, Only : ieee_value, ieee_signaling_nan
+    Use, Intrinsic :: ieee_arithmetic, Only : ieee_value, ieee_support_nan, ieee_signaling_nan
 
     Class( complex_distributed_matrix ), Intent(   Out ) :: A
     Integer                            , Intent( In    ) :: m
@@ -555,8 +559,12 @@ Contains
 
     Allocate( A%data( 1:lda, 1:sda  ) )
     ! Initialise with signalling NANs - this should be done more carefully but this will do for now
-    A%data = Cmplx( ieee_value( 0.0_wp, ieee_signaling_nan ), &
-         ieee_value( 0.0_wp, ieee_signaling_nan ), wp )
+    If( ieee_support_nan( Real( A%data, wp ) ) ) Then
+       A%data = Cmplx( ieee_value( 0.0_wp, ieee_signaling_nan ), &
+            ieee_value( 0.0_wp, ieee_signaling_nan ), wp )
+    Else
+       A%data = Huge( Real( A%data, wp ) )
+    End If
         
   End Subroutine matrix_create_complex
   
