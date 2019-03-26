@@ -38,6 +38,7 @@ Module distributed_matrix_module
      ! Public methods that are overridden
      Procedure( create     ), Deferred, Public :: create                     !! Create storage for the data of the matrix 
      Procedure( local_size ), Deferred, Public :: local_size                 !! Get the dimensions of the local part of the matrix
+     Procedure( remap_op   ), Deferred, Public :: remap
      ! Private implementations
      Procedure,                                 Private :: matrix_dagger           !! Apply the dagger operator to the matrix
      Procedure( set_global_real    ), Deferred, Private :: set_global_real         !! Set values with a real    array using global indexing
@@ -47,6 +48,8 @@ Module distributed_matrix_module
      Procedure(         binary_op ), Deferred, Private :: multiply
      Procedure(    real_binary_op ), Deferred, Pass( B ), Private :: real_multiply
      Procedure( complex_binary_op ), Deferred, Pass( B ), Private :: complex_multiply
+     Procedure(    real_remap_op ), Deferred, Pass( B ), Private :: real_remap
+     Procedure( complex_remap_op ), Deferred, Pass( B ), Private :: complex_remap
   End type distributed_matrix
 
   Type, Extends( distributed_matrix ), Public :: real_distributed_matrix
@@ -56,6 +59,7 @@ Module distributed_matrix_module
      ! Public methods
      Procedure, Public :: create        => matrix_create_real              !! Create storage for the data of the matrix 
      Procedure, Public :: local_size    => matrix_local_size_real          !! Get the dimensions of the local part of the matrix
+     Procedure, Public :: remap         => real_remap
      ! Private implementations
      Procedure, Private :: set_global_real    => real_matrix_set_global_real
      Procedure, Private :: set_global_complex => real_matrix_set_global_complex
@@ -64,6 +68,8 @@ Module distributed_matrix_module
      Procedure, Private :: multiply           => real_multiply
      Procedure, Pass( B ), Private :: real_multiply    => real_multiply_real
      Procedure, Pass( B ), Private :: complex_multiply => complex_multiply_real
+     Procedure, Pass( B ), Private :: real_remap    => real_remap_real
+     Procedure, Pass( B ), Private :: complex_remap => complex_remap_real
 !!$     Procedure, Private   :: diag_r               => matrix_diag_real
 !!$     Generic              :: diag                 => diag_r
 !!$     Procedure, Private   :: dagger_r             => matrix_dagger_real
@@ -105,6 +111,7 @@ Module distributed_matrix_module
      ! Public methods
      Procedure, Public :: create     => matrix_create_complex                 !! Create storage for the data of the matrix 
      Procedure, Public :: local_size => matrix_local_size_complex             !! Get the dimensions of the local part of the matrix
+     Procedure, Public :: remap      => complex_remap
      ! Private implementations
      Procedure, Private :: set_global_real    => complex_matrix_set_global_real
      Procedure, Private :: set_global_complex => complex_matrix_set_global_complex
@@ -113,6 +120,8 @@ Module distributed_matrix_module
      Procedure, Private :: multiply           => complex_multiply
      Procedure, Pass( B ), Private :: real_multiply    => real_multiply_complex
      Procedure, Pass( B ), Private :: complex_multiply => complex_multiply_complex
+     Procedure, Pass( B ), Private :: real_remap    => real_remap_complex
+     Procedure, Pass( B ), Private :: complex_remap => complex_remap_complex
 !!$     Procedure, Private   :: diag_c               => matrix_diag_complex
 !!$     Generic              :: diag                 => diag_c
 !!$     Procedure, Private   :: dagger_c             => matrix_dagger_complex
@@ -151,19 +160,13 @@ Module distributed_matrix_module
   Public :: distributed_matrix_comm_to_base
   Public :: distributed_matrix_finalise
   Public :: distributed_matrix_set_default_blocking
-  Public :: distributed_matrix_remap_data
   
   Private
 
   Integer, Parameter, Private :: diag_work_size_fiddle_factor = 4 ! From experience Scalapack sometimes returns too small a work size
   
-  Integer, Parameter, Private :: default_block_fac = 4
+  Integer, Parameter, Private :: default_block_fac = 96
   Integer,            Private :: block_fac = default_block_fac
-
-  Interface distributed_matrix_remap_data
-     Procedure real_remap_real
-     Procedure complex_remap_complex
-  End Interface distributed_matrix_remap_data
 
   Abstract Interface
      Subroutine create( A, m, n, source_matrix )
@@ -257,6 +260,38 @@ Module distributed_matrix_module
        Class( complex_distributed_matrix ), Intent( In ) :: A
        Class(         distributed_matrix ), Intent( In ) :: B
      End Function complex_binary_op
+     Subroutine remap_op( A, is_A_dummy, parent_comm, B, is_B_dummy ) 
+       !! A remap operation between two base class objects
+       Import :: distributed_matrix
+       Implicit None
+       Class( distributed_matrix ), Intent( In    ) :: A
+       Logical                    , Intent( In    ) :: is_A_dummy
+       Integer                    , Intent( In    ) :: parent_comm
+       Class( distributed_matrix ), Intent( InOut ) :: B
+       Logical                    , Intent( In    ) :: is_B_dummy
+     End Subroutine remap_op
+     Subroutine real_remap_op( A, is_A_dummy, parent_comm, B, is_B_dummy ) 
+       !! A remap operation between the base class and a real matrix
+       Import ::      distributed_matrix
+       Import :: real_distributed_matrix
+       Implicit None
+       Class( real_distributed_matrix ), Intent( In    ) :: A
+       Logical                         , Intent( In    ) :: is_A_dummy
+       Integer                         , Intent( In    ) :: parent_comm
+       Class(      distributed_matrix ), Intent( InOut ) :: B
+       Logical                         , Intent( In    ) :: is_B_dummy
+     End Subroutine real_remap_op
+     Subroutine complex_remap_op( A, is_A_dummy, parent_comm, B, is_B_dummy ) 
+       !! A remap operation between the base class and a real matrix
+       Import ::         distributed_matrix
+       Import :: complex_distributed_matrix
+       Implicit None
+       Class( complex_distributed_matrix ), Intent( In    ) :: A
+       Logical                         , Intent( In    ) :: is_A_dummy
+       Integer                         , Intent( In    ) :: parent_comm
+       Class(      distributed_matrix ), Intent( InOut ) :: B
+       Logical                         , Intent( In    ) :: is_B_dummy
+     End Subroutine complex_remap_op
   End Interface
   
 Contains
@@ -2224,35 +2259,97 @@ Contains
 !!$
 !!$  End Subroutine matrix_set_to_identity_complex
 
-  Subroutine real_remap_real( A, parent_comm, B )
+  Subroutine real_remap( A, is_A_dummy, parent_comm, B, is_B_dummy )
+
+    Class( real_distributed_matrix ), Intent( In    ) :: A           !! Source Matrix
+    Logical                         , Intent( In    ) :: is_A_dummy  !! If true the source is NOT on this process
+    Integer                         , Intent( In    ) :: parent_comm !! A communicator that encompasses all the relevant processes
+    Class(      distributed_matrix ), Intent( InOut ) :: B           !! Destination matrix
+    Logical                         , Intent( In    ) :: is_B_dummy  !! If true the destination is NOT on this process
+
+    Call B%real_remap( A, is_A_dummy, parent_comm, is_B_dummy )
+
+  End Subroutine real_remap
+
+  Subroutine complex_remap( A, is_A_dummy, parent_comm, B, is_B_dummy )
+
+    Class( complex_distributed_matrix ), Intent( In    ) :: A           !! Source Matrix
+    Logical                            , Intent( In    ) :: is_A_dummy  !! If true the source is NOT on this process
+    Integer                            , Intent( In    ) :: parent_comm !! A communicator that encompasses all the relevant processes
+    Class(         distributed_matrix ), Intent( InOut ) :: B           !! Destination matrix
+    Logical                            , Intent( In    ) :: is_B_dummy  !! If true the destination is NOT on this process
+
+    Call B%complex_remap( A, is_A_dummy, parent_comm, is_B_dummy )
+
+  End Subroutine complex_remap
+
+  Subroutine complex_remap_real( A, is_A_dummy, parent_comm, B, is_B_dummy )
+
+    Class( complex_distributed_matrix ), Intent( In    ) :: A           !! Source Matrix
+    Logical                            , Intent( In    ) :: is_A_dummy  !! If true the source is NOT on this process
+    Integer                            , Intent( In    ) :: parent_comm !! A communicator that encompasses all the relevant processes
+    Class(    real_distributed_matrix ), Intent( InOut ) :: B           !! Destination matrix
+    Logical                            , Intent( In    ) :: is_B_dummy  !! If true the destination is NOT on this process
+
+    Stop "Illegal combination of arguments in complex_remap_real"
+    Write( *, * ) A%data, is_A_dummy, parent_comm, B%data, is_B_dummy
+    
+  End Subroutine complex_remap_real
+  
+  Subroutine real_remap_complex( A, is_A_dummy, parent_comm, B, is_B_dummy )
+
+    Class(    real_distributed_matrix ), Intent( In    ) :: A           !! Source Matrix
+    Logical                            , Intent( In    ) :: is_A_dummy  !! If true the source is NOT on this process
+    Integer                            , Intent( In    ) :: parent_comm !! A communicator that encompasses all the relevant processes
+    Class( complex_distributed_matrix ), Intent( InOut ) :: B           !! Destination matrix
+    Logical                            , Intent( In    ) :: is_B_dummy  !! If true the destination is NOT on this process
+
+    Stop "Illegal combination of arguments in real_remap_complex"
+    Write( *, * ) A%data, is_A_dummy, parent_comm, B%data, is_B_dummy
+    
+  End Subroutine real_remap_complex
+  
+  Subroutine real_remap_real( A, is_A_dummy, parent_comm, B, is_B_dummy )
+
+    !! Remap a source real matrix in one distribution to another destination real
+    !! matrix in another distribution
+    ! A fairly horrible thing. The problems occur because the source and destination
+    ! matrices may occupy different sets of processes. Thus we have the IS_?_DUMMY
+    ! arguments which mean if set this process doesn't (currently) hold any data
+    ! associated witht the matrix. If this is the case the ONLY use of the
+    ! matrix is its type used to dispatch the approriate method - the routine should
+    ! not attempt to read a matrix for which the corresponding IS_?_DUMMY argument is set.
+
+    ! To keep some vague amount of sanity in all this one of A or B MUST be in this process
+    ! This allows us to work out what type of thing is being redistributed.
 
     Use Scalapack_interfaces, Only : pdgemr2d
     
-    Type( real_distributed_matrix ), Allocatable, Intent( In    ) :: A
-    Integer                         ,              Intent( In    ) :: parent_comm
-    Type( real_distributed_matrix ), Allocatable, Intent( InOut ) :: B
-
-    Type( real_distributed_matrix ), Allocatable :: T
+    Class( real_distributed_matrix ), Intent( In    ) :: A           !! Source Matrix
+    Logical                         , Intent( In    ) :: is_A_dummy  !! If true the source is NOT on this process
+    Integer                         , Intent( In    ) :: parent_comm !! A communicator that encompasses all the relevant processes
+    Class( real_distributed_matrix ), Intent( InOut ) :: B           !! Destination matrix
+    Logical                         , Intent( In    ) :: is_B_dummy  !! If true the destination is NOT on this process
 
     Type( matrix_mapping ) :: mapping
 
-    Real( wp ), Dimension( 1:1, 1:1 ) :: dum_a, dum_T
+    Real( wp ), Dimension( 1:1, 1:1 ) :: dum_A, dum_B
 
-    Integer, Dimension( 1:9 ) :: desc_A, desc_T
+    Integer, Dimension( 1:9 ) :: desc_A, desc_B
     
     Integer :: m, n
     Integer :: m_A, n_A
-    Integer :: m_T, n_T
+    Integer :: m_B, n_B
     Integer :: parent_ctxt
 
-    Logical :: p_A, p_T
+    Logical :: p_A, p_B
 
-    T = B
+    ! Are A or B "present", i.e. contain actual data. Hold over from when I tried to do
+    ! this with both optional and allocatable arguments
+    p_A = .Not. is_A_dummy
+    p_B = .Not. is_B_dummy
     
-    p_A = Allocated( A )
-    p_T = Allocated( B )
-    
-    If( .Not. p_A .And. .Not. p_T ) Then
+    If( .Not. p_A .And. .Not. p_B ) Then
        Stop "In matrix_remap_data_real one of A or B must be supplied"
     End If
     
@@ -2260,10 +2357,8 @@ Contains
     Call matrix_mapping_comm_to_base( parent_comm, mapping )
     Call mapping%get_data( ctxt = parent_ctxt )
 
-    m = -1
-    n = -1
     ! Get sizes and descriptors for the matrices
-    ! The redistrib routine use -1 to indicate no data on this process
+    ! The redistrib routine use -1 to indicate no data on this process as that is what the Scalapack routine uses
     If( p_A ) Then
        Call A%matrix_map%get_data( m = m_A, n = n_A )
        desc_A = A%matrix_map%get_descriptor()
@@ -2273,82 +2368,94 @@ Contains
        desc_A = -1
     End If
     
-    If( p_T ) Then
-       Call B%matrix_map%get_data( m = m_T, n = n_T )
-       desc_T = B%matrix_map%get_descriptor()
+    If( p_B ) Then
+       Call B%matrix_map%get_data( m = m_B, n = n_B )
+       desc_B = B%matrix_map%get_descriptor()
     Else
-       m_T    = -1
-       n_T    = -1
-       desc_T = -1
+       m_B    = -1
+       n_B    = -1
+       desc_B = -1
     End If
 
-    If( m_A /= -1 .And. n_A /= -1 .And. m_T /= -1 .And. n_T /= - 1 ) Then
-       If( m_A /= m_T .Or. n_A /= n_T ) Then
+    If( m_A /= -1 .And. n_A /= -1 .And. m_B /= -1 .And. n_B /= - 1 ) Then
+       If( m_A /= m_B .Or. n_A /= n_B ) Then
           Stop "Inconsistent matrix sizes in matrix_remap_data_real"
        End If
     End If
 
+    ! Work out the dimensions of the matrix we are redistributing
     If( p_A ) Then
        m = m_A
        n = n_A
-    Else If( p_T ) Then
-       m = m_T
-       n = n_T
+    Else If( p_B ) Then
+       m = m_B
+       n = n_B
     Else
        Stop "In matrix_remap_data_real got to an impossible place!"
     End If
 
     ! Call the redistribution routine supplying dummy arrays as required
-    If     (       p_A .And.       p_T ) Then
-       Call pdgemr2d( m, n, A%data, 1, 1, desc_A, T%data, 1, 1, desc_T, parent_ctxt )
+    If     (       p_A .And.       p_B ) Then
+       Call pdgemr2d( m, n, A%data, 1, 1, desc_A, B%data, 1, 1, desc_B, parent_ctxt )
 
-    Else If(       p_A .And. .Not. p_T ) Then
-       Call pdgemr2d( m, n, A%data, 1, 1, desc_A, dum_T , 1, 1, desc_T, parent_ctxt )
+    Else If(       p_A .And. .Not. p_B ) Then
+       Call pdgemr2d( m, n, A%data, 1, 1, desc_A, dum_B , 1, 1, desc_B, parent_ctxt )
 
-    Else If( .Not. p_A .And.       p_T ) Then
-       Call pdgemr2d( m, n, dum_A , 1, 1, desc_A, T%data, 1, 1, desc_T, parent_ctxt )
+    Else If( .Not. p_A .And.       p_B ) Then
+       Call pdgemr2d( m, n, dum_A , 1, 1, desc_A, B%data, 1, 1, desc_B, parent_ctxt )
 
-    Else If( .Not. p_A .And. .Not. p_T ) Then
+    Else If( .Not. p_A .And. .Not. p_B ) Then
        ! Shouldn't get here due to error check above
        Stop "In matrix_remap_data_real got to an impossible place!"
 
     End If
 
-    B = T
-
-    ! Need to exit the created BLACS context IMPORTANT MUST DO!!
+    ! Free the context we created
+    Call mapping%free()
     
   End Subroutine real_remap_real
   
-  Subroutine complex_remap_complex( A, parent_comm, B )
+  Subroutine complex_remap_complex( A, is_A_dummy, parent_comm, B, is_B_dummy )
+
+    !! Remap a source complex matrix in one distribution to another destination complex
+    !! matrix in another distribution
+    ! A fairly horrible thing. The problems occur because the source and destination
+    ! matrices may occupy different sets of processes. Thus we have the IS_?_DUMMY
+    ! arguments which mean if set this process doesn't (currently) hold any data
+    ! associated witht the matrix. If this is the case the ONLY use of the
+    ! matrix is its type used to dispatch the approriate method - the routine should
+    ! not attempt to read a matrix for which the corresponding IS_?_DUMMY argument is set.
+
+    ! To keep some vague amount of sanity in all this one of A or B MUST be in this process
+    ! This allows us to work out what type of thing is being redistributed.
 
     Use Scalapack_interfaces, Only : pzgemr2d
 
-    Type( complex_distributed_matrix ), Allocatable, Intent( In    ) :: A
-    Integer                            ,              Intent( In    ) :: parent_comm
-    Type( complex_distributed_matrix ), Allocatable, Intent( InOut ) :: B
-
-    Type( complex_distributed_matrix ), Allocatable :: T
+    Class( complex_distributed_matrix ), Intent( In    ) :: A           !! Source Matrix
+    Logical                            , Intent( In    ) :: is_A_dummy  !! If true the source is NOT on this process
+    Integer                            , Intent( In    ) :: parent_comm !! A communicator that encompasses all the relevant processes
+    Class( complex_distributed_matrix ), Intent( InOut ) :: B           !! Destination matrix
+    Logical                            , Intent( In    ) :: is_B_dummy  !! If true the destination is NOT on this process
     
     Type( matrix_mapping ) :: mapping
 
-    Complex( wp ), Dimension( 1:1, 1:1 ) :: dum_a, dum_T
+    Complex( wp ), Dimension( 1:1, 1:1 ) :: dum_A, dum_B
 
-    Integer, Dimension( 1:9 ) :: desc_A, desc_T
+    Integer, Dimension( 1:9 ) :: desc_A, desc_B
     
     Integer :: m, n
     Integer :: m_A, n_A
-    Integer :: m_T, n_T
+    Integer :: m_B, n_B
     Integer :: parent_ctxt
 
-    Logical :: p_A, p_T
+    Logical :: p_A, p_B
 
-    T = B
-
-    p_A = Allocated( A )
-    p_T = Allocated( T )
+    ! Are A or B "present", i.e. contain actual data. Hold over from when I tried to do
+    ! this with both optional and allocatable arguments
+    p_A = .Not. is_A_dummy
+    p_B = .Not. is_B_dummy
     
-    If( .Not. p_A .And. .Not. p_T ) Then
+    If( .Not. p_A .And. .Not. p_B ) Then
        Stop "In matrix_remap_data_complex one of A or B must be supplied"
     End If
     
@@ -2356,10 +2463,8 @@ Contains
     Call matrix_mapping_comm_to_base( parent_comm, mapping )
     Call mapping%get_data( ctxt = parent_ctxt )
 
-    m = -1
-    n = -1
     ! Get sizes and descriptors for the matrices
-    ! The redistrib routine use -1 to indicate no data on this process
+    ! The redistrib routine use -1 to indicate no data on this process as that is what the Scalapack routine uses
     If( p_A ) Then
        Call A%matrix_map%get_data( m = m_A, n = n_A )
        desc_A = A%matrix_map%get_descriptor()
@@ -2369,50 +2474,50 @@ Contains
        desc_A = -1
     End If
     
-    If( p_T ) Then
-       Call T%matrix_map%get_data( m = m_T, n = n_T )
-       desc_T = T%matrix_map%get_descriptor()
+    If( p_B ) Then
+       Call B%matrix_map%get_data( m = m_B, n = n_B )
+       desc_B = B%matrix_map%get_descriptor()
     Else
-       m_T    = -1
-       n_T    = -1
-       desc_T = -1
+       m_B    = -1
+       n_B    = -1
+       desc_B = -1
     End If
 
-    If( m_A /= -1 .And. n_A /= -1 .And. m_T /= -1 .And. n_T /= - 1 ) Then
-       If( m_A /= m_T .Or. n_A /= n_T ) Then
+    If( m_A /= -1 .And. n_A /= -1 .And. m_B /= -1 .And. n_B /= - 1 ) Then
+       If( m_A /= m_B .Or. n_A /= n_B ) Then
           Stop "Inconsistent matrix sizes in matrix_remap_data_complex"
        End If
     End If
 
+    ! Work out the dimensions of the matrix we are redistributing
     If( p_A ) Then
        m = m_A
        n = n_A
-    Else If( p_T ) Then
-       m = m_T
-       n = n_T
+    Else If( p_B ) Then
+       m = m_B
+       n = n_B
     Else
        Stop "In matrix_remap_data_real got to an impossible place!"
     End If
 
     ! Call the redistribution routine supplying dummy arrays as required
-    If     (       p_A .And.       p_T ) Then
-       Call pzgemr2d( m, n, A%data, 1, 1, desc_A, T%data, 1, 1, desc_T, parent_ctxt )
+    If     (       p_A .And.       p_B ) Then
+       Call pzgemr2d( m, n, A%data, 1, 1, desc_A, B%data, 1, 1, desc_B, parent_ctxt )
 
-    Else If(       p_A .And. .Not. p_T ) Then
-       Call pzgemr2d( m, n, A%data, 1, 1, desc_A, dum_T , 1, 1, desc_T, parent_ctxt )
+    Else If(       p_A .And. .Not. p_B ) Then
+       Call pzgemr2d( m, n, A%data, 1, 1, desc_A, dum_B , 1, 1, desc_B, parent_ctxt )
 
-    Else If( .Not. p_A .And.       p_T ) Then
-       Call pzgemr2d( m, n, dum_A , 1, 1, desc_A, T%data, 1, 1, desc_T, parent_ctxt )
+    Else If( .Not. p_A .And.       p_B ) Then
+       Call pzgemr2d( m, n, dum_A , 1, 1, desc_A, B%data, 1, 1, desc_B, parent_ctxt )
 
-    Else If( .Not. p_A .And. .Not. p_T ) Then
+    Else If( .Not. p_A .And. .Not. p_B ) Then
        ! Shouldn't get here due to error check above
        Stop "In matrix_remap_data_complex got to an impossible place!"
 
     End If
 
-    B = T
-
-    ! Need to exit the created BLACS context IMPORTANT MUST DO!!
+    ! Free the context we created
+    Call mapping%free()
 
   End Subroutine complex_remap_complex
   

@@ -82,7 +82,7 @@ Contains
     ! and so the unallocated actual argument doesn't contain
     ! any information about what it is
 
-    Use distributed_matrix_module, Only : distributed_matrix_remap_data
+!!$    Use distributed_matrix_module, Only : distributed_matrix_remap_data
 
     Type   ( ks_matrix ), Allocatable, Intent( In    ) :: A
     Integer             ,              Intent( In    ) :: parent_communicator
@@ -93,7 +93,7 @@ Contains
     Logical :: p_A, p_B
 
     p_A = Allocated( A )
-    p_B = Allocated( A )
+    p_B = Allocated( B )
 
     ! One of A or B must be present to define the data type of what is being redistributed
     If( .Not. p_A .And. .Not. p_B ) Then
@@ -113,20 +113,21 @@ Contains
     ! arguments are dummies because this process
 
     If     (       p_A .And. p_B ) Then
-       Call distributed_matrix_remap_data(       A%matrix, .False., parent_communicator,        B%matrix, .False. )
+!!$       Call distributed_matrix_remap_data(       A%matrix, .False., parent_communicator,        B%matrix, .False. )
+       Call       A%matrix%remap( .False., parent_communicator,        B%matrix, .False. )
 
     Else If( .Not. p_A .And. p_B ) Then
-       Call distributed_matrix_remap_data( dummy_A%matrix, .True. , parent_communicator,        B%matrix, .False. )
+!!$       Call distributed_matrix_remap_data( dummy_A%matrix, .True. , parent_communicator,        B%matrix, .False. )
+       Call dummy_A%matrix%remap( .True. , parent_communicator,        B%matrix, .False. )
 
     Else If(       p_A .And. .Not. p_B ) Then
-       Call distributed_matrix_remap_data(       A%matrix, .False. , parent_communicator, dummy_B%matrix, .True.  )
+!!$       Call distributed_matrix_remap_data(       A%matrix, .False. , parent_communicator, dummy_B%matrix, .True.  )
+       Call       A%matrix%remap( .False. , parent_communicator, dummy_B%matrix, .True.  )
 
     Else
        Stop "Must specify one of the matrices in ks_matrix_remap_data"
     End If
 
-
-    
   End Subroutine ks_matrix_remap_data
 
   Subroutine ks_matrix_finalise

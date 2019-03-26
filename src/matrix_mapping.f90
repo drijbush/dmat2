@@ -18,6 +18,7 @@ Module matrix_mapping_module
      Procedure, Public  :: get_data       => get_matrix_mapping_data  !! Get information about the matrix mapping
      Procedure, Public  :: get_descriptor => get_matrix_descriptor    !! Returns the whole BLACS descriptor
      Generic  , Public  :: set            => set_matrix_mapping       !! Set a matrix mapping
+     Procedure, Public  :: free           => free_matrix_mapping      !! Frees any data associated with a matrix mapping
      ! Private Implementations
      Procedure, Private :: set_matrix_mapping                         
   End type matrix_mapping
@@ -59,6 +60,10 @@ Module matrix_mapping_module
        Integer             , Intent(   Out ) :: myprow
        Integer             , Intent(   Out ) :: mypcol
      End Subroutine blacs_gridinfo
+     Subroutine blacs_gridexit( ctxt )
+       Implicit None
+       Integer, Intent( InOut ) :: ctxt
+     End Subroutine blacs_gridexit
      Subroutine blacs_exit( cont )
        Implicit None
        Integer, Intent( In ) :: cont
@@ -103,10 +108,10 @@ Contains
 
     Call proc_mapping_finalise
 
-    ! Kill all blacs contexts i use, but not the MPI subsytem
+    ! Kill all blacs contexts I use, but not the MPI subsytem
     ! ( as indicated by the argument being non-zero )
-    ! Unfortunately this means restating the BLACS seems impossible grrrr....
-!!$    Call blacs_exit( 1 )
+    ! Unfortunately in practice this means restarting the BLACS seems impossible grrrr....
+!    Call blacs_exit( 1 )
     
   End Subroutine matrix_mapping_finalise
 
@@ -258,6 +263,18 @@ Contains
     End If
 
   End Subroutine get_matrix_mapping_data
+
+  Subroutine free_matrix_mapping( map )
+
+    Class( matrix_mapping ), Intent( InOut ) :: map
+
+    Integer :: ctxt
+
+    Call map%get_data( ctxt = ctxt )
+
+    Call blacs_gridexit( ctxt )
+    
+  End Subroutine free_matrix_mapping
 
   Pure Function get_matrix_descriptor( map ) Result( descriptor )
 

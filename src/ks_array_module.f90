@@ -6,7 +6,7 @@ Module ks_array_module
   
   Use numbers_module  , Only : wp
   Use ks_matrix_module, Only : ks_matrix_init, ks_matrix_comm_to_base, &
-       ks_matrix_finalise, ks_matrix
+       ks_matrix_finalise, ks_matrix_remap_data, ks_matrix
 
   Implicit None
 
@@ -46,11 +46,13 @@ Module ks_array_module
    Contains
      ! Public Methods
      ! Methods at all levels
-     Procedure                     :: create               => ks_array_create
-     Generic                       :: Operator( .Dagger. ) => dagger
-     Generic                       :: Operator( * )        => multiply
-     Generic                       :: set_by_global        => set_by_global_r, set_by_global_c
-     Generic                       :: get_by_global        => get_by_global_r, get_by_global_c
+     Procedure, Public :: create               => ks_array_create
+     Procedure, Public :: split                => ks_array_split_ks
+     Generic  , Public :: Operator( .Dagger. ) => dagger
+     Generic  , Public :: Operator( * )        => multiply
+     Generic  , Public :: set_by_global        => set_by_global_r, set_by_global_c
+     Generic  , Public :: get_by_global        => get_by_global_r, get_by_global_c
+     Procedure, Public :: print_info           => ks_array_print_info
 !!$     Generic                       :: Operator( + )        => add, pre_add_diag, post_add_diag
 !!$     Generic                       :: Operator( - )        => subtract, post_subtract_diag
 !!$     Generic                       :: Operator( * )        => pre_scale, post_scale, &
@@ -67,7 +69,6 @@ Module ks_array_module
 !!$     Procedure                     :: extract              => ks_array_extract
 !!$     ! Methods only at this level
 !!$     Procedure                     :: split_ks             => ks_array_split_ks
-     Procedure                     :: print_info           => ks_array_print_info
      ! Private implementations
      Procedure, Private            :: get_all_ks_index
      Procedure, Private            :: get_my_ks_index
