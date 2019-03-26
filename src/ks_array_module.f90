@@ -55,6 +55,8 @@ Module ks_array_module
      Generic  , Public :: Operator( * )        => multiply                          !! Multiply each element of the array with the corresponding element in another array
      Generic  , Public :: set_by_global        => set_by_global_r, set_by_global_c  !! Set patches of an element
      Generic  , Public :: get_by_global        => get_by_global_r, get_by_global_c  !! Get patches of an element
+     Procedure, Public :: global_to_local      => ks_array_g_to_l
+     Procedure, Public :: local_to_global      => ks_array_l_to_g
      Procedure, Public :: print_info           => ks_array_print_info               !! print info about a KS_array
 !!$     Generic                       :: Operator( + )        => add, pre_add_diag, post_add_diag
 !!$     Generic                       :: Operator( - )        => subtract, post_subtract_diag
@@ -66,8 +68,6 @@ Module ks_array_module
 !!$     Procedure                     :: Choleski             => ks_array_Choleski
 !!$     Procedure                     :: solve                => ks_array_solve
 !!$     Procedure                     :: set_to_identity      => ks_array_set_to_identity
-!!$     Procedure                     :: global_to_local      => ks_array_g_to_l
-!!$     Procedure                     :: local_to_global      => ks_array_l_to_g
 !!$     Procedure                     :: size                 => ks_array_size
 !!$     Procedure                     :: extract              => ks_array_extract
 !!$     ! Methods only at this level
