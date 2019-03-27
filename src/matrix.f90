@@ -345,6 +345,9 @@ Contains
 
     Use matrix_mapping_module, Only : matrix_mapping_finalise
 
+    ! Reset the blocking facto to the default
+    Call distributed_matrix_set_default_blocking( default_block_fac )
+
     Call matrix_mapping_finalise
     
   End Subroutine distributed_matrix_finalise
