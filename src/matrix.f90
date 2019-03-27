@@ -5,8 +5,7 @@ Module distributed_matrix_module
   !  once for real, one for complex
 
   Use numbers_module       , Only : wp
-  Use matrix_mapping_module, Only : matrix_mapping, &
-       matrix_mapping_init, matrix_mapping_comm_to_base, matrix_mapping_finalise
+  Use matrix_mapping_module, Only : matrix_mapping 
 
   
   Implicit None
@@ -299,14 +298,22 @@ Contains
   ! Non-type bound procedures
 
   Subroutine distributed_matrix_init
+
+    Use matrix_mapping_module, Only : matrix_mapping_init
+
     !! Initialise the matrix system
+
+    Call matrix_mapping_init
+    
   End Subroutine distributed_matrix_init
 
   Subroutine distributed_matrix_comm_to_base( comm, base_matrix )
 
     !! Converts an MPI communicator into the data structures
-    !! reuired to describe a matrix mapped onto it
+    !! required to describe a matrix mapped onto it
     
+    Use matrix_mapping_module, Only : matrix_mapping_comm_to_base
+
     Integer                      , Intent( In    ) :: comm
     Class  ( distributed_matrix ), Intent(   Out ) :: base_matrix 
 
@@ -325,6 +332,8 @@ Contains
   Subroutine distributed_matrix_finalise
 
     !! Finalise the matrix system
+
+    Use matrix_mapping_module, Only : matrix_mapping_finalise
 
     Call matrix_mapping_finalise
     
@@ -2315,7 +2324,8 @@ Contains
     ! To keep some vague amount of sanity in all this one of A or B MUST be in this process
     ! This allows us to work out what type of thing is being redistributed.
 
-    Use Scalapack_interfaces, Only : pdgemr2d
+    Use matrix_mapping_module, Only : matrix_mapping_comm_to_base
+    Use Scalapack_interfaces , Only : pdgemr2d
     
     Class( real_distributed_matrix ), Intent( In    ) :: A           !! Source Matrix
     Logical                         , Intent( In    ) :: is_A_dummy  !! If true the source is NOT on this process
@@ -2421,7 +2431,8 @@ Contains
     ! To keep some vague amount of sanity in all this one of A or B MUST be in this process
     ! This allows us to work out what type of thing is being redistributed.
 
-    Use Scalapack_interfaces, Only : pzgemr2d
+    Use matrix_mapping_module, Only : matrix_mapping_comm_to_base
+    Use Scalapack_interfaces , Only : pzgemr2d
 
     Class( complex_distributed_matrix ), Intent( In    ) :: A           !! Source Matrix
     Logical                            , Intent( In    ) :: is_A_dummy  !! If true the source is NOT on this process
