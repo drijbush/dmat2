@@ -109,13 +109,19 @@ Module ks_array_module
 
 Contains
 
-  Subroutine ks_array_init
+  Subroutine ks_array_init( nb )
 
     !! Initalise the KS arrays
     
     Use ks_matrix_module, Only : ks_matrix_init
+    
+    Integer, Intent( In ), Optional :: nb !! Set a default blocking factor
 
-    Call ks_matrix_init
+    If( .Not. present( nb ) ) Then
+       Call ks_matrix_init
+    Else
+       Call ks_matrix_init( nb )
+    End If
 
   End Subroutine ks_array_init
 
