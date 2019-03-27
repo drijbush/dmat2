@@ -5,7 +5,6 @@ Module distributed_matrix_module
   !  once for real, one for complex
 
   Use numbers_module       , Only : wp
-  Use Scalapack_interfaces , Only : numroc, pdgemm, pzgemm
   Use matrix_mapping_module, Only : matrix_mapping, &
        matrix_mapping_init, matrix_mapping_comm_to_base, matrix_mapping_finalise
 
@@ -479,6 +478,8 @@ Contains
 
     Use, Intrinsic :: ieee_arithmetic, Only : ieee_value, ieee_support_nan, ieee_signaling_nan
 
+    Use Scalapack_interfaces , Only : numroc
+
     Class( real_distributed_matrix ), Intent(   Out ) :: A
     Integer                         , Intent( In    ) :: m
     Integer                         , Intent( In    ) :: n
@@ -528,6 +529,8 @@ Contains
     !! Create the data for a complex MxN matrix. The distribution is the same as the provided source matrix.
 
     Use, Intrinsic :: ieee_arithmetic, Only : ieee_value, ieee_support_nan, ieee_signaling_nan
+
+    Use Scalapack_interfaces , Only : numroc
 
     Class( complex_distributed_matrix ), Intent(   Out ) :: A
     Integer                            , Intent( In    ) :: m
@@ -857,6 +860,8 @@ Contains
 
     !! Multiply a real matrix by a real matrix
     
+    Use Scalapack_interfaces , Only : pdgemm
+
     Class(      distributed_matrix ), Allocatable :: C
 
     Class( real_distributed_matrix ), Intent( In ) :: A
@@ -943,6 +948,8 @@ Contains
   Function complex_multiply_complex( A, B ) Result( C )
 
     !! Multiply a complex matrix by complex matrix
+
+    Use Scalapack_interfaces , Only : pzgemm
 
     Class(         distributed_matrix ), Allocatable :: C
 
