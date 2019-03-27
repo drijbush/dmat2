@@ -33,21 +33,25 @@ Module distributed_matrix_module
      Generic  , Public :: set_by_global        => set_global_real, set_global_complex !! Set a matrix using global indexing
      Generic  , Public :: get_by_global        => get_global_real, get_global_complex !! Get from a matrix using global indexing
      Generic  , Public :: Operator( * )        => multiply                   !! Multiply two matrices together
+     Generic  , Public :: Operator( + )        => add                        !! Add two matrices together
      ! Public methods that are overridden
      Procedure( create     ), Deferred, Public :: create                     !! Create storage for the data of the matrix 
      Procedure( local_size ), Deferred, Public :: local_size                 !! Get the dimensions of the local part of the matrix
      Procedure( remap_op   ), Deferred, Public :: remap                      !! Remap the data to another distribution
      ! Private implementations
-     Procedure,                                 Private :: matrix_dagger           !! Apply the dagger operator to the matrix
-     Procedure( set_global_real    ), Deferred, Private :: set_global_real         !! Set values with a real    array using global indexing
-     Procedure( set_global_complex ), Deferred, Private :: set_global_complex      !! Set values with a complex array using global indexing
-     Procedure( get_global_real    ), Deferred, Private :: get_global_real         !! Get values from a real    array using global indexing
-     Procedure( get_global_complex ), Deferred, Private :: get_global_complex      !! Get values from a complex array using global indexing
-     Procedure(         binary_op ), Deferred, Private :: multiply
-     Procedure(    real_binary_op ), Deferred, Pass( B ), Private :: real_multiply
-     Procedure( complex_binary_op ), Deferred, Pass( B ), Private :: complex_multiply
-     Procedure(    real_remap_op ), Deferred, Pass( B ), Private :: real_remap
-     Procedure( complex_remap_op ), Deferred, Pass( B ), Private :: complex_remap
+     Procedure,                                            Private :: matrix_dagger           !! Apply the dagger operator to the matrix
+     Procedure( set_global_real    ), Deferred,            Private :: set_global_real         !! Set values with a real    array using global indexing
+     Procedure( set_global_complex ), Deferred,            Private :: set_global_complex      !! Set values with a complex array using global indexing
+     Procedure( get_global_real    ), Deferred,            Private :: get_global_real         !! Get values from a real    array using global indexing
+     Procedure( get_global_complex ), Deferred,            Private :: get_global_complex      !! Get values from a complex array using global indexing
+     Procedure(          binary_op ), Deferred,            Private :: multiply
+     Procedure(     real_binary_op ), Deferred, Pass( B ), Private :: real_multiply
+     Procedure(  complex_binary_op ), Deferred, Pass( B ), Private :: complex_multiply
+     Procedure(          binary_op ), Deferred,            Private :: add
+     Procedure(     real_binary_op ), Deferred, Pass( B ), Private :: real_add
+     Procedure(  complex_binary_op ), Deferred, Pass( B ), Private :: complex_add
+     Procedure(      real_remap_op ), Deferred, Pass( B ), Private :: real_remap
+     Procedure(   complex_remap_op ), Deferred, Pass( B ), Private :: complex_remap
   End type distributed_matrix
 
   Type, Extends( distributed_matrix ), Public :: real_distributed_matrix
@@ -59,15 +63,18 @@ Module distributed_matrix_module
      Procedure, Public :: local_size    => matrix_local_size_real          !! Get the dimensions of the local part of the matrix
      Procedure, Public :: remap         => real_remap                      !! Remap the data to another distribution
      ! Private implementations
-     Procedure, Private :: set_global_real    => real_matrix_set_global_real
-     Procedure, Private :: set_global_complex => real_matrix_set_global_complex
-     Procedure, Private :: get_global_real    => real_matrix_get_global_real
-     Procedure, Private :: get_global_complex => real_matrix_get_global_complex
-     Procedure, Private :: multiply           => real_multiply
-     Procedure, Pass( B ), Private :: real_multiply    => real_multiply_real
-     Procedure, Pass( B ), Private :: complex_multiply => complex_multiply_real
-     Procedure, Pass( B ), Private :: real_remap    => real_remap_real
-     Procedure, Pass( B ), Private :: complex_remap => complex_remap_real
+     Procedure,            Private :: set_global_real    => real_matrix_set_global_real
+     Procedure,            Private :: set_global_complex => real_matrix_set_global_complex
+     Procedure,            Private :: get_global_real    => real_matrix_get_global_real
+     Procedure,            Private :: get_global_complex => real_matrix_get_global_complex
+     Procedure,            Private :: multiply           => real_multiply
+     Procedure, Pass( B ), Private :: real_multiply      => real_multiply_real
+     Procedure, Pass( B ), Private :: complex_multiply   => complex_multiply_real
+     Procedure,            Private :: add                => real_add
+     Procedure, Pass( B ), Private :: real_add           => real_add_real
+     Procedure, Pass( B ), Private :: complex_add        => complex_add_real
+     Procedure, Pass( B ), Private :: real_remap         => real_remap_real
+     Procedure, Pass( B ), Private :: complex_remap      => complex_remap_real
 !!$     Procedure, Private   :: diag_r               => matrix_diag_real
 !!$     Generic              :: diag                 => diag_r
 !!$     Procedure, Private   :: dagger_r             => matrix_dagger_real
@@ -111,15 +118,18 @@ Module distributed_matrix_module
      Procedure, Public :: local_size => matrix_local_size_complex             !! Get the dimensions of the local part of the matrix
      Procedure, Public :: remap      => complex_remap                         !! Remap the data to another distribution
      ! Private implementations
-     Procedure, Private :: set_global_real    => complex_matrix_set_global_real
-     Procedure, Private :: set_global_complex => complex_matrix_set_global_complex
-     Procedure, Private :: get_global_real    => complex_matrix_get_global_real
-     Procedure, Private :: get_global_complex => complex_matrix_get_global_complex
-     Procedure, Private :: multiply           => complex_multiply
-     Procedure, Pass( B ), Private :: real_multiply    => real_multiply_complex
-     Procedure, Pass( B ), Private :: complex_multiply => complex_multiply_complex
-     Procedure, Pass( B ), Private :: real_remap    => real_remap_complex
-     Procedure, Pass( B ), Private :: complex_remap => complex_remap_complex
+     Procedure,            Private :: set_global_real    => complex_matrix_set_global_real
+     Procedure,            Private :: set_global_complex => complex_matrix_set_global_complex
+     Procedure,            Private :: get_global_real    => complex_matrix_get_global_real
+     Procedure,            Private :: get_global_complex => complex_matrix_get_global_complex
+     Procedure,            Private :: multiply           => complex_multiply
+     Procedure, Pass( B ), Private :: real_multiply      => real_multiply_complex
+     Procedure, Pass( B ), Private :: complex_multiply   => complex_multiply_complex
+     Procedure,            Private :: add                => complex_add
+     Procedure, Pass( B ), Private :: real_add           => real_add_complex
+     Procedure, Pass( B ), Private :: complex_add        => complex_add_complex
+     Procedure, Pass( B ), Private :: real_remap         => real_remap_complex
+     Procedure, Pass( B ), Private :: complex_remap      => complex_remap_complex
 !!$     Procedure, Private   :: diag_c               => matrix_diag_complex
 !!$     Generic              :: diag                 => diag_c
 !!$     Procedure, Private   :: dagger_c             => matrix_dagger_complex
@@ -485,7 +495,9 @@ Contains
 
     !! Create the data for a real MxN matrix. The distribution is the same as the provided source matrix.
 
-    Use, Intrinsic :: ieee_arithmetic, Only : ieee_value, ieee_support_nan, ieee_signaling_nan
+    Use, Intrinsic :: ieee_arithmetic, Only : ieee_value, ieee_support_nan, ieee_signaling_nan, &
+         ieee_support_halting, ieee_get_halting_mode, ieee_set_halting_mode,                    &
+         ieee_get_flag, ieee_set_flag, ieee_invalid
 
     Use Scalapack_interfaces , Only : numroc
 
@@ -498,6 +510,8 @@ Contains
     Integer :: npcol, mypcol, nb, sda
     Integer :: ctxt
 
+    Logical :: is_invalid, is_halting
+
     ! Need to fix if n, m smaller than blocking fac
     mb = block_fac
     nb = block_fac
@@ -521,10 +535,24 @@ Contains
     Call set_global_to_local( A%global_to_local_cols, n, nb, mypcol, npcol )
 
     Allocate( A%data( 1:lda, 1:sda  ) )
-    ! Initialise with signalling NANs - this should be done more carefully but this will do for now
-    If( ieee_support_nan( A%data ) ) Then
+    ! Try to initialise with signalling NANs
+    If( ieee_support_nan( A%data ) .And. ieee_support_halting( ieee_invalid ) ) Then
+       ! This processor supports ieee maths and control of halting - Use this as carefully as possible to initialise
+       ! matrix type objects to a value that can help detect their use when unitilised - namely a ignalling NaN
+       ! First get the current halting mode for ieee invalid 
+       Call ieee_get_halting_mode( ieee_invalid, is_halting )
+       ! Now deliberately turn halting off
+       Call ieee_set_halting_mode( ieee_invalid, .False. )
+       ! Get the current value of the invalid flag to avoid spurious signalling caused by the below
+       Call ieee_get_flag( ieee_invalid, is_invalid )
        A%data = ieee_value( A%data, ieee_signaling_nan )
+       ! Reset the invalid flag to what it was before we deliberatley used a signalling NaN to avoid missing ones later
+       Call ieee_set_flag( ieee_invalid, is_invalid )
+       ! And reset the halting mode
+       Call ieee_set_halting_mode( ieee_invalid, is_halting )
     Else
+       ! The processor doesn't support ieee and doesn't support halting control under ieee
+       ! Simply initialise to a very big value
        A%data = Huge( A%data )
     End If
 
@@ -537,7 +565,9 @@ Contains
 
     !! Create the data for a complex MxN matrix. The distribution is the same as the provided source matrix.
 
-    Use, Intrinsic :: ieee_arithmetic, Only : ieee_value, ieee_support_nan, ieee_signaling_nan
+    Use, Intrinsic :: ieee_arithmetic, Only : ieee_value, ieee_support_nan, ieee_signaling_nan, &
+         ieee_support_halting, ieee_get_halting_mode, ieee_set_halting_mode,                    &
+         ieee_get_flag, ieee_set_flag, ieee_invalid
 
     Use Scalapack_interfaces , Only : numroc
 
@@ -549,6 +579,8 @@ Contains
     Integer :: nprow, myprow, mb, lda
     Integer :: npcol, mypcol, nb, sda
     Integer :: ctxt
+
+    Logical :: is_invalid, is_halting
 
     ! Need to fix if n, m smaller than blocking fac
     mb = block_fac
@@ -573,11 +605,25 @@ Contains
     Call set_global_to_local( A%global_to_local_cols, n, nb, mypcol, npcol )
 
     Allocate( A%data( 1:lda, 1:sda  ) )
-    ! Initialise with signalling NANs - this should be done more carefully but this will do for now
-    If( ieee_support_nan( Real( A%data, wp ) ) ) Then
+    ! Try to initialise with signalling NANs
+    If( ieee_support_nan( Real( A%data ) ) .And. ieee_support_halting( ieee_invalid ) ) Then
+       ! This processor supports ieee maths and control of halting - Use this as carefully as possible to initialise
+       ! matrix type objects to a value that can help detect their use when unitilised - namely a ignalling NaN
+       ! First get the current halting mode for ieee invalid 
+       Call ieee_get_halting_mode( ieee_invalid, is_halting )
+       ! Now deliberately turn halting off
+       Call ieee_set_halting_mode( ieee_invalid, .False. )
+       ! Get the current value of the invalid flag to avoid spurious signalling caused by the below
+       Call ieee_get_flag( ieee_invalid, is_invalid )
        A%data = Cmplx( ieee_value( 0.0_wp, ieee_signaling_nan ), &
-            ieee_value( 0.0_wp, ieee_signaling_nan ), wp )
+                       ieee_value( 0.0_wp, ieee_signaling_nan ), wp )
+       ! Reset the invalid flag to what it was before we deliberatley used a signalling NaN to avoid missing ones later
+       Call ieee_set_flag( ieee_invalid, is_invalid )
+       ! And reset the halting mode
+       Call ieee_set_halting_mode( ieee_invalid, is_halting )
     Else
+       ! The processor doesn't support ieee and doesn't support halting control under ieee
+       ! Simply initialise to a very big value
        A%data = Huge( Real( A%data, wp ) )
     End If
 
@@ -855,7 +901,7 @@ Contains
   
     !! Multiply a complex matrix by something yet to be determined
 
-    Class(      distributed_matrix ), Allocatable :: C
+    Class(         distributed_matrix ), Allocatable :: C
 
     Class( complex_distributed_matrix ), Intent( In ) :: A
     Class(         distributed_matrix ), Intent( In ) :: B
@@ -1012,6 +1058,34 @@ Contains
 
   ! Addition routines
 
+  Function real_add( A, B ) Result( C )
+
+    !! Add a real matrix to something yet to be determined
+  
+    Class(      distributed_matrix ), Allocatable :: C
+
+    Class( real_distributed_matrix ), Intent( In ) :: A
+    Class(      distributed_matrix ), Intent( In ) :: B
+
+    ! We know what A is. Now use dispatch on B to pick out what it is
+    C = B%real_add( A )
+    
+  End Function real_add
+
+  Function complex_add( A, B ) Result( C )
+  
+    !! Add a complex matrix to something yet to be determined
+
+    Class(         distributed_matrix ), Allocatable :: C
+
+    Class( complex_distributed_matrix ), Intent( In ) :: A
+    Class(         distributed_matrix ), Intent( In ) :: B
+
+    ! We know what A is. Now use dispatch on B to pick out what it is
+    C = B%complex_add( A )
+    
+  End Function complex_add
+
   Function real_add_real( A, B ) Result( C )
 
     !! Adds two real matrices A and B, returning the result in C
@@ -1121,6 +1195,36 @@ Contains
 
   End Function real_add_real
 
+  Function real_add_complex( A, B ) Result( C )
+
+    !! Add a real matrix to a complex matrix - ILLEGAL
+
+    Class(         distributed_matrix ), Allocatable :: C
+
+    Class(    real_distributed_matrix ), Intent( In ) :: A
+    Class( complex_distributed_matrix ), Intent( In ) :: B
+
+    Stop "Illegal combination of arguments in real_add_complex"
+    Deallocate( C )
+    Write( *, * ) A%data, B%data
+
+  End Function real_add_complex
+
+  Function complex_add_real( A, B ) Result( C )
+
+    !! Add a complex matrix to a real matrix - ILLEGAL
+
+    Class(         distributed_matrix ), Allocatable :: C
+
+    Class( complex_distributed_matrix ), Intent( In ) :: A
+    Class(    real_distributed_matrix ), Intent( In ) :: B
+
+    Stop "Illegal combination of arguments in complex_add_real"
+    Deallocate( C )
+    Write( *, * ) A%data, B%data
+    
+  End Function complex_add_real
+  
   Function complex_add_complex( A, B ) Result( C )
 
     !! Adds two real matrices A and B, returning the result in C
