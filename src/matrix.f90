@@ -28,16 +28,17 @@ Module distributed_matrix_module
      Procedure, Public :: local_to_global      => matrix_local_to_global     !! Get an array for mapping local  indices to global ones
      Procedure, Public :: size                 => matrix_size                !! Get the dimensions of the matrix
      Procedure, Public :: get_comm             => matrix_communicator        !! Get the communicator containing the processes holding the matrix
-     Generic  , Public :: Operator( .Dagger. ) => matrix_dagger              !! Apply the dagger operator to the matrix
-     Generic  , Public :: set_by_global        => set_global_real, set_global_complex !! Set a matrix using global indexing
-     Generic  , Public :: get_by_global        => get_global_real, get_global_complex !! Get from a matrix using global indexing
      Generic  , Public :: Operator( * )        => multiply                   !! Multiply two matrices together
      Generic  , Public :: Operator( + )        => add                        !! Add two matrices together
      Generic  , Public :: Operator( - )        => subtract                   !! Subtract two matrices 
+     Generic  , Public :: Operator( .Dagger. ) => matrix_dagger              !! Apply the dagger operator to the matrix
+     Generic  , Public :: set_by_global        => set_global_real, set_global_complex !! Set a matrix using global indexing
+     Generic  , Public :: get_by_global        => get_global_real, get_global_complex !! Get from a matrix using global indexing
      ! Public methods that are overridden
      Procedure( create     ), Deferred, Public :: create                     !! Create storage for the data of the matrix 
      Procedure( local_size ), Deferred, Public :: local_size                 !! Get the dimensions of the local part of the matrix
      Procedure( remap_op   ), Deferred, Public :: remap                      !! Remap the data to another distribution
+     Procedure( diag_op    ), Deferred, Public :: diag                       !! Diagonalise the (assumed Hermitian) matrix
      ! Private implementations
      Procedure,                                            Private :: matrix_dagger           !! Apply the dagger operator to the matrix
      Procedure( set_global_real    ), Deferred,            Private :: set_global_real         !! Set values with a real    array using global indexing
@@ -53,6 +54,8 @@ Module distributed_matrix_module
      Procedure(          binary_op ), Deferred,            Private :: subtract
      Procedure(     real_binary_op ), Deferred, Pass( B ), Private :: real_subtract
      Procedure(  complex_binary_op ), Deferred, Pass( B ), Private :: complex_subtract
+     Procedure(       real_diag_op ), Deferred, Pass( Q ), Private :: real_diag
+     Procedure(    complex_diag_op ), Deferred, Pass( Q ), Private :: complex_diag
      Procedure(      real_remap_op ), Deferred, Pass( B ), Private :: real_remap
      Procedure(   complex_remap_op ), Deferred, Pass( B ), Private :: complex_remap
   End type distributed_matrix
@@ -65,6 +68,7 @@ Module distributed_matrix_module
      Procedure, Public :: create        => matrix_create_real              !! Create storage for the data of the matrix 
      Procedure, Public :: local_size    => matrix_local_size_real          !! Get the dimensions of the local part of the matrix
      Procedure, Public :: remap         => real_remap                      !! Remap the data to another distribution
+     Procedure, Public :: diag          => real_diag                       !! Diagonalise the (assumed symmetric) matrix
      ! Private implementations
      Procedure,            Private :: set_global_real    => real_matrix_set_global_real
      Procedure,            Private :: set_global_complex => real_matrix_set_global_complex
@@ -79,6 +83,8 @@ Module distributed_matrix_module
      Procedure,            Private :: subtract           => real_subtract
      Procedure, Pass( B ), Private :: real_subtract      => real_subtract_real
      Procedure, Pass( B ), Private :: complex_subtract   => complex_subtract_real
+     Procedure, Pass( Q ), Private :: real_diag          => real_diag_real
+     Procedure, Pass( Q ), Private :: complex_diag       => complex_diag_real
      Procedure, Pass( B ), Private :: real_remap         => real_remap_real
      Procedure, Pass( B ), Private :: complex_remap      => complex_remap_real
 !!$     Procedure, Private   :: diag_r               => matrix_diag_real
@@ -119,6 +125,7 @@ Module distributed_matrix_module
      Procedure, Public :: create     => matrix_create_complex                 !! Create storage for the data of the matrix 
      Procedure, Public :: local_size => matrix_local_size_complex             !! Get the dimensions of the local part of the matrix
      Procedure, Public :: remap      => complex_remap                         !! Remap the data to another distribution
+     Procedure, Public :: diag       => complex_diag                          !! Diagonalise the (assumed Hermitian) matrix
      ! Private implementations
      Procedure,            Private :: set_global_real    => complex_matrix_set_global_real
      Procedure,            Private :: set_global_complex => complex_matrix_set_global_complex
@@ -133,6 +140,8 @@ Module distributed_matrix_module
      Procedure,            Private :: subtract           => complex_subtract
      Procedure, Pass( B ), Private :: real_subtract      => real_subtract_complex
      Procedure, Pass( B ), Private :: complex_subtract   => complex_subtract_complex
+     Procedure, Pass( Q ), Private :: real_diag          => real_diag_complex
+     Procedure, Pass( Q ), Private :: complex_diag       => complex_diag_complex
      Procedure, Pass( B ), Private :: real_remap         => real_remap_complex
      Procedure, Pass( B ), Private :: complex_remap      => complex_remap_complex
 !!$     Procedure, Private   :: diag_c               => matrix_diag_complex
@@ -273,6 +282,35 @@ Module distributed_matrix_module
        Class( complex_distributed_matrix ), Intent( In ) :: A
        Class(         distributed_matrix ), Intent( In ) :: B
      End Function complex_binary_op
+     Subroutine diag_op( A, Q, E )
+       !! Diagonalising a base class matrix with vectors returned as base class
+       Import :: wp
+       Import :: distributed_matrix
+       Implicit None
+       Class( distributed_matrix ),             Intent( In    ) :: A
+       Class( distributed_matrix ),             Intent(   Out ) :: Q
+       Real( wp ), Dimension( : ), Allocatable, Intent(   Out ) :: E
+     End Subroutine diag_op
+     Subroutine real_diag_op( A, Q, E )
+       !! Diagonalising a base class matrix with vectors returned as base class
+       Import :: wp
+       Import :: distributed_matrix
+       Import :: real_distributed_matrix
+       Implicit None
+       Class( real_distributed_matrix ),        Intent( In    ) :: A
+       Class(      distributed_matrix ),        Intent(   Out ) :: Q
+       Real( wp ), Dimension( : ), Allocatable, Intent(   Out ) :: E
+     End Subroutine real_diag_op
+     Subroutine complex_diag_op( A, Q, E )
+       !! Diagonalising a base class matrix with vectors returned as base class
+       Import :: wp
+       Import :: distributed_matrix
+       Import :: complex_distributed_matrix
+       Implicit None
+       Class( complex_distributed_matrix ),     Intent( In    ) :: A
+       Class(         distributed_matrix ),     Intent(   Out ) :: Q
+       Real( wp ), Dimension( : ), Allocatable, Intent(   Out ) :: E
+     End Subroutine complex_diag_op
      Subroutine remap_op( A, is_A_dummy, parent_comm, B, is_B_dummy ) 
        !! A remap operation between two base class objects
        Import :: distributed_matrix
@@ -1669,8 +1707,38 @@ Contains
   End Function complex_subtract_complex
 
   ! Diagonalisation routines
+
+  Subroutine real_diag( A, Q, E )
+
+    !! Diagonalise a real matrix
     
+    Implicit None
+
+    Class( real_distributed_matrix ),              Intent( In    ) :: A
+    Class(      distributed_matrix ),              Intent(   Out ) :: Q
+    Real( wp ), Dimension( : )      , Allocatable, Intent(   Out ) :: E
+
+    Call Q%real_diag( A, E )
+
+  End Subroutine real_diag
+
+  Subroutine complex_diag( A, Q, E )
+
+    !! Diagonalise a complex matrix
+    
+    Implicit None
+
+    Class( complex_distributed_matrix ),              Intent( In    ) :: A
+    Class(         distributed_matrix ),              Intent(   Out ) :: Q
+    Real( wp ), Dimension( : )         , Allocatable, Intent(   Out ) :: E
+
+    Call Q%complex_diag( A, E )
+
+  End Subroutine complex_diag
+
   Subroutine real_diag_real( A, Q, E )
+
+    !! Diagonalise a real symmetric matrix
 
     Use Scalapack_interfaces, Only : pdsyevd
 
@@ -1720,7 +1788,41 @@ Contains
 
   End Subroutine real_diag_real
 
+  Subroutine real_diag_complex( A, Q, E )
+
+    !! Diagonalise a real matrix returning complex vectors - ILLEGAL
+
+    Implicit None
+
+    Class(    real_distributed_matrix ),              Intent( In    ) :: A
+    Class( complex_distributed_matrix ),              Intent(   Out ) :: Q
+    Real( wp ), Dimension( : )         , Allocatable, Intent(   Out ) :: E
+
+    Stop "Illegal combination of arguments in complex_multiply_real"
+    Deallocate( E )
+    Write( *, * ) A%data, Q%data
+
+  End Subroutine real_diag_complex
+
+  Subroutine complex_diag_real( A, Q, E )
+
+    !! Diagonalise a complex matrix returning real vectors - ILLEGAL
+
+    Implicit None
+
+    Class( complex_distributed_matrix ),              Intent( In    ) :: A
+    Class(    real_distributed_matrix ),              Intent(   Out ) :: Q
+    Real( wp ), Dimension( : )         , Allocatable, Intent(   Out ) :: E
+
+    Stop "Illegal combination of arguments in complex_multiply_real"
+    Deallocate( E )
+    Write( *, * ) A%data, Q%data
+
+  End Subroutine complex_diag_real
+
   Subroutine complex_diag_complex( A, Q, E )
+
+    !! Diagonalise a complex Hermitian matrix
 
     Use Scalapack_interfaces, Only : pzheevd
 

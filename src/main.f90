@@ -14,7 +14,8 @@ Program test_distributed_matrix
   Integer :: ns, nk
   Integer :: error
 
-  Character( Len = 34 ), Parameter :: format = '( "--> ", a, t35, g26.20, t65, a )'
+  Character( Len = 34 ), Parameter :: error_format = '( "--> ", a, t35, g26.20, t65, a )'
+  Character( Len =  9 ), Parameter :: title_format = '( t5, a )'
 
   Real( wp ), Parameter :: tol = 1.0e-11_wp
   
@@ -38,8 +39,24 @@ Program test_distributed_matrix
   Call mpi_bcast( ns, 1, mpi_integer, 0, mpi_comm_world, error )
   Call mpi_bcast( nk, 1, mpi_integer, 0, mpi_comm_world, error )
 
+  If( me == 0 ) Then
+     Write( *, * ) 'Running tests for: '
+     Write( *, * ) ' m = ', m
+     Write( *, * ) ' n = ', n
+     Write( *, * ) ' k = ', k
+     Write( *, * ) ' n_block = ', n_block
+     Write( *, * ) ' ns = ', ns
+     Write( *, * ) ' nk = ', nk
+  End If
+
   ! Distributed matrix tests
+  If( me == 0 ) Then
+     Write( *, * ) 'Distributed Matrix tests:'
+  End If
   ! Adds
+  If( me == 0 ) Then
+     Write( *, title_format ) 'Additions'
+  End If
   Call test_real_add_NN
   Call test_real_add_TN
   Call test_real_add_NT
@@ -49,6 +66,9 @@ Program test_distributed_matrix
   Call test_complex_add_TN
   Call test_complex_add_TT
   ! Subtracts
+  If( me == 0 ) Then
+     Write( *, title_format ) 'Subtractions'
+  End If
   Call test_real_subtract_NN
   Call test_real_subtract_TN
   Call test_real_subtract_NT
@@ -58,6 +78,9 @@ Program test_distributed_matrix
   Call test_complex_subtract_TN
   Call test_complex_subtract_TT
   ! Multiplies
+  If( me == 0 ) Then
+     Write( *, title_format ) 'Multiplies'
+  End If
   Call test_real_matmul_NN
   Call test_real_matmul_TN
   Call test_real_matmul_NT
@@ -66,8 +89,25 @@ Program test_distributed_matrix
   Call test_complex_matmul_TN
   Call test_complex_matmul_NT
   Call test_complex_matmul_TT
+  ! Diagonalisation tests
+  If( me == 0 ) Then
+     Write( *, title_format ) 'Diagonalisations'
+  End If
+  Call test_diag_real
+  Call test_diag_complex
+
+  If( me == 0 ) Then
+     Write( *, * )
+  End If
 
   ! KS_matrix tests
+  If( me == 0 ) Then
+     Write( *, * ) 'KS_matrix tests'
+  End If
+  ! Multiplies
+  If( me == 0 ) Then
+     Write( *, title_format ) 'Multiplies'
+  End If
   Call test_ks_matrix_matmul_real_NN
   Call test_ks_matrix_matmul_real_TN
   Call test_ks_matrix_matmul_real_NT
@@ -77,22 +117,41 @@ Program test_distributed_matrix
   Call test_ks_matrix_matmul_complex_NT
   Call test_ks_matrix_matmul_complex_TT
 
+  If( me == 0 ) Then
+     Write( *, * )
+  End If
+
   ! KS_array tests
+  If( me == 0 ) Then
+     Write( *, * ) 'KS_array tests'
+  End If
   ! Adds
+  If( me == 0 ) Then
+     Write( *, title_format ) 'Split distribution adds'
+  End If
   Call test_ks_split_add_NN
   Call test_ks_split_add_TN
   Call test_ks_split_add_NT
   Call test_ks_split_add_TT
   ! Subtracts
+  If( me == 0 ) Then
+     Write( *, title_format ) 'Split distribution subtractions'
+  End If
   Call test_ks_split_subtract_NN
   Call test_ks_split_subtract_TN
   Call test_ks_split_subtract_NT
   Call test_ks_split_subtract_TT
   ! Multiplies
+  If( me == 0 ) Then
+     Write( *, title_format ) 'All distribution multiplies'
+  End If
   Call test_ks_array_matmul_NN
   Call test_ks_array_matmul_TN
   Call test_ks_array_matmul_NT
   Call test_ks_array_matmul_TT
+  If( me == 0 ) Then
+     Write( *, title_format ) 'Split distribution multiplies'
+  End If
   Call test_ks_split_matmul_NN
   Call test_ks_split_matmul_TN
   Call test_ks_split_matmul_NT
@@ -102,9 +161,9 @@ Program test_distributed_matrix
 
 Contains
 
-  !DISTRIBUTED_MATRIX tests
+  ! DISTRIBUTED_MATRIX tests
 
-  !Add tests
+  ! Add tests
   Subroutine test_real_add_NN
     
     Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
@@ -147,7 +206,7 @@ Contains
     Cm = Am + Bm
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in real add NN ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in real add NN ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
@@ -197,7 +256,7 @@ Contains
     Cm = AmT + Bm
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in real add TN ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in real add TN ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
@@ -247,7 +306,7 @@ Contains
     Cm = Am + BmT
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in real add NT ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in real add NT ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
@@ -298,7 +357,7 @@ Contains
     Cm = AmT + BmT
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in real add TT ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in real add TT ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
@@ -352,7 +411,7 @@ Contains
     Cm = Am + Bm
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in complex add NN ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in complex add NN ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
@@ -409,7 +468,7 @@ Contains
     Cm = AmT + Bm
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in complex add TN ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in complex add TN ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
@@ -466,7 +525,7 @@ Contains
     Cm = Am + BmT
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in complex add NT ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in complex add NT ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
@@ -522,7 +581,7 @@ Contains
     Cm = AmT + BmT
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in complex add TT ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in complex add TT ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
@@ -572,7 +631,7 @@ Contains
     Cm = Am - Bm
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in real subtract NN ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in real subtract NN ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
@@ -622,7 +681,7 @@ Contains
     Cm = AmT - Bm
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in real subtract TN ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in real subtract TN ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
@@ -672,7 +731,7 @@ Contains
     Cm = Am - BmT
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in real subtract NT ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in real subtract NT ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
@@ -723,7 +782,7 @@ Contains
     Cm = AmT - BmT
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in real subtract TT ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in real subtract TT ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
@@ -777,7 +836,7 @@ Contains
     Cm = Am - Bm
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in complex subtract NN ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in complex subtract NN ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
@@ -834,7 +893,7 @@ Contains
     Cm = AmT - Bm
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in complex subtract TN ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in complex subtract TN ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
@@ -891,7 +950,7 @@ Contains
     Cm = Am - BmT
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in complex subtract NT ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in complex subtract NT ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
@@ -947,7 +1006,7 @@ Contains
     Cm = AmT - BmT
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in complex subtract TT ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in complex subtract TT ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
@@ -997,7 +1056,7 @@ Contains
     Cm = Am * Bm
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in real matmul NN ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in real matmul NN ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
@@ -1047,7 +1106,7 @@ Contains
     Cm  = AmT * Bm
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in real matmul TN ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in real matmul TN ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
@@ -1097,7 +1156,7 @@ Contains
     Cm = Am * BmT
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in real matmul NT ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in real matmul NT ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
@@ -1148,7 +1207,7 @@ Contains
     Cm = AmT * BmT
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in real matmul TT ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in real matmul TT ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
@@ -1205,7 +1264,7 @@ Contains
     Cm = Am * Bm
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in complex matmul NN ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in complex matmul NN ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
@@ -1263,7 +1322,7 @@ Contains
     Cm  = AmT * Bm
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in complex matmul TN ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in complex matmul TN ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
@@ -1321,7 +1380,7 @@ Contains
     Cm = Am * BmT
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in complex matmul NT ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in complex matmul NT ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
@@ -1380,12 +1439,127 @@ Contains
     Cm = AmT * BmT
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in complex matmul TT ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in complex matmul TT ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call distributed_matrix_finalise
 
   End Subroutine test_complex_matmul_TT
+
+  ! Diag tests
+  Subroutine test_diag_real()
+
+    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+
+    Use numbers_module           , Only : wp
+    Use distributed_matrix_module, Only : distributed_matrix, real_distributed_matrix, &
+         distributed_matrix_init, distributed_matrix_comm_to_base, distributed_matrix_finalise, &
+         distributed_matrix_set_default_blocking
+
+    Implicit None
+
+    Type( real_distributed_matrix ) :: base
+    Class( distributed_matrix ), Allocatable :: Am, Qm, QTm, Cm
+    Real( wp ), Dimension( : ) , Allocatable :: E
+    
+    Real( wp ), Dimension( :, : ), Allocatable :: A
+    Real( wp ), Dimension( :, : ), Allocatable :: tmp
+
+    Integer :: n
+    Integer :: i
+
+    n = m
+
+    Allocate( A( 1:n, 1:n ) )
+    If( me == 0 ) Then
+       Call Random_number( A )
+       A = A + Transpose( A )
+    End If
+    Call mpi_bcast( A, Size( A ), mpi_double_precision, 0, mpi_comm_world, error )
+
+    Call distributed_matrix_init
+    Call distributed_matrix_set_default_blocking( n_block )
+    Call distributed_matrix_comm_to_base( mpi_comm_world, base )
+    Allocate( real_distributed_matrix :: Am )
+    Allocate( real_distributed_matrix :: Qm )
+    Call Am%create( n, n, base )
+    Call Am%set_by_global( 1, n, 1, n, A )
+
+    Call Am%diag( Qm, E )
+
+    QTm = .Dagger. Qm
+    Cm = QTm * Am * Qm 
+    Allocate( tmp( 1:n, 1:n ) )
+    Call Cm%get_by_global( 1, n, 1, n, tmp )
+    Do i = 1, n
+       tmp( i, i ) = tmp( i, i ) - E( i )
+    End Do
+    
+    If( me == 0 ) Then
+       Write( *, error_format ) 'Error in real diag ', Maxval( Abs( tmp ) ), &
+            Merge( 'Passed', 'FAILED', Maxval( Abs( tmp ) ) < tol )
+    End If
+  
+  End Subroutine test_diag_real
+
+  Subroutine test_diag_complex()
+
+    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+
+    Use numbers_module           , Only : wp
+    Use distributed_matrix_module, Only : distributed_matrix, real_distributed_matrix, complex_distributed_matrix, &
+         distributed_matrix_init, distributed_matrix_comm_to_base, distributed_matrix_finalise, &
+         distributed_matrix_set_default_blocking
+
+    Implicit None
+
+    Type( real_distributed_matrix ) :: base
+    Class( distributed_matrix ), Allocatable :: Am, Qm, QTm, Cm
+    Real( wp ), Dimension( : ) , Allocatable :: E
+    
+    Complex( wp ), Dimension( :, : ), Allocatable :: A
+    Complex( wp ), Dimension( :, : ), Allocatable :: tmp
+
+    Real( wp ), Dimension( :, : ), Allocatable :: rand1, rand2
+
+    Integer :: n
+    Integer :: i
+
+    n = m
+
+    Allocate( A( 1:n, 1:n ) )
+    If( me == 0 ) Then
+       Allocate( rand1( 1:n, 1:n ), rand2( 1:n, 1:n ) )
+       Call Random_number( rand1 ); Call Random_number( rand2 )
+       A = Cmplx( rand1, rand2, wp )
+       A = A + Conjg( Transpose( A ) )
+    End If
+    Call mpi_bcast( A, Size( A ), mpi_double_complex, 0, mpi_comm_world, error )
+
+    Call distributed_matrix_init
+    Call distributed_matrix_set_default_blocking( n_block )
+    Call distributed_matrix_comm_to_base( mpi_comm_world, base )
+    Allocate( complex_distributed_matrix :: Am )
+    Allocate( complex_distributed_matrix :: Qm )
+    Call Am%create( n, n, base )
+    Call Am%set_by_global( 1, n, 1, n, A )
+
+    Call Am%diag( Qm, E )
+
+    QTm = .Dagger. Qm
+    Cm = QTm * Am * Qm 
+    Allocate( tmp( 1:n, 1:n ) )
+    Call Cm%get_by_global( 1, n, 1, n, tmp )
+    Do i = 1, n
+       tmp( i, i ) = tmp( i, i ) - E( i )
+    End Do
+    
+    If( me == 0 ) Then
+       Write( *, error_format ) 'Error in complex diag ', Maxval( Abs( tmp ) ), &
+            Merge( 'Passed', 'FAILED', Maxval( Abs( tmp ) ) < tol )
+    End If
+  
+  End Subroutine test_diag_complex
 
   !KS_MATRIX tests
   
@@ -1424,7 +1598,7 @@ Contains
     Cm = Am * Bm
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in real ks_matmul NN ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in real ks_matmul NN ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call ks_matrix_finalise
@@ -1467,7 +1641,7 @@ Contains
     Cm = AmT * Bm
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in real ks_matmul TN ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in real ks_matmul TN ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call ks_matrix_finalise
@@ -1510,7 +1684,7 @@ Contains
     Cm = Am * BmT
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in real ks_matmul NT ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in real ks_matmul NT ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call ks_matrix_finalise
@@ -1554,7 +1728,7 @@ Contains
     Cm = AmT * BmT
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in real ks_matmul TT ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in real ks_matmul TT ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call ks_matrix_finalise
@@ -1604,7 +1778,7 @@ Contains
     Cm = Am * Bm
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in complex ks_matmul NN ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in complex ks_matmul NN ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call ks_matrix_finalise
@@ -1655,7 +1829,7 @@ Contains
     Cm = AmT * Bm
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in complex ks_matmul TN ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in complex ks_matmul TN ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call ks_matrix_finalise
@@ -1706,7 +1880,7 @@ Contains
     Cm = Am * BmT
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in complex ks_matmul NT ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in complex ks_matmul NT ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call ks_matrix_finalise
@@ -1758,7 +1932,7 @@ Contains
     Cm = AmT * BmT
     Call Cm%get_by_global( 1, m, 1, n, tmp )
     If( me == 0 ) Then
-       Write( *, format ) 'Error in complex ks_matmul TT ', Maxval( Abs( C - tmp ) ), &
+       Write( *, error_format ) 'Error in complex ks_matmul TT ', Maxval( Abs( C - tmp ) ), &
             Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
     End If
     Call ks_matrix_finalise
@@ -1898,7 +2072,7 @@ Contains
        End Do
     End Do
     If( me == 0 ) Then
-       Write( *, format ) 'Error in ks_split add NN ', max_diff, &
+       Write( *, error_format ) 'Error in ks_split add NN ', max_diff, &
             Merge( 'Passed', 'FAILED', max_diff < tol )
     End If
 
@@ -2039,7 +2213,7 @@ Contains
        End Do
     End Do
     If( me == 0 ) Then
-       Write( *, format ) 'Error in ks_split add TN ', max_diff, &
+       Write( *, error_format ) 'Error in ks_split add TN ', max_diff, &
             Merge( 'Passed', 'FAILED', max_diff < tol )
     End If
 
@@ -2180,7 +2354,7 @@ Contains
        End Do
     End Do
     If( me == 0 ) Then
-       Write( *, format ) 'Error in ks_split add NT ', max_diff, &
+       Write( *, error_format ) 'Error in ks_split add NT ', max_diff, &
             Merge( 'Passed', 'FAILED', max_diff < tol )
     End If
 
@@ -2323,7 +2497,7 @@ Contains
        End Do
     End Do
     If( me == 0 ) Then
-       Write( *, format ) 'Error in ks_split add TT ', max_diff, &
+       Write( *, error_format ) 'Error in ks_split add TT ', max_diff, &
             Merge( 'Passed', 'FAILED', max_diff < tol )
     End If
 
@@ -2462,7 +2636,7 @@ Contains
        End Do
     End Do
     If( me == 0 ) Then
-       Write( *, format ) 'Error in ks_split subtract NN ', max_diff, &
+       Write( *, error_format ) 'Error in ks_split subtract NN ', max_diff, &
             Merge( 'Passed', 'FAILED', max_diff < tol )
     End If
 
@@ -2603,7 +2777,7 @@ Contains
        End Do
     End Do
     If( me == 0 ) Then
-       Write( *, format ) 'Error in ks_split subtract TN ', max_diff, &
+       Write( *, error_format ) 'Error in ks_split subtract TN ', max_diff, &
             Merge( 'Passed', 'FAILED', max_diff < tol )
     End If
 
@@ -2744,7 +2918,7 @@ Contains
        End Do
     End Do
     If( me == 0 ) Then
-       Write( *, format ) 'Error in ks_split subtract NT ', max_diff, &
+       Write( *, error_format ) 'Error in ks_split subtract NT ', max_diff, &
             Merge( 'Passed', 'FAILED', max_diff < tol )
     End If
 
@@ -2887,7 +3061,7 @@ Contains
        End Do
     End Do
     If( me == 0 ) Then
-       Write( *, format ) 'Error in ks_split subtract TT ', max_diff, &
+       Write( *, error_format ) 'Error in ks_split subtract TT ', max_diff, &
             Merge( 'Passed', 'FAILED', max_diff < tol )
     End If
 
@@ -3017,7 +3191,7 @@ Contains
        End Do
     End Do
     If( me == 0 ) Then
-       Write( *, format ) 'Error in ks_array matmul NN ', max_diff, &
+       Write( *, error_format ) 'Error in ks_array matmul NN ', max_diff, &
             Merge( 'Passed', 'FAILED', max_diff < tol )
     End If
 
@@ -3146,7 +3320,7 @@ Contains
        End Do
     End Do
     If( me == 0 ) Then
-       Write( *, format ) 'Error in ks_array matmul TN ', max_diff, &
+       Write( *, error_format ) 'Error in ks_array matmul TN ', max_diff, &
             Merge( 'Passed', 'FAILED', max_diff < tol )
     End If
 
@@ -3275,7 +3449,7 @@ Contains
        End Do
     End Do
     If( me == 0 ) Then
-       Write( *, format ) 'Error in ks_array matmul NN ', max_diff, &
+       Write( *, error_format ) 'Error in ks_array matmul NN ', max_diff, &
             Merge( 'Passed', 'FAILED', max_diff < tol )
     End If
 
@@ -3406,7 +3580,7 @@ Contains
        End Do
     End Do
     If( me == 0 ) Then
-       Write( *, format ) 'Error in ks_array matmul TT ', max_diff, &
+       Write( *, error_format ) 'Error in ks_array matmul TT ', max_diff, &
             Merge( 'Passed', 'FAILED', max_diff < tol )
     End If
 
@@ -3546,7 +3720,7 @@ Contains
        End Do
     End Do
     If( me == 0 ) Then
-       Write( *, format ) 'Error in ks_split matmul NN ', max_diff, &
+       Write( *, error_format ) 'Error in ks_split matmul NN ', max_diff, &
             Merge( 'Passed', 'FAILED', max_diff < tol )
     End If
 
@@ -3678,7 +3852,7 @@ Contains
        End Do
     End Do
     If( me == 0 ) Then
-       Write( *, format ) 'Error in ks_array matmul TN ', max_diff, &
+       Write( *, error_format ) 'Error in ks_split matmul TN ', max_diff, &
             Merge( 'Passed', 'FAILED', max_diff < tol )
     End If
 
@@ -3809,7 +3983,7 @@ Contains
        End Do
     End Do
     If( me == 0 ) Then
-       Write( *, format ) 'Error in ks_array matmul NT ', max_diff, &
+       Write( *, error_format ) 'Error in ks_split matmul NT ', max_diff, &
             Merge( 'Passed', 'FAILED', max_diff < tol )
     End If
 
@@ -3942,7 +4116,7 @@ Contains
        End Do
     End Do
     If( me == 0 ) Then
-       Write( *, format ) 'Error in ks_array matmul TT ', max_diff, &
+       Write( *, error_format ) 'Error in ks_split matmul TT ', max_diff, &
             Merge( 'Passed', 'FAILED', max_diff < tol )
     End If
 

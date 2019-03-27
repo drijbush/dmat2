@@ -141,7 +141,7 @@ Module scalapack_interfaces
        Integer                     , Intent( In    ) :: lwork
        Integer   , Dimension( *   ), Intent(   Out ) :: iwork
        Integer                     , Intent( In    ) :: liwork
-       Integer                     , Intent( In    ) :: info
+       Integer                     , Intent(   Out ) :: info
      End Subroutine pdsyevd
 
      Subroutine pzheevd( jobz, uplo, n, a, ia, ja, desca, w, z, iz, jz, descz, cwork, lcwork, rwork, lrwork, iwork, liwork, info )
@@ -165,7 +165,7 @@ Module scalapack_interfaces
        Integer                        , Intent( In    ) :: lrwork
        Integer      , Dimension( *   ), Intent(   Out ) :: iwork
        Integer                        , Intent( In    ) :: liwork
-       Integer                        , Intent( In    ) :: info
+       Integer                        , Intent(   Out ) :: info
      End Subroutine pzheevd
 
   End Interface
