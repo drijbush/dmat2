@@ -15,9 +15,10 @@ Module ks_matrix_module
      ! Public methods
      Procedure, Public :: create               => ks_matrix_create                     !! Create a ks_matrix
      Generic  , Public :: Operator( .Dagger. ) => dagger                               !! Dagger a ks_matrix
-     Generic  , Public :: Operator( * )        => multiply                             !! multiply 2 ks_matrix's
-     Generic  , Public :: Operator( + )        => add                                  !! add 2 ks_matrix's
-     Generic  , Public :: Operator( - )        => subtract                             !! subtract 2 ks_matrix's
+     Generic  , Public :: Operator( * )        => multiply                             !! Multiply 2 ks_matrix's
+     Generic  , Public :: Operator( + )        => add                                  !! Add 2 ks_matrix's
+     Generic  , Public :: Operator( - )        => subtract                             !! Subtract 2 ks_matrix's
+     Procedure, Public :: diag                 => ks_matrix_diag                       !! Diagonalise a ks_matrix
      Procedure, Public :: size                 => ks_matrix_size                       !! Get the dimensions of the matrix
      Generic  , Public :: set_by_global        => set_global_real, set_global_complex  !! Set elements by global indices
      Generic  , Public :: get_by_global        => get_global_real, get_global_complex  !! Get elements using global indices
@@ -217,6 +218,18 @@ Contains
     C%matrix = A%matrix - B%matrix
 
   End Function ks_matrix_subtract
+
+  Subroutine ks_matrix_diag( A, Q, E ) 
+
+    !! Diagonalise a (assumed Hermitian) ks matrix
+    
+    Class( ks_matrix ),                      Intent( In    ) :: A
+    Type ( ks_matrix ),                      Intent(   Out ) :: Q
+    Real( wp ), Dimension( : ), Allocatable, Intent(   Out ) :: E
+
+    Call A%matrix%diag( Q%matrix, E )
+
+  End Subroutine ks_matrix_diag
 
   Function ks_matrix_size( A, dim ) Result( n )
 
