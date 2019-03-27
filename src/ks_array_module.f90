@@ -54,6 +54,7 @@ Module ks_array_module
      Generic  , Public :: Operator( .Dagger. ) => dagger                            !! Dagger each element in the array
      Generic  , Public :: Operator( * )        => multiply                          !! Multiply each element of the array with the corresponding element in another array
      Generic  , Public :: Operator( + )        => add                               !! Add each element of the array with the corresponding element in another array
+     Generic  , Public :: Operator( - )        => subtract                          !! Subtract each element of the array with the corresponding element in another array
      Generic  , Public :: set_by_global        => set_by_global_r, set_by_global_c  !! Set patches of an element
      Generic  , Public :: get_by_global        => get_by_global_r, get_by_global_c  !! Get patches of an element
      Procedure, Public :: global_to_local      => ks_array_g_to_l
@@ -84,6 +85,7 @@ Module ks_array_module
      Procedure, Private            :: dagger               => ks_array_dagger
      Procedure, Private            :: multiply             => ks_array_mult
      Procedure, Private            :: add                  => ks_array_add
+     Procedure, Private            :: subtract             => ks_array_subtract
 !!$     Procedure, Private, Pass( A ) :: pre_scale            => ks_array_pre_scale
 !!$     Procedure, Private            :: post_scale           => ks_array_post_scale
 !!$     Procedure, Private, Pass( A ) :: pre_mult_diag        => ks_array_pre_mult_diag
@@ -656,6 +658,32 @@ Contains
 
   End Function ks_array_add
 
+  Function ks_array_subtract( A, B ) Result( C )
+
+    !! Subtract the arays together element by element (i.e. matrix by matrix ) 
+
+    Type( ks_array ) :: C
+
+    Class( ks_array ), Intent( In ) :: A
+    Type ( ks_array ), Intent( In ) :: B
+
+    Integer :: my_ks, my_irrep
+
+    Call C%create( NO_DATA, NO_DATA, A )
+    
+    Do my_ks = 1, Size( A%my_k_points )
+       ! Irreps will need more thought - work currenly as burnt into as 1
+       Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
+          Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
+                     Bks => B%my_k_points( my_ks )%data( my_irrep )%matrix, &
+                     Cks => C%my_k_points( my_ks )%data( my_irrep )%matrix )
+            Cks = Aks - Bks
+          End Associate
+       End Do
+    End Do
+
+  End Function ks_array_subtract
+
 !!$  Function ks_array_pre_scale( s, A ) Result( C )
 !!$
 !!$    Type( ks_array ), Allocatable :: C
@@ -752,28 +780,6 @@ Contains
 !!$
 !!$  End Function ks_array_post_mult_diag
 !!$
-!!$  Function ks_array_add( A, B ) Result( C )
-!!$
-!!$    Type( ks_array ), Allocatable :: C
-!!$
-!!$    Class( ks_array ), Intent( In ) :: A
-!!$    Type ( ks_array ), Intent( In ) :: B
-!!$
-!!$    Integer :: my_ks, my_irrep
-!!$
-!!$    Allocate( C )
-!!$    C = A
-!!$    
-!!$    Do my_ks = 1, Size( A%my_k_points )
-!!$       ! Irreps will need more thought - work currenly as burnt into as 1
-!!$       Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
-!!$          Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
-!!$                     Bks => B%my_k_points( my_ks )%data( my_irrep )%matrix, &
-!!$                     Cks => C%my_k_points( my_ks )%data( my_irrep )%matrix )
-!!$            Cks = Aks + Bks
-!!$          End Associate
-!!$       End Do
-!!$    End Do
 !!$
 !!$  End Function ks_array_add
 !!$

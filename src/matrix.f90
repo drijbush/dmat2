@@ -34,6 +34,7 @@ Module distributed_matrix_module
      Generic  , Public :: get_by_global        => get_global_real, get_global_complex !! Get from a matrix using global indexing
      Generic  , Public :: Operator( * )        => multiply                   !! Multiply two matrices together
      Generic  , Public :: Operator( + )        => add                        !! Add two matrices together
+     Generic  , Public :: Operator( - )        => subtract                   !! Subtract two matrices 
      ! Public methods that are overridden
      Procedure( create     ), Deferred, Public :: create                     !! Create storage for the data of the matrix 
      Procedure( local_size ), Deferred, Public :: local_size                 !! Get the dimensions of the local part of the matrix
@@ -50,6 +51,9 @@ Module distributed_matrix_module
      Procedure(          binary_op ), Deferred,            Private :: add
      Procedure(     real_binary_op ), Deferred, Pass( B ), Private :: real_add
      Procedure(  complex_binary_op ), Deferred, Pass( B ), Private :: complex_add
+     Procedure(          binary_op ), Deferred,            Private :: subtract
+     Procedure(     real_binary_op ), Deferred, Pass( B ), Private :: real_subtract
+     Procedure(  complex_binary_op ), Deferred, Pass( B ), Private :: complex_subtract
      Procedure(      real_remap_op ), Deferred, Pass( B ), Private :: real_remap
      Procedure(   complex_remap_op ), Deferred, Pass( B ), Private :: complex_remap
   End type distributed_matrix
@@ -73,6 +77,9 @@ Module distributed_matrix_module
      Procedure,            Private :: add                => real_add
      Procedure, Pass( B ), Private :: real_add           => real_add_real
      Procedure, Pass( B ), Private :: complex_add        => complex_add_real
+     Procedure,            Private :: subtract           => real_subtract
+     Procedure, Pass( B ), Private :: real_subtract      => real_subtract_real
+     Procedure, Pass( B ), Private :: complex_subtract   => complex_subtract_real
      Procedure, Pass( B ), Private :: real_remap         => real_remap_real
      Procedure, Pass( B ), Private :: complex_remap      => complex_remap_real
 !!$     Procedure, Private   :: diag_r               => matrix_diag_real
@@ -128,6 +135,9 @@ Module distributed_matrix_module
      Procedure,            Private :: add                => complex_add
      Procedure, Pass( B ), Private :: real_add           => real_add_complex
      Procedure, Pass( B ), Private :: complex_add        => complex_add_complex
+     Procedure,            Private :: subtract           => complex_subtract
+     Procedure, Pass( B ), Private :: real_subtract      => real_subtract_complex
+     Procedure, Pass( B ), Private :: complex_subtract   => complex_subtract_complex
      Procedure, Pass( B ), Private :: real_remap         => real_remap_complex
      Procedure, Pass( B ), Private :: complex_remap      => complex_remap_complex
 !!$     Procedure, Private   :: diag_c               => matrix_diag_complex
@@ -1385,6 +1395,284 @@ Contains
 
   End Function complex_add_complex
 
+  ! Subtraction Routines
+  
+  Function real_subtract( A, B ) Result( C )
+
+    !! Subtract from a real matrix something yet to be determined
+  
+    Class(      distributed_matrix ), Allocatable :: C
+
+    Class( real_distributed_matrix ), Intent( In ) :: A
+    Class(      distributed_matrix ), Intent( In ) :: B
+
+    ! We know what A is. Now use dispatch on B to pick out what it is
+    C = B%real_subtract( A )
+    
+  End Function real_subtract
+
+  Function complex_subtract( A, B ) Result( C )
+  
+    !! Subtract from a complex matrix something yet to be determined
+
+    Class(         distributed_matrix ), Allocatable :: C
+
+    Class( complex_distributed_matrix ), Intent( In ) :: A
+    Class(         distributed_matrix ), Intent( In ) :: B
+
+    ! We know what A is. Now use dispatch on B to pick out what it is
+    C = B%complex_subtract( A )
+    
+  End Function complex_subtract
+
+  Function real_subtract_real( A, B ) Result( C )
+
+    !! Forms A - B, returning the result in C
+    ! Slightly complicated by the tranpose options on A and B, i.e. A and B may be flagged that they have
+    ! previously been tranposed, and so we have to subtract the correct forms together. Do this in a way
+    ! to avoid communication whereever possible, but as it gets a bit fiddly we will do
+    ! it very slowly and explicitly
+    ! The actual subtraction will be by pdgeadd( op, ... A, ... C ) which does C -> C + op( A ), so by careful
+    ! use of the transposes we can keep things sane
+    
+    Use Scalapack_interfaces, Only : pdgeadd
+
+    Class(      distributed_matrix ), Allocatable :: C
+
+    Class( real_distributed_matrix ), Intent( In ) :: A
+    Class( real_distributed_matrix ), Intent( In ) :: B
+
+    Type( real_distributed_matrix ) :: T
+
+    Character :: tA, TB
+
+    Integer :: mA, nA
+    Integer :: mB, nB
+    Integer :: mT, nT
+    
+    ! Work out the tranposes
+    tA = Merge( 'T', 'N', A%daggered )
+    tB = Merge( 'T', 'N', B%daggered )
+
+    ! Get the shapes of the input matrices
+    Call A%matrix_map%get_data( m = mA, n = nA )
+    Call B%matrix_map%get_data( m = mB, n = nB )
+    
+    ! Consider each in turn
+    ! We will generate the result in T which is a real_distributed_matrix
+    ! and then once we have it return the result via C
+
+    If     ( tA == 'N' .And. tB == 'N' ) Then
+       ! Neither matrix to be used in tranposed form
+       ! Perform A -> -B + A
+       ! First check the matrices are compatible
+       If( mA /= mb .Or. nA /= nB ) Then
+          Stop "Incompatible sizes in real_subtract_real" 
+       End If
+       ! Shape of the result
+       mT = mA
+       nT = nA
+       ! Now generate the result in T
+       T = A
+       Call pdgeadd( 'N', mT, nT, -1.0_wp, B%data, 1, 1, B%matrix_map%get_descriptor(), &
+                                   1.0_wp, T%data, 1, 1, T%matrix_map%get_descriptor() )
+       
+    Else If( tA == 'N' .And. tB == 'T' ) Then
+       ! A not transposed, B to be used in transposed form
+       ! Perform A -> -Tranpose( B ) + A
+       ! First check the matrices are compatible
+       If( mA /= nb .Or. nA /= mB ) Then
+          Stop "Incompatible sizes in real_subtract_real" 
+       End If
+       ! Shape of the result
+       mT = mA
+       nT = nA
+       ! Now generate the result in T
+       T = A
+       Call pdgeadd( 'T', mT, nT, -1.0_wp, B%data, 1, 1, B%matrix_map%get_descriptor(), &
+                                   1.0_wp, T%data, 1, 1, T%matrix_map%get_descriptor() )
+
+    Else If( tA == 'T' .And. tB == 'N' ) Then
+       ! A tranposed, B not transposed
+       ! Perform B -> Tranpose( A ) - B
+       ! First check the matrices are compatible
+       If( mA /= nb .Or. nA /= mB ) Then
+          Stop "Incompatible sizes in real_subtract_real" 
+       End If
+       ! Shape of the result
+       mT = mB
+       nT = nB
+       ! Now generate the result in T
+       T = B
+       Call pdgeadd( 'T', mT, nT,  1.0_wp, A%data, 1, 1, A%matrix_map%get_descriptor(), &
+                                  -1.0_wp, T%data, 1, 1, T%matrix_map%get_descriptor() )
+
+    Else If( tA == 'T' .And. tB == 'T' ) Then
+       ! Both matrices in transposed form
+       ! THIS IS THE TRICKSY ONE
+       ! Perform A -> -B + A AND THEN indicate the matrix is returned in tranposed form to avoid comms
+       ! First check the matrices are compatible
+       If( mA /= mb .Or. nA /= nB ) Then
+          Stop "Incompatible sizes in real_subtract_real" 
+       End If
+       ! Shape of the result
+       mT = mA
+       nT = nA
+       ! Now generate the result in T
+       T = A
+       Call pdgeadd( 'N', mT, nT, -1.0_wp, B%data, 1, 1, B%matrix_map%get_descriptor(), &
+                                   1.0_wp, T%data, 1, 1, T%matrix_map%get_descriptor() )
+       ! Now "tranpose" the result
+       T%daggered = .True.
+
+    Else
+       Stop "How did we get here in real_subtract_real?"
+    End If
+
+    ! Return the result
+    C = T
+
+  End Function real_subtract_real
+
+  Function real_subtract_complex( A, B ) Result( C )
+
+    !! Subtract from a real matrix a complex matrix - ILLEGAL
+
+    Class(         distributed_matrix ), Allocatable :: C
+
+    Class(    real_distributed_matrix ), Intent( In ) :: A
+    Class( complex_distributed_matrix ), Intent( In ) :: B
+
+    Stop "Illegal combination of arguments in real_subtract_complex"
+    Deallocate( C )
+    Write( *, * ) A%data, B%data
+
+  End Function real_subtract_complex
+
+  Function complex_subtract_real( A, B ) Result( C )
+
+    !! Subtract from a complex matrix a real matrix - ILLEGAL
+
+    Class(         distributed_matrix ), Allocatable :: C
+
+    Class( complex_distributed_matrix ), Intent( In ) :: A
+    Class(    real_distributed_matrix ), Intent( In ) :: B
+
+    Stop "Illegal combination of arguments in complex_subtract_real"
+    Deallocate( C )
+    Write( *, * ) A%data, B%data
+    
+  End Function complex_subtract_real
+  
+  Function complex_subtract_complex( A, B ) Result( C )
+
+    !! Froms A - B, returning the result in C
+    ! Slightly complicated by the tranpose options on A and B, i.e. A and B may be flagged that they have
+    ! previously been tranposed, and so we have to subtract the correct forms together. Do this in a way
+    ! to avoid communication whereever possible, but as it gets a bit fiddly we will do
+    ! it very slowly and explicitly
+    ! The actual subtraction will be by pzgeadd( op, ... A, ... C ) which does C -> C + op( A ), so by careful
+    ! use of the transposes we can keep things sane
+    
+    Use Scalapack_interfaces, Only : pzgeadd
+
+    Class(         distributed_matrix ), Allocatable :: C
+
+    Class( complex_distributed_matrix ), Intent( In ) :: A
+    Class( complex_distributed_matrix ), Intent( In ) :: B
+
+    Type( complex_distributed_matrix ) :: T
+
+    Character :: tA, TB
+
+    Integer :: mA, nA
+    Integer :: mB, nB
+    Integer :: mT, nT
+    
+    ! Work out the tranposes
+    tA = Merge( 'C', 'N', A%daggered )
+    tB = Merge( 'C', 'N', B%daggered )
+
+    ! Get the shapes of the input matrices
+    Call A%matrix_map%get_data( m = mA, n = nA )
+    Call B%matrix_map%get_data( m = mB, n = nB )
+    
+    ! Consider each in turn
+    ! We will generate the result in T which is a real_distributed_matrix
+    ! and then once we have it return the result via C
+
+    If     ( tA == 'N' .And. tB == 'N' ) Then
+       ! Neither matrix to be used in tranposed form
+       ! Perform A -> -B + A
+       ! First check the matrices are compatible
+       If( mA /= mb .Or. nA /= nB ) Then
+          Stop "Incompatible sizes in real_subtract_real" 
+       End If
+       ! Shape of the result
+       mT = mA
+       nT = nA
+       ! Now generate the result in T
+       T = A
+       Call pzgeadd( 'N', mT, nT, - ( 1.0_wp, 0.0_wp ), B%data, 1, 1, B%matrix_map%get_descriptor(), &
+                                    ( 1.0_wp, 0.0_wp ), T%data, 1, 1, T%matrix_map%get_descriptor() )
+       
+    Else If( tA == 'N' .And. tB == 'C' ) Then
+       ! A not transposed, B to be used in transposed form
+       ! Perform A -> -Tranpose( B ) + B
+       ! First check the matrices are compatible
+       If( mA /= nb .Or. nA /= mB ) Then
+          Stop "Incompatible sizes in real_subtract_real" 
+       End If
+       ! Shape of the result
+       mT = mA
+       nT = nA
+       ! Now generate the result in T
+       T = A
+       Call pzgeadd( 'C', mT, nT, - ( 1.0_wp, 0.0_wp ), B%data, 1, 1, B%matrix_map%get_descriptor(), &
+                                    ( 1.0_wp, 0.0_wp ), T%data, 1, 1, T%matrix_map%get_descriptor() )
+
+    Else If( tA == 'C' .And. tB == 'N' ) Then
+       ! A tranposed, B not transposed
+       ! Perform B -> Tranpose( A ) - B
+       ! First check the matrices are compatible
+       If( mA /= nb .Or. nA /= mB ) Then
+          Stop "Incompatible sizes in real_subtract_real" 
+       End If
+       ! Shape of the result
+       mT = mB
+       nT = nB
+       ! Now generate the result in T
+       T = B
+       Call pzgeadd( 'C', mT, nT,   ( 1.0_wp, 0.0_wp ), A%data, 1, 1, A%matrix_map%get_descriptor(), &
+                                  - ( 1.0_wp, 0.0_wp ), T%data, 1, 1, T%matrix_map%get_descriptor() )
+
+    Else If( tA == 'C' .And. tB == 'C' ) Then
+       ! Both matrices in transposed form
+       ! THIS IS THE TRICKSY ONE
+       ! Perform A -> -B + A AND THEN indicate the matrix is returned in tranposed form to avoid comms
+       ! First check the matrices are compatible
+       If( mA /= mb .Or. nA /= nB ) Then
+          Stop "Incompatible sizes in real_subtract_real" 
+       End If
+       ! Shape of the result
+       mT = mA
+       nT = nA
+       ! Now generate the result in T
+       T = A
+       Call pzgeadd( 'N', mT, nT, - ( 1.0_wp, 0.0_wp ), B%data, 1, 1, B%matrix_map%get_descriptor(), &
+                                    ( 1.0_wp, 0.0_wp ), T%data, 1, 1, T%matrix_map%get_descriptor() )
+       ! Now "tranpose" the result
+       T%daggered = .True.
+
+    Else
+       Stop "How did we get here in real_subtract_real?"
+    End If
+
+    ! Return the result
+    C = T
+
+  End Function complex_subtract_complex
+  
   !##########################################################################
   ! Auxiliary routines
   
@@ -2058,78 +2346,6 @@ Contains
 !!$    
 !!$  End Function matrix_pre_scale_complex
 !!$
-!!$  Function matrix_add_real( A, B ) Result( C )
-!!$
-!!$    ! Note in an effort to avoid communication through transposes the addition occurs in
-!!$    ! the form with A NOT transposed, and then the result is indicate as requiring transposition
-!!$    ! or not as required byt this.
-!!$
-!!$    ! NOTE TRANSPOSES BUSTED - is PDTRAN the solution?
-!!$
-!!$    Class( real_distributed_matrix ), Allocatable :: C
-!!$
-!!$    Class( real_distributed_matrix ), Intent( In ) :: A
-!!$    Class( real_distributed_matrix ), Intent( In ) :: B
-!!$
-!!$    Integer :: m, n
-!!$    
-!!$    Character :: tA, tB
-!!$
-!!$    tA = Merge( 'T', 'N', A%daggered )
-!!$    tB = Merge( 'T', 'N', B%daggered )
-!!$    Call A%matrix_map%get_data( m = m, n = n )
-!!$    Allocate( real_distributed_matrix :: C )
-!!$    Call matrix_create( C, m, n, A )
-!!$    C%data = B%data
-!!$    Call pdgeadd( tB, m, n, 1.0_wp, A%data, 1, 1, A%matrix_map%get_descriptor(), &
-!!$                            1.0_wp, C%data, 1, 1, C%matrix_map%get_descriptor() )
-!!$  
-!!$    Select Case( tA )
-!!$    Case Default
-!!$       Stop "How did we get here in matrix_add_real"
-!!$    Case( "N" )
-!!$       C%daggered = .False.
-!!$    Case( "T" )
-!!$       C%daggered = .True.
-!!$    End Select
-!!$              
-!!$  End Function matrix_add_real
-!!$     
-!!$  Function matrix_add_complex( A, B ) Result( C )
-!!$
-!!$    ! Note in an effort to avoid communication through transposes the addition occurs in
-!!$    ! the form with A NOT transposed, and then the result is indicate as requiring transposition
-!!$    ! or not as required byt this.
-!!$
-!!$    Class( complex_distributed_matrix ), Allocatable :: C
-!!$
-!!$    Class( complex_distributed_matrix ), Intent( In ) :: A
-!!$    Class( complex_distributed_matrix ), Intent( In ) :: B
-!!$
-!!$    Integer :: m, n
-!!$    
-!!$    Character :: tA, tB
-!!$
-!!$    tA = Merge( 'T', 'N', A%daggered )
-!!$    tB = Merge( 'T', 'N', B%daggered )
-!!$    Call A%matrix_map%get_data( m = m, n = n )
-!!$    Allocate( complex_distributed_matrix :: C )
-!!$    Call matrix_create( C, m, n, A )
-!!$    C%data = B%data
-!!$    Call pzgeadd( tB, m, n, ( 1.0_wp, 0.0_wp ), A%data, 1, 1, A%matrix_map%get_descriptor(), &
-!!$                            ( 1.0_wp, 0.0_wp ), C%data, 1, 1, C%matrix_map%get_descriptor() )
-!!$  
-!!$    Select Case( tA )
-!!$    Case Default
-!!$       Stop "How did we get here in matrix_add_complex"
-!!$    Case( "N" )
-!!$       C%daggered = .False.
-!!$    Case( "T" )
-!!$       C%daggered = .True.
-!!$    End Select
-!!$              
-!!$  End Function matrix_add_complex
-!!$     
 !!$  Function matrix_post_add_diag_real( A, d ) Result( B )
 !!$
 !!$    Class( real_distributed_matrix ), Allocatable :: B
