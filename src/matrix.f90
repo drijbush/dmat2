@@ -6,7 +6,6 @@ Module distributed_matrix_module
 
   Use numbers_module       , Only : wp
   Use matrix_mapping_module, Only : matrix_mapping 
-
   
   Implicit None
 
@@ -104,13 +103,9 @@ Module distributed_matrix_module
 !!$     Procedure            :: Choleski             => matrix_choleski_real
 !!$     Procedure            :: Solve                => matrix_solve_real
 !!$     Procedure            :: set_to_identity      => matrix_set_to_identity_real
-!!$     Procedure, Private   :: set_by_global_r      => matrix_set_global_real
 !!$     Procedure, Private   :: set_by_local_r       => matrix_set_local_real
-!!$     Procedure, Private   :: get_by_global_r      => matrix_get_global_real
 !!$     Procedure, Private   :: get_by_local_r       => matrix_get_local_real
-!!$     Generic              :: set_by_global        => set_by_global_r
 !!$     Generic              :: set_by_local         => set_by_local_r
-!!$     Generic              :: get_by_global        => get_by_global_r
 !!$     Generic              :: get_by_local         => get_by_local_r
 !!$     Procedure, Private   :: extract_r            => matrix_extract_real
 !!$     Generic              :: extract              => extract_r
@@ -1672,7 +1667,114 @@ Contains
     C = T
 
   End Function complex_subtract_complex
-  
+
+  ! Diagonalisation routines
+    
+  Subroutine real_diag_real( A, Q, E )
+
+    Use Scalapack_interfaces, Only : pdsyevd
+
+    Implicit None
+
+    Class( real_distributed_matrix ),              Intent( In    ) :: A
+    Class( real_distributed_matrix ),              Intent(   Out ) :: Q
+    Real( wp ), Dimension( : )      , Allocatable, Intent(   Out ) :: E
+
+    Real( wp ), Dimension( :, : ), Allocatable :: tmp_a
+
+    Real( wp ), Dimension( : ), Allocatable :: work
+
+    Integer, Dimension( : ), Allocatable :: iwork
+    
+    Integer :: nwork
+    Integer :: npcol
+    Integer :: m, n
+    Integer :: info
+
+    ! Give Q the same mapping as A
+    Call A%matrix_map%get_data( m = m, n = n, npcol = npcol )
+    Call Q%create( m, n, A )
+
+    Allocate( E( 1:m ) )
+    
+    ! The diag overwrites the matrix. Horrible so use a temporary
+    tmp_A = A%data
+    
+    ! Workspace size enquiry
+    Allocate( work( 1:1 ), iwork( 1:1 ) )
+    Call pdsyevd( 'V', 'U', m, tmp_A, 1, 1, A%matrix_map%get_descriptor(), E, Q%data, 1, 1, Q%matrix_map%get_descriptor(), &
+         work, -1, iwork, 0, info )
+    nwork = Nint( work( 1 ) )
+    nwork = nwork * diag_work_size_fiddle_factor ! From experience ...
+    Deallocate( work, iwork )
+    Allocate(  work( 1:nwork ) )
+    ! Scalapack recipe is behind the strange numbers
+    Allocate( iwork( 1:7 * m + 8 * npcol + 2 ) )
+    ! Do the diag
+    Call pdsyevd( 'V', 'U', m, tmp_A, 1, 1, A%matrix_map%get_descriptor(), E, Q%data, 1, 1, Q%matrix_map%get_descriptor(), &
+         work, Size( work ), iwork, Size( iwork ), info )
+
+    If( info /= 0 ) Then
+       Deallocate( E )
+    End If
+
+  End Subroutine real_diag_real
+
+  Subroutine complex_diag_complex( A, Q, E )
+
+    Use Scalapack_interfaces, Only : pzheevd
+
+    Implicit None
+
+    Class( complex_distributed_matrix ),              Intent( In    ) :: A
+    Class( complex_distributed_matrix ),              Intent(   Out ) :: Q
+    Real( wp ), Dimension( : )         , Allocatable, Intent(   Out ) :: E
+
+    Complex( wp ), Dimension( :, : ), Allocatable :: tmp_a
+
+    Complex( wp ), Dimension( : ), Allocatable :: cwork
+
+    Real( wp ), Dimension( : ), Allocatable :: rwork
+
+    Integer, Dimension( : ), Allocatable :: iwork
+    
+    Integer :: ncwork, nrwork
+    Integer :: npcol
+    Integer :: m, n
+    Integer :: info
+
+    ! Give Q the same mapping as A
+    Call A%matrix_map%get_data( m = m, n = n, npcol = npcol )
+    Call Q%create( m, n, A )
+    
+    Allocate( E( 1:m ) )
+
+    ! The diag overwrites the matrix. Horrible so use a temporary
+    tmp_A = A%data
+       
+    ! Workspace size enquiry
+    Allocate( cwork( 1:1 ), rwork( 1:1 ), iwork( 1:1 ) )
+    Call pzheevd( 'V', 'U', m, tmp_A, 1, 1, A%matrix_map%get_descriptor(), E, Q%data, 1, 1, Q%matrix_map%get_descriptor(), &
+         cwork, -1, rwork, -1, iwork, 0, info )
+    ncwork = Nint( Real( cwork( 1 ), wp ) )
+    ncwork = ncwork * diag_work_size_fiddle_factor ! From experience ...
+    nrwork = Nint( rwork( 1 ) )
+    nrwork = nrwork * diag_work_size_fiddle_factor ! From experience ...
+    Deallocate( cwork, rwork, iwork )
+    Allocate( cwork( 1:ncwork ) )
+    Allocate( rwork( 1:nrwork ) )
+    ! Scalapack recipe is behind the strange numbers
+    Allocate( iwork( 1:7 * m + 8 * npcol + 2 ) )
+    ! Do the diag
+    Call pzheevd( 'V', 'U', m, tmp_A, 1, 1, A%matrix_map%get_descriptor(), E, Q%data, 1, 1, Q%matrix_map%get_descriptor(), &
+            cwork, Size( cwork ), rwork, Size( rwork ), iwork, Size( iwork ), info )
+
+    If( info /= 0 ) Then
+       Deallocate( E )
+    End If
+
+  End Subroutine complex_diag_complex
+
   !##########################################################################
   ! Auxiliary routines
   
