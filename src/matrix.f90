@@ -518,6 +518,9 @@ Contains
        A%data = Huge( A%data )
     End If
 
+    ! Indicate that A is not tranposed
+    A%daggered = .False.
+
   End Subroutine matrix_create_real
 
   Subroutine matrix_create_complex( A, m, n, source_matrix )
@@ -565,6 +568,9 @@ Contains
     Else
        A%data = Huge( Real( A%data, wp ) )
     End If
+
+    ! Indicate that A is not tranposed
+    A%daggered = .False.
         
   End Subroutine matrix_create_complex
   
@@ -988,6 +994,225 @@ Contains
     
   End Function complex_multiply_complex
 
+  ! Addition routines
+
+  Function real_add_real( A, B ) Result( C )
+
+    !! Adds two real matrices A and B, returning the result in C
+    ! Slightly complicated by the tranpose options on A and B, i.e. A and B may be flagged that they have
+    ! previously been tranposed, and so we have to add the correct forms together. Do this in a way
+    ! to avoid communication whereever possible, but as it gets a bit fiddly we will do
+    ! it very slowly and explicitly
+    ! The actual addition will be by pdgeadd( op, ... A, ... C ) which does C -> C + op( A ), so by careful
+    ! use of the transposes we can keep things sane
+    
+    Use Scalapack_interfaces, Only : pdgeadd
+
+    Class(      distributed_matrix ), Allocatable :: C
+
+    Class( real_distributed_matrix ), Intent( In ) :: A
+    Class( real_distributed_matrix ), Intent( In ) :: B
+
+    Type( real_distributed_matrix ) :: T
+
+    Character :: tA, TB
+
+    Integer :: mA, nA
+    Integer :: mB, nB
+    Integer :: mT, nT
+    
+    ! Work out the tranposes
+    tA = Merge( 'T', 'N', A%daggered )
+    tB = Merge( 'T', 'N', B%daggered )
+
+    ! Get the shapes of the input matrices
+    Call A%matrix_map%get_data( m = mA, n = nA )
+    Call B%matrix_map%get_data( m = mB, n = nB )
+    
+    ! Consider each in turn
+    ! We will generate the result in T which is a real_distributed_matrix
+    ! and then once we have it return the result via C
+
+    If     ( tA == 'N' .And. tB == 'N' ) Then
+       ! Neither matrix to be used in tranposed form
+       ! Perform A -> A + B
+       ! First check the matrices are compatible
+       If( mA /= mb .Or. nA /= nB ) Then
+          Stop "Incompatible sizes in real_add_real" 
+       End If
+       ! Shape of the result
+       mT = mA
+       nT = nA
+       ! Now generate the result in T
+       T = A
+       Call pdgeadd( 'N', mT, nT, 1.0_wp, B%data, 1, 1, B%matrix_map%get_descriptor(), &
+                                  1.0_wp, T%data, 1, 1, T%matrix_map%get_descriptor() )
+       
+    Else If( tA == 'N' .And. tB == 'T' ) Then
+       ! A not transposed, B to be used in transposed form
+       ! Perform A -> A + Tranpose( B )
+       ! First check the matrices are compatible
+       If( mA /= nb .Or. nA /= mB ) Then
+          Stop "Incompatible sizes in real_add_real" 
+       End If
+       ! Shape of the result
+       mT = mA
+       nT = nA
+       ! Now generate the result in T
+       T = A
+       Call pdgeadd( 'T', mT, nT, 1.0_wp, B%data, 1, 1, B%matrix_map%get_descriptor(), &
+                                  1.0_wp, T%data, 1, 1, T%matrix_map%get_descriptor() )
+
+    Else If( tA == 'T' .And. tB == 'N' ) Then
+       ! A tranposed, B not transposed
+       ! Perform B -> B + Tranpose( A )
+       ! First check the matrices are compatible
+       If( mA /= nb .Or. nA /= mB ) Then
+          Stop "Incompatible sizes in real_add_real" 
+       End If
+       ! Shape of the result
+       mT = mB
+       nT = nB
+       ! Now generate the result in T
+       T = B
+       Call pdgeadd( 'T', mT, nT, 1.0_wp, A%data, 1, 1, A%matrix_map%get_descriptor(), &
+                                  1.0_wp, T%data, 1, 1, T%matrix_map%get_descriptor() )
+
+    Else If( tA == 'T' .And. tB == 'T' ) Then
+       ! Both matrices in transposed form
+       ! THIS IS THE TRICKSY ONE
+       ! Perform A -> A + B AND THEN indicate the matrix is returned in tranposed form to avoid comms
+       ! First check the matrices are compatible
+       If( mA /= mb .Or. nA /= nB ) Then
+          Stop "Incompatible sizes in real_add_real" 
+       End If
+       ! Shape of the result
+       mT = mA
+       nT = nA
+       ! Now generate the result in T
+       T = A
+       Call pdgeadd( 'N', mT, nT, 1.0_wp, B%data, 1, 1, B%matrix_map%get_descriptor(), &
+                                  1.0_wp, T%data, 1, 1, T%matrix_map%get_descriptor() )
+       ! Now "tranpose" the result
+       T%daggered = .True.
+
+    Else
+       Stop "How did we get here in real_add_real?"
+    End If
+
+    ! Return the result
+    C = T
+
+  End Function real_add_real
+
+  Function complex_add_complex( A, B ) Result( C )
+
+    !! Adds two real matrices A and B, returning the result in C
+    ! Slightly complicated by the tranpose options on A and B, i.e. A and B may be flagged that they have
+    ! previously been tranposed, and so we have to add the correct forms together. Do this in a way
+    ! to avoid communication whereever possible, but as it gets a bit fiddly we will do
+    ! it very slowly and explicitly
+    ! The actual addition will be by pdgeadd( op, ... A, ... C ) which does C -> C + op( A ), so by careful
+    ! use of the transposes we can keep things sane
+    
+    Use Scalapack_interfaces, Only : pzgeadd
+
+    Class(         distributed_matrix ), Allocatable :: C
+
+    Class( complex_distributed_matrix ), Intent( In ) :: A
+    Class( complex_distributed_matrix ), Intent( In ) :: B
+
+    Type( complex_distributed_matrix ) :: T
+
+    Character :: tA, TB
+
+    Integer :: mA, nA
+    Integer :: mB, nB
+    Integer :: mT, nT
+    
+    ! Work out the tranposes
+    tA = Merge( 'C', 'N', A%daggered )
+    tB = Merge( 'C', 'N', B%daggered )
+
+    ! Get the shapes of the input matrices
+    Call A%matrix_map%get_data( m = mA, n = nA )
+    Call B%matrix_map%get_data( m = mB, n = nB )
+    
+    ! Consider each in turn
+    ! We will generate the result in T which is a real_distributed_matrix
+    ! and then once we have it return the result via C
+
+    If     ( tA == 'N' .And. tB == 'N' ) Then
+       ! Neither matrix to be used in tranposed form
+       ! Perform A -> A + B
+       ! First check the matrices are compatible
+       If( mA /= mb .Or. nA /= nB ) Then
+          Stop "Incompatible sizes in real_add_real" 
+       End If
+       ! Shape of the result
+       mT = mA
+       nT = nA
+       ! Now generate the result in T
+       T = A
+       Call pzgeadd( 'N', mT, nT, ( 1.0_wp, 0.0_wp ), B%data, 1, 1, B%matrix_map%get_descriptor(), &
+                                  ( 1.0_wp, 0.0_wp ), T%data, 1, 1, T%matrix_map%get_descriptor() )
+       
+    Else If( tA == 'N' .And. tB == 'C' ) Then
+       ! A not transposed, B to be used in transposed form
+       ! Perform A -> A + Tranpose( B )
+       ! First check the matrices are compatible
+       If( mA /= nb .Or. nA /= mB ) Then
+          Stop "Incompatible sizes in real_add_real" 
+       End If
+       ! Shape of the result
+       mT = mA
+       nT = nA
+       ! Now generate the result in T
+       T = A
+       Call pzgeadd( 'C', mT, nT, ( 1.0_wp, 0.0_wp ), B%data, 1, 1, B%matrix_map%get_descriptor(), &
+                                  ( 1.0_wp, 0.0_wp ), T%data, 1, 1, T%matrix_map%get_descriptor() )
+
+    Else If( tA == 'C' .And. tB == 'N' ) Then
+       ! A tranposed, B not transposed
+       ! Perform B -> B + Tranpose( A )
+       ! First check the matrices are compatible
+       If( mA /= nb .Or. nA /= mB ) Then
+          Stop "Incompatible sizes in real_add_real" 
+       End If
+       ! Shape of the result
+       mT = mB
+       nT = nB
+       ! Now generate the result in T
+       T = B
+       Call pzgeadd( 'C', mT, nT, ( 1.0_wp, 0.0_wp ), A%data, 1, 1, A%matrix_map%get_descriptor(), &
+                                  ( 1.0_wp, 0.0_wp ), T%data, 1, 1, T%matrix_map%get_descriptor() )
+
+    Else If( tA == 'C' .And. tB == 'C' ) Then
+       ! Both matrices in transposed form
+       ! THIS IS THE TRICKSY ONE
+       ! Perform A -> A + B AND THEN indicate the matrix is returned in tranposed form to avoid comms
+       ! First check the matrices are compatible
+       If( mA /= mb .Or. nA /= nB ) Then
+          Stop "Incompatible sizes in real_add_real" 
+       End If
+       ! Shape of the result
+       mT = mA
+       nT = nA
+       ! Now generate the result in T
+       T = A
+       Call pzgeadd( 'N', mT, nT, ( 1.0_wp, 0.0_wp ), B%data, 1, 1, B%matrix_map%get_descriptor(), &
+                                  ( 1.0_wp, 0.0_wp ), T%data, 1, 1, T%matrix_map%get_descriptor() )
+       ! Now "tranpose" the result
+       T%daggered = .True.
+
+    Else
+       Stop "How did we get here in real_add_real?"
+    End If
+
+    ! Return the result
+    C = T
+
+  End Function complex_add_complex
 
   !##########################################################################
   ! Auxiliary routines
@@ -1255,34 +1480,6 @@ Contains
 !!$    
 !!$  End Function matrix_solve_complex
 !!$
-!!$  Subroutine matrix_set_global_real( matrix, m, n, p, q, data )
-!!$
-!!$    ! Sets the data ( m:n, p:q ) in the global matrix
-!!$
-!!$    Class( real_distributed_matrix ), Intent( InOut ) :: matrix
-!!$    Integer                         , Intent( In    ) :: m
-!!$    Integer                         , Intent( In    ) :: n
-!!$    Integer                         , Intent( In    ) :: p
-!!$    Integer                         , Intent( In    ) :: q
-!!$    Real( wp ), Dimension( m:, p: ) , Intent( In    ) :: data
-!!$
-!!$    Integer :: i_glob, j_glob
-!!$    Integer :: i_loc , j_loc
-!!$    
-!!$    ! THIS NEEDS OPTIMISATION!!
-!!$
-!!$    Do j_glob = p, q
-!!$       j_loc = matrix%global_to_local_cols( j_glob )
-!!$       If( j_loc == distributed_matrix_NOT_ME ) Cycle
-!!$       Do i_glob = m, n
-!!$          i_loc = matrix%global_to_local_rows( i_glob )
-!!$          If( i_loc == distributed_matrix_NOT_ME ) Cycle
-!!$          matrix%data( i_loc, j_loc ) = data( i_glob, j_glob )
-!!$       End Do
-!!$    End Do
-!!$       
-!!$  End Subroutine matrix_set_global_real
-!!$
 !!$  Subroutine matrix_set_local_real( matrix, m, n, p, q, data )
 !!$
 !!$    ! Sets the data ( m:n, p:q ) in the local matrix
@@ -1298,34 +1495,6 @@ Contains
 !!$    
 !!$  End Subroutine matrix_set_local_real
 !!$
-!!$  Subroutine matrix_set_global_complex( matrix, m, n, p, q, data )
-!!$
-!!$    ! Sets the data ( m:n, p:q ) in the global matrix
-!!$
-!!$    Class( complex_distributed_matrix ), Intent( InOut ) :: matrix
-!!$    Integer                            , Intent( In    ) :: m
-!!$    Integer                            , Intent( In    ) :: n
-!!$    Integer                            , Intent( In    ) :: p
-!!$    Integer                            , Intent( In    ) :: q
-!!$    Complex( wp ), Dimension( m:, p: ) , Intent( In    ) :: data
-!!$
-!!$    Integer :: i_glob, j_glob
-!!$    Integer :: i_loc , j_loc
-!!$    
-!!$    ! THIS NEEDS OPTIMISATION!!
-!!$
-!!$    Do j_glob = p, q
-!!$       j_loc = matrix%global_to_local_cols( j_glob )
-!!$       If( j_loc == distributed_matrix_NOT_ME ) Cycle
-!!$       Do i_glob = m, n
-!!$          i_loc = matrix%global_to_local_rows( i_glob )
-!!$          If( i_loc == distributed_matrix_NOT_ME ) Cycle
-!!$          matrix%data( i_loc, j_loc ) = data( i_glob, j_glob )
-!!$       End Do
-!!$    End Do
-!!$       
-!!$  End Subroutine matrix_set_global_complex
-!!$  
 !!$  Subroutine matrix_set_local_complex( matrix, m, n, p, q, data )
 !!$
 !!$    ! Sets the data ( m:n, p:q ) in the local matrix
@@ -1341,48 +1510,6 @@ Contains
 !!$    
 !!$  End Subroutine matrix_set_local_complex
 !!$
-!!$  Subroutine matrix_get_global_real( matrix, m, n, p, q, data )
-!!$
-!!$    Use mpi
-!!$    
-!!$    ! Gets the data ( m:n, p:q ) in the global matrix
-!!$
-!!$    Class( real_distributed_matrix ), Intent( In    ) :: matrix
-!!$    Integer                         , Intent( In    ) :: m
-!!$    Integer                         , Intent( In    ) :: n
-!!$    Integer                         , Intent( In    ) :: p
-!!$    Integer                         , Intent( In    ) :: q
-!!$    Real( wp ), Dimension( m:, p: ) , Intent(   Out ) :: data
-!!$    
-!!$    Real( wp ) :: rdum
-!!$
-!!$    Integer :: i_glob, j_glob
-!!$    Integer :: i_loc , j_loc
-!!$    Integer :: handle
-!!$    Integer :: rsize, error
-!!$    
-!!$    ! THIS NEEDS OPTIMISATION!!
-!!$    data = 0.0_wp
-!!$    Do j_glob = p, q
-!!$       j_loc = matrix%global_to_local_cols( j_glob )
-!!$       If( j_loc == distributed_matrix_NOT_ME ) Cycle
-!!$       Do i_glob = m, n
-!!$          i_loc = matrix%global_to_local_rows( i_glob )
-!!$          If( i_loc == distributed_matrix_NOT_ME ) Cycle
-!!$          data( i_glob, j_glob ) = matrix%data( i_loc, j_loc )
-!!$       End Do
-!!$    End Do
-!!$    ! Generate a portable MPI data type handle from the variable to be communicated
-!!$    Call MPI_Type_create_f90_real( Precision( data ), Range( data ), handle, error )
-!!$    ! Replicate the data
-!!$!!!!HACK TO WORK AROUND BUG IN MVAPICH2
-!!$!!!!!$    Call MPI_Allreduce( MPI_IN_PLACE, data, Size( data ), handle, MPI_SUM, matrix%matrix_map%get_comm(), error )
-!!$    Call mpi_sizeof( rdum, rsize, error )
-!!$    Call mpi_type_match_size( MPI_TYPECLASS_REAL, rsize, handle, error )
-!!$    Call MPI_Allreduce( MPI_IN_PLACE, data, Size( data ), MPI_DOUBLE_PRECISION, MPI_SUM, matrix%matrix_map%get_comm(), error )
-!!$       
-!!$  End Subroutine matrix_get_global_real
-!!$
 !!$  Subroutine matrix_get_local_real( matrix, m, n, p, q, data )
 !!$
 !!$    ! Gets the data ( m:n, p:q ) in the local matrix
@@ -1397,46 +1524,6 @@ Contains
 !!$    data( m:n, p:q ) = matrix%data( m:n, p:q )
 !!$       
 !!$  End Subroutine matrix_get_local_real
-!!$
-!!$  Subroutine matrix_get_global_complex( matrix, m, n, p, q, data )
-!!$
-!!$    ! Gets the data ( m:n, p:q ) in the global matrix
-!!$
-!!$    Class( complex_distributed_matrix ), Intent( In    ) :: matrix
-!!$    Integer                            , Intent( In    ) :: m
-!!$    Integer                            , Intent( In    ) :: n
-!!$    Integer                            , Intent( In    ) :: p
-!!$    Integer                            , Intent( In    ) :: q
-!!$    Complex( wp ), Dimension( m:, p: ) , Intent(   Out ) :: data
-!!$
-!!$    Real( wp ) :: cdum
-!!$
-!!$    Integer :: i_glob, j_glob
-!!$    Integer :: i_loc , j_loc
-!!$    Integer :: csize, handle
-!!$    Integer :: error
-!!$    
-!!$    ! THIS NEEDS OPTIMISATION!!
-!!$    data = 0.0_wp
-!!$    Do j_glob = p, q
-!!$       j_loc = matrix%global_to_local_cols( j_glob )
-!!$       If( j_loc == distributed_matrix_NOT_ME ) Cycle
-!!$       Do i_glob = m, n
-!!$          i_loc = matrix%global_to_local_rows( i_glob )
-!!$          If( i_loc == distributed_matrix_NOT_ME ) Cycle
-!!$          data( i_glob, j_glob ) = matrix%data( i_loc, j_loc )
-!!$       End Do
-!!$    End Do
-!!$    ! Generate a portable MPI data type handle from the variable to be communicated
-!!$    Call MPI_Type_create_f90_complex( Precision( data ), Range( data ), handle, error )
-!!$    ! Replicate the data
-!!$!!!!HACK TO WORK AROUND BUG IN MVAPICH2
-!!$!!!!!$    Call MPI_Allreduce( MPI_IN_PLACE, data, Size( data ), handle, MPI_SUM, matrix%matrix_map%get_comm(), error )
-!!$    Call mpi_sizeof( cdum, csize, error )
-!!$    Call mpi_type_match_size( MPI_TYPECLASS_REAL, csize, handle, error )
-!!$    Call MPI_Allreduce( MPI_IN_PLACE, data, Size( data ), MPI_double_complex, MPI_SUM, matrix%matrix_map%get_comm(), error )
-!!$       
-!!$  End Subroutine matrix_get_global_complex
 !!$
 !!$  Subroutine matrix_get_local_complex( matrix, m, n, p, q, data )
 !!$
@@ -1563,124 +1650,6 @@ Contains
 !!$    End If
 !!$
 !!$  End Subroutine matrix_diag_complex
-!!$
-!!$  Function matrix_multiply_real( A, B ) Result( C )
-!!$
-!!$    Use mpi
-!!$
-!!$    Class( real_distributed_matrix ), Allocatable :: C
-!!$
-!!$    Class( real_distributed_matrix ), Intent( In ) :: A
-!!$    Class( real_distributed_matrix ), Intent( In ) :: B
-!!$
-!!$    Integer :: ma, na
-!!$    Integer :: mb, nb
-!!$    Integer :: m, n, k
-!!$
-!!$    Character :: t1, t2
-!!$
-!!$    ! Give C the same mapping as A
-!!$    Allocate( C, Source = A )
-!!$
-!!$    ! There must be a neater way ...
-!!$    Deallocate( C%data )
-!!$    Deallocate( C%local_to_global_rows )
-!!$    Deallocate( C%local_to_global_cols )
-!!$    Deallocate( C%global_to_local_rows )
-!!$    Deallocate( C%global_to_local_cols )
-!!$    C%daggered = .False.
-!!$    
-!!$    t1 = Merge( 'T', 'N', A%daggered )
-!!$    t2 = Merge( 'T', 'N', B%daggered )
-!!$    
-!!$    Call A%matrix_map%get_data( m = ma, n = na )
-!!$    Call B%matrix_map%get_data( m = mb, n = nb )
-!!$    
-!!$    If( t1 == 'N' .And. t2 == 'N' ) Then
-!!$       m = ma
-!!$       n = nb
-!!$       k = na
-!!$    Else If( t1 == 'T' .And. t2 == 'N' ) Then
-!!$       m = na
-!!$       n = nb
-!!$       k = ma
-!!$    Else If( t1 == 'N' .And. t2 == 'T' ) Then
-!!$       m = ma
-!!$       n = mb
-!!$       k = na
-!!$    Else If( t1 == 'T' .And. t2 == 'T' ) Then
-!!$       m = na
-!!$       n = mb
-!!$       k = ma
-!!$    Else
-!!$       Stop 'How did we get here in matrix_multiply_real???'
-!!$    End If
-!!$    
-!!$    Call matrix_create( C, m, n, A )
-!!$    
-!!$    Call pdgemm( t1, t2, m, n, k, 1.0_wp, A%data, 1, 1, A%matrix_map%get_descriptor(), &
-!!$                                          B%data, 1, 1, B%matrix_map%get_descriptor(), &
-!!$                                  0.0_wp, C%data, 1, 1, C%matrix_map%get_descriptor() )
-!!$          
-!!$  End Function matrix_multiply_real
-!!$     
-!!$  Function matrix_multiply_complex( A, B ) Result( C )
-!!$
-!!$    Class( complex_distributed_matrix ), Allocatable :: C
-!!$
-!!$    Class( complex_distributed_matrix ), Intent( In ) :: A
-!!$    Class( complex_distributed_matrix ), Intent( In ) :: B
-!!$
-!!$    Integer :: ma, na
-!!$    Integer :: mb, nb
-!!$    Integer :: m, n, k
-!!$
-!!$    Character :: t1, t2
-!!$
-!!$    ! Give C the same mapping as A
-!!$    Allocate( C, Source = A )
-!!$
-!!$    ! There must be a neater way ...
-!!$    Deallocate( C%data )
-!!$    Deallocate( C%local_to_global_rows )
-!!$    Deallocate( C%local_to_global_cols )
-!!$    Deallocate( C%global_to_local_rows )
-!!$    Deallocate( C%global_to_local_cols )
-!!$    C%daggered = .False.
-!!$    
-!!$    t1 = Merge( 'C', 'N', A%daggered )
-!!$    t2 = Merge( 'C', 'N', B%daggered )
-!!$       
-!!$    Call A%matrix_map%get_data( m = ma, n = na )
-!!$    Call B%matrix_map%get_data( m = mb, n = nb )
-!!$
-!!$    If( t1 == 'N' .And. t2 == 'N' ) Then
-!!$       m = ma
-!!$       n = nb
-!!$       k = na
-!!$    Else If( t1 == 'C' .And. t2 == 'N' ) Then
-!!$       m = na
-!!$       n = nb
-!!$       k = ma
-!!$    Else If( t1 == 'N' .And. t2 == 'C' ) Then
-!!$       m = ma
-!!$       n = mb
-!!$       k = na
-!!$    Else If( t1 == 'C' .And. t2 == 'C' ) Then
-!!$       m = na
-!!$       n = mb
-!!$       k = ma
-!!$    Else
-!!$       Stop 'How did we get here in matrix_multiply_complex???'
-!!$    End If
-!!$    
-!!$    Call matrix_create( C, m, n, A )
-!!$
-!!$    Call pzgemm( t1, t2, m, n, k, ( 1.0_wp, 0.0_wp ), A%data, 1, 1, A%matrix_map%get_descriptor(), &
-!!$                                                      B%data, 1, 1, B%matrix_map%get_descriptor(), &
-!!$                                  ( 0.0_wp, 0.0_wp ), C%data, 1, 1, C%matrix_map%get_descriptor() )
-!!$
-!!$  End Function matrix_multiply_complex
 !!$
 !!$  Function matrix_post_mult_diag_real( A, d ) Result( B )
 !!$

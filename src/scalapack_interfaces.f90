@@ -74,7 +74,49 @@ Module scalapack_interfaces
        Integer,       Dimension( 1:9 ), Intent( In    ) :: descC
      End Subroutine pzgemm
 
-  End Interface 
+  End Interface
+
+  Interface
+
+     !! Matrix addition routines
+
+     Subroutine pdgeadd( trans, m, n, alpha, a, ia, ja, desca, beta, c, ic, jc, descc )
+       Import :: wp
+       Implicit None
+       Character                                     :: trans
+       Integer                     , Intent( In    ) :: m
+       Integer                     , Intent( In    ) :: n
+       Real( wp )                  , Intent( In    ) :: alpha
+       Real( wp ), Dimension( *   ), Intent( In    ) :: a
+       Integer                     , Intent( In    ) :: ia
+       Integer                     , Intent( In    ) :: ja
+       Integer   , Dimension( 1:9 ), Intent( In    ) :: desca
+       Real( wp )                  , Intent( In    ) :: beta
+       Real( wp ), Dimension( *   ), Intent( InOut ) :: c
+       Integer                     , Intent( In    ) :: ic
+       Integer                     , Intent( In    ) :: jc
+       Integer   , Dimension( 1:9 ), Intent( In    ) :: descc
+     End Subroutine pdgeadd
+     
+     Subroutine pzgeadd( trans, m, n, alpha, a, ia, ja, desca, beta, c, ic, jc, descc )
+       Import :: wp
+       Implicit None
+       Character                                        :: trans
+       Integer                        , Intent( In    ) :: m
+       Integer                        , Intent( In    ) :: n
+       Complex( wp )                  , Intent( In    ) :: alpha
+       Complex( wp ), Dimension( *   ), Intent( In    ) :: a
+       Integer                        , Intent( In    ) :: ia
+       Integer                        , Intent( In    ) :: ja
+       Integer      , Dimension( 1:9 ), Intent( In    ) :: desca
+       Complex( wp )                  , Intent( In    ) :: beta
+       Complex( wp ), Dimension( *   ), Intent( InOut ) :: c
+       Integer                        , Intent( In    ) :: ic
+       Integer                        , Intent( In    ) :: jc
+       Integer      , Dimension( 1:9 ), Intent( In    ) :: descc
+     End Subroutine pzgeadd
+     
+  End Interface
 
   Interface
 
