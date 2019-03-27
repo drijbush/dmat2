@@ -690,15 +690,27 @@ Contains
 
     ! Could be optimised by introducing ranges for the mapping arryas
 
-    Do j_glob = p, q
-       j_loc = A%global_to_local_cols( j_glob )
-       If( j_loc == distributed_matrix_NOT_ME ) Cycle
-       Do i_glob = m, n
-          i_loc = A%global_to_local_rows( i_glob )
-          If( i_loc == distributed_matrix_NOT_ME ) Cycle
-          A%data( i_loc, j_loc ) = data( i_glob, j_glob )
+    If( .Not. A%daggered ) Then
+       Do j_glob = p, q
+          j_loc = A%global_to_local_cols( j_glob )
+          If( j_loc == distributed_matrix_NOT_ME ) Cycle
+          Do i_glob = m, n
+             i_loc = A%global_to_local_rows( i_glob )
+             If( i_loc == distributed_matrix_NOT_ME ) Cycle
+             A%data( i_loc, j_loc ) = data( i_glob, j_glob )
+          End Do
        End Do
-    End Do
+    Else
+       Do j_glob = p, q
+          j_loc = A%global_to_local_rows( j_glob )
+          If( j_loc == distributed_matrix_NOT_ME ) Cycle
+          Do i_glob = m, n
+             i_loc = A%global_to_local_cols( i_glob )
+             If( i_loc == distributed_matrix_NOT_ME ) Cycle
+             A%data( j_loc, i_loc ) = data( i_glob, j_glob )
+          End Do
+       End Do
+    End If
        
   End Subroutine real_matrix_set_global_real
 
@@ -749,17 +761,29 @@ Contains
     Integer :: i_glob, j_glob
     Integer :: i_loc , j_loc
 
-    ! Could be optimised by introducing ranges for the mapping arryas
+    ! Could be optimised by introducing ranges for the mapping arrays
     
-    Do j_glob = p, q
-       j_loc = A%global_to_local_cols( j_glob )
-       If( j_loc == distributed_matrix_NOT_ME ) Cycle
-       Do i_glob = m, n
-          i_loc = A%global_to_local_rows( i_glob )
-          If( i_loc == distributed_matrix_NOT_ME ) Cycle
-          A%data( i_loc, j_loc ) = data( i_glob, j_glob )
+    If( .Not. A%daggered ) Then
+       Do j_glob = p, q
+          j_loc = A%global_to_local_cols( j_glob )
+          If( j_loc == distributed_matrix_NOT_ME ) Cycle
+          Do i_glob = m, n
+             i_loc = A%global_to_local_rows( i_glob )
+             If( i_loc == distributed_matrix_NOT_ME ) Cycle
+             A%data( i_loc, j_loc ) = data( i_glob, j_glob )
+          End Do
        End Do
-    End Do
+    Else
+       Do j_glob = p, q
+          j_loc = A%global_to_local_rows( j_glob )
+          If( j_loc == distributed_matrix_NOT_ME ) Cycle
+          Do i_glob = m, n
+             i_loc = A%global_to_local_cols( i_glob )
+             If( i_loc == distributed_matrix_NOT_ME ) Cycle
+             A%data( j_loc, i_loc ) = Conjg( data( i_glob, j_glob ) )
+          End Do
+       End Do
+    End If
        
   End Subroutine complex_matrix_set_global_complex
 
@@ -785,15 +809,27 @@ Contains
     Integer :: rsize, error
     
     data = 0.0_wp
-    Do j_glob = p, q
-       j_loc = A%global_to_local_cols( j_glob )
-       If( j_loc == distributed_matrix_NOT_ME ) Cycle
-       Do i_glob = m, n
-          i_loc = A%global_to_local_rows( i_glob )
-          If( i_loc == distributed_matrix_NOT_ME ) Cycle
-          data( i_glob, j_glob ) = A%data( i_loc, j_loc )
+    If( .Not. A%daggered ) Then
+       Do j_glob = p, q
+          j_loc = A%global_to_local_cols( j_glob )
+          If( j_loc == distributed_matrix_NOT_ME ) Cycle
+          Do i_glob = m, n
+             i_loc = A%global_to_local_rows( i_glob )
+             If( i_loc == distributed_matrix_NOT_ME ) Cycle
+             data( i_glob, j_glob ) = A%data( i_loc, j_loc )
+          End Do
        End Do
-    End Do
+    Else
+       Do j_glob = p, q
+          j_loc = A%global_to_local_rows( j_glob )
+          If( j_loc == distributed_matrix_NOT_ME ) Cycle
+          Do i_glob = m, n
+             i_loc = A%global_to_local_cols( i_glob )
+             If( i_loc == distributed_matrix_NOT_ME ) Cycle
+             data( i_glob, j_glob ) = A%data( j_loc, i_loc )
+          End Do
+       End Do
+    End If
     ! Generate a portable MPI data type handle from the variable to be communicated
     Call MPI_Type_create_f90_real( Precision( data ), Range( data ), handle, error )
     ! Replicate the data
@@ -861,15 +897,27 @@ Contains
     Integer :: error
     
     data = 0.0_wp
-    Do j_glob = p, q
-       j_loc = A%global_to_local_cols( j_glob )
-       If( j_loc == distributed_matrix_NOT_ME ) Cycle
-       Do i_glob = m, n
-          i_loc = A%global_to_local_rows( i_glob )
-          If( i_loc == distributed_matrix_NOT_ME ) Cycle
-          data( i_glob, j_glob ) = A%data( i_loc, j_loc )
+    If( .Not. A%daggered ) Then
+       Do j_glob = p, q
+          j_loc = A%global_to_local_cols( j_glob )
+          If( j_loc == distributed_matrix_NOT_ME ) Cycle
+          Do i_glob = m, n
+             i_loc = A%global_to_local_rows( i_glob )
+             If( i_loc == distributed_matrix_NOT_ME ) Cycle
+             data( i_glob, j_glob ) = A%data( i_loc, j_loc )
+          End Do
        End Do
-    End Do
+    Else
+       Do j_glob = p, q
+          j_loc = A%global_to_local_rows( j_glob )
+          If( j_loc == distributed_matrix_NOT_ME ) Cycle
+          Do i_glob = m, n
+             i_loc = A%global_to_local_cols( i_glob )
+             If( i_loc == distributed_matrix_NOT_ME ) Cycle
+             data( i_glob, j_glob ) = Conjg( A%data( j_loc, i_loc ) )
+          End Do
+       End Do
+    End If
     ! Generate a portable MPI data type handle from the variable to be communicated
     Call MPI_Type_create_f90_complex( Precision( data ), Range( data ), handle, error )
     ! Replicate the data
