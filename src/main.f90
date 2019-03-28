@@ -14,8 +14,9 @@ Program test_distributed_matrix
   Integer :: ns, nk
   Integer :: error
 
-  Character( Len = 34 ), Parameter :: error_format = '( "--> ", a, t35, g26.20, t65, a )'
-  Character( Len =  9 ), Parameter :: title_format = '( t5, a )'
+  Character( Len = * ), Parameter :: error_format = '( "--> ", a, t35, g26.20, t65, a )'
+  Character( Len = * ), Parameter ::   run_format = '( a, t20, i0 )'
+  Character( Len = * ), Parameter :: title_format = '( t5, a )'
 
   Real( wp ), Parameter :: tol = 1.0e-11_wp
   
@@ -41,12 +42,13 @@ Program test_distributed_matrix
 
   If( me == 0 ) Then
      Write( *, * ) 'Running tests for: '
-     Write( *, * ) ' m = ', m
-     Write( *, * ) ' n = ', n
-     Write( *, * ) ' k = ', k
-     Write( *, * ) ' n_block = ', n_block
-     Write( *, * ) ' ns = ', ns
-     Write( *, * ) ' nk = ', nk
+     Write( *, run_format ) ' m = ', m
+     Write( *, run_format ) ' n = ', n
+     Write( *, run_format ) ' k = ', k
+     Write( *, run_format ) ' n_block = ', n_block
+     Write( *, run_format ) ' ns = ', ns
+     Write( *, run_format ) ' nk = ', nk
+     Write( *, * )
   End If
 
   ! Distributed matrix tests
