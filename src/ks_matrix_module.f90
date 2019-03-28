@@ -224,8 +224,11 @@ Contains
     !! Diagonalise a (assumed Hermitian) ks matrix
     
     Class( ks_matrix ),                      Intent( In    ) :: A
-    Type ( ks_matrix ),                      Intent( InOut ) :: Q
+    Type ( ks_matrix ),                      Intent(   Out ) :: Q
     Real( wp ), Dimension( : ), Allocatable, Intent(   Out ) :: E
+
+    ! Need to give a Type to Q as Intent( Out ) will have deallocatd all its components
+    Q = A
 
     Call A%matrix%diag( Q%matrix, E )
 

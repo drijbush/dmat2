@@ -288,7 +288,7 @@ Module distributed_matrix_module
        Import :: distributed_matrix
        Implicit None
        Class( distributed_matrix ),             Intent( In    ) :: A
-       Class( distributed_matrix ),             Intent( InOut ) :: Q
+       Class( distributed_matrix ),             Intent(   Out ) :: Q
        Real( wp ), Dimension( : ), Allocatable, Intent(   Out ) :: E
      End Subroutine diag_op
      Subroutine real_diag_op( A, Q, E )
@@ -298,7 +298,7 @@ Module distributed_matrix_module
        Import :: real_distributed_matrix
        Implicit None
        Class( real_distributed_matrix ),        Intent( In    ) :: A
-       Class(      distributed_matrix ),        Intent( InOut ) :: Q
+       Class(      distributed_matrix ),        Intent(   Out ) :: Q
        Real( wp ), Dimension( : ), Allocatable, Intent(   Out ) :: E
      End Subroutine real_diag_op
      Subroutine complex_diag_op( A, Q, E )
@@ -308,7 +308,7 @@ Module distributed_matrix_module
        Import :: complex_distributed_matrix
        Implicit None
        Class( complex_distributed_matrix ),     Intent( In    ) :: A
-       Class(         distributed_matrix ),     Intent( InOut ) :: Q
+       Class(         distributed_matrix ),     Intent(   Out ) :: Q
        Real( wp ), Dimension( : ), Allocatable, Intent(   Out ) :: E
      End Subroutine complex_diag_op
      Subroutine remap_op( A, is_A_dummy, parent_comm, B, is_B_dummy ) 
@@ -1715,7 +1715,7 @@ Contains
     Implicit None
 
     Class( real_distributed_matrix ),              Intent( In    ) :: A
-    Class(      distributed_matrix ),              Intent( InOut ) :: Q
+    Class(      distributed_matrix ),              Intent(   Out ) :: Q
     Real( wp ), Dimension( : )      , Allocatable, Intent(   Out ) :: E
 
     Call Q%real_diag( A, E )
@@ -1729,7 +1729,7 @@ Contains
     Implicit None
 
     Class( complex_distributed_matrix ),              Intent( In    ) :: A
-    Class(         distributed_matrix ),              Intent( InOut ) :: Q
+    Class(         distributed_matrix ),              Intent(   Out ) :: Q
     Real( wp ), Dimension( : )         , Allocatable, Intent(   Out ) :: E
 
     Call Q%complex_diag( A, E )
@@ -1745,7 +1745,7 @@ Contains
     Implicit None
 
     Class( real_distributed_matrix ),              Intent( In    ) :: A
-    Class( real_distributed_matrix ),              Intent( InOut ) :: Q
+    Class( real_distributed_matrix ),              Intent(   Out ) :: Q
     Real( wp ), Dimension( : )      , Allocatable, Intent(   Out ) :: E
 
     Real( wp ), Dimension( :, : ), Allocatable :: tmp_a
@@ -1795,7 +1795,7 @@ Contains
     Implicit None
 
     Class(    real_distributed_matrix ),              Intent( In    ) :: A
-    Class( complex_distributed_matrix ),              Intent( InOut ) :: Q
+    Class( complex_distributed_matrix ),              Intent(   Out ) :: Q
     Real( wp ), Dimension( : )         , Allocatable, Intent(   Out ) :: E
 
     Stop "Illegal combination of arguments in complex_multiply_real"
@@ -1811,7 +1811,7 @@ Contains
     Implicit None
 
     Class( complex_distributed_matrix ),              Intent( In    ) :: A
-    Class(    real_distributed_matrix ),              Intent( InOut ) :: Q
+    Class(    real_distributed_matrix ),              Intent(   Out ) :: Q
     Real( wp ), Dimension( : )         , Allocatable, Intent(   Out ) :: E
 
     Stop "Illegal combination of arguments in complex_multiply_real"
@@ -1829,7 +1829,7 @@ Contains
     Implicit None
 
     Class( complex_distributed_matrix ),              Intent( In    ) :: A
-    Class( complex_distributed_matrix ),              Intent( InOut ) :: Q
+    Class( complex_distributed_matrix ),              Intent(   Out ) :: Q
     Real( wp ), Dimension( : )         , Allocatable, Intent(   Out ) :: E
 
     Complex( wp ), Dimension( :, : ), Allocatable :: tmp_a

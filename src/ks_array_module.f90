@@ -636,8 +636,7 @@ Contains
     Logical :: sending_data
     
     ! Make Q have the same set up as A
-!!$    Call Q%create( NO_DATA, NO_DATA, A )
-    Q = A
+    Call Q%create( NO_DATA, NO_DATA, A )
 
     Do my_ks = 1, Size( A%my_k_points )
        ! Irreps will need more thought - worrk currenly as burnt into as 1
@@ -645,8 +644,6 @@ Contains
           ks = A%get_all_ks_index( my_ks )
           Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
                      Qks => Q%my_k_points( my_ks )%data( my_irrep )%matrix )
-!!$            E( ks )%spin      = A%all_k_point_info( ks )%spin
-!!$            E( ks )%k_indices = A%all_k_point_info( ks )%k_indices
             Call Aks%diag( Qks, E( ks )%evals )
           End Associate
        End Do
