@@ -16,6 +16,8 @@ Module ks_matrix_module
      Procedure, Public :: create               => ks_matrix_create                     !! Create a ks_matrix
      Generic  , Public :: Operator( .Dagger. ) => dagger                               !! Dagger a ks_matrix
      Generic  , Public :: Operator( * )        => multiply                             !! Multiply 2 ks_matrix's
+     Generic  , Public :: Operator( * )        => rscal_multiply                       !! Pre-multiply by a real scalar
+     Generic  , Public :: Operator( * )        => multiply_rscal                       !! Post-multiply by a real scalar
      Generic  , Public :: Operator( + )        => add                                  !! Add 2 ks_matrix's
      Generic  , Public :: Operator( - )        => subtract                             !! Subtract 2 ks_matrix's
      Procedure, Public :: diag                 => ks_matrix_diag                       !! Diagonalise a ks_matrix
@@ -26,14 +28,16 @@ Module ks_matrix_module
      Procedure, Public :: global_to_local      => ks_matrix_global_to_local            !! Get an array for mapping global indices to local  ones
      Procedure, Public :: local_to_global      => ks_matrix_local_to_global            !! Get an array for mapping local  indices to global ones
      ! Private implementations
-     Procedure, Private :: dagger               => ks_matrix_dagger
-     Procedure, Private :: multiply             => ks_matrix_mult
-     Procedure, Private :: add                  => ks_matrix_add
-     Procedure, Private :: subtract             => ks_matrix_subtract
-     Procedure, Private :: set_global_real      => ks_matrix_set_global_real
-     Procedure, Private :: set_global_complex   => ks_matrix_set_global_complex
-     Procedure, Private :: get_global_real      => ks_matrix_get_global_real
-     Procedure, Private :: get_global_complex   => ks_matrix_get_global_complex
+     Procedure,            Private :: dagger               => ks_matrix_dagger
+     Procedure,            Private :: multiply             => ks_matrix_mult
+     Procedure, Pass( A ), Private :: rscal_multiply       => ks_matrix_rscal_mult
+     Procedure,            Private :: multiply_rscal       => ks_matrix_mult_rscal
+     Procedure,            Private :: add                  => ks_matrix_add
+     Procedure,            Private :: subtract             => ks_matrix_subtract
+     Procedure,            Private :: set_global_real      => ks_matrix_set_global_real
+     Procedure,            Private :: set_global_complex   => ks_matrix_set_global_complex
+     Procedure,            Private :: get_global_real      => ks_matrix_get_global_real
+     Procedure,            Private :: get_global_complex   => ks_matrix_get_global_complex
   End Type ks_matrix
 
   Public :: ks_matrix_init          !! Initialise the ks matrix system and optionally sets the default blocking factor
@@ -179,6 +183,32 @@ Contains
     tA%matrix = .Dagger. A%matrix
 
   End Function ks_matrix_dagger
+
+  Function ks_matrix_rscal_mult( s, A ) Result( C )
+
+    !! Multiply two matrices together
+    
+    Type( ks_matrix ) :: C
+    
+    Real( wp )        , Intent( In ) :: s
+    Class( ks_matrix ), Intent( In ) :: A
+
+    C%matrix = s * A%matrix
+
+  End Function ks_matrix_rscal_mult
+
+  Function ks_matrix_mult_rscal( A, s ) Result( C )
+
+    !! Multiply two matrices together
+    
+    Type( ks_matrix ) :: C
+    
+    Class( ks_matrix ), Intent( In ) :: A
+    Real( wp )        , Intent( In ) :: s
+
+    C%matrix = s * A%matrix
+
+  End Function ks_matrix_mult_rscal
 
   Function ks_matrix_mult( A, B ) Result( C )
 

@@ -53,6 +53,8 @@ Module ks_array_module
      Procedure, Public :: split                => ks_array_split_ks                 !! Split the distribution so k point //ism can be used
      Generic  , Public :: Operator( .Dagger. ) => dagger                            !! Dagger each element in the array
      Generic  , Public :: Operator( * )        => multiply                          !! Multiply each element of the array with the corresponding element in another array
+     Generic  , Public :: Operator( * )        => rscal_multiply                    !! Pre-multiply by a real scalar
+     Generic  , Public :: Operator( * )        => multiply_rscal                    !! Post-multiply by a real scalar
      Generic  , Public :: Operator( + )        => add                               !! Add each element of the array with the corresponding element in another array
      Generic  , Public :: Operator( - )        => subtract                          !! Subtract each element of the array with the corresponding element in another array
      Procedure, Public :: diag                 => ks_array_diag                     !! Diagonalise each matrix
@@ -76,17 +78,19 @@ Module ks_array_module
 !!$     ! Methods only at this level
 !!$     Procedure                     :: split_ks             => ks_array_split_ks
      ! Private implementations
-     Procedure, Private            :: get_all_ks_index
-     Procedure, Private            :: get_my_ks_index
-     Procedure, Private            :: get_ks
-     Procedure, Private            :: set_by_global_r      => ks_array_set_global_real
-     Procedure, Private            :: set_by_global_c      => ks_array_set_global_complex
-     Procedure, Private            :: get_by_global_r      => ks_array_get_global_real
-     Procedure, Private            :: get_by_global_c      => ks_array_get_global_complex
-     Procedure, Private            :: dagger               => ks_array_dagger
-     Procedure, Private            :: multiply             => ks_array_mult
-     Procedure, Private            :: add                  => ks_array_add
-     Procedure, Private            :: subtract             => ks_array_subtract
+     Procedure,            Private :: get_all_ks_index
+     Procedure,            Private :: get_my_ks_index
+     Procedure,            Private :: get_ks
+     Procedure,            Private :: set_by_global_r      => ks_array_set_global_real
+     Procedure,            Private :: set_by_global_c      => ks_array_set_global_complex
+     Procedure,            Private :: get_by_global_r      => ks_array_get_global_real
+     Procedure,            Private :: get_by_global_c      => ks_array_get_global_complex
+     Procedure,            Private :: dagger               => ks_array_dagger
+     Procedure,            Private :: multiply             => ks_array_mult
+     Procedure, Pass( A ), Private :: rscal_multiply       => ks_array_rscal_mult
+     Procedure,            Private :: multiply_rscal       => ks_array_mult_rscal
+     Procedure,            Private :: add                  => ks_array_add
+     Procedure,            Private :: subtract             => ks_array_subtract
 !!$     Procedure, Private, Pass( A ) :: pre_scale            => ks_array_pre_scale
 !!$     Procedure, Private            :: post_scale           => ks_array_post_scale
 !!$     Procedure, Private, Pass( A ) :: pre_mult_diag        => ks_array_pre_mult_diag
@@ -556,6 +560,56 @@ Contains
     End Do
 
   End Function ks_array_mult
+
+  Function ks_array_rscal_mult( s, A ) Result( C )
+
+    !! Multiply the arays together element by element (i.e. matrix by matrix ) 
+
+    Type( ks_array ) :: C
+
+    Real( wp )       , Intent( In ) :: s
+    Class( ks_array ), Intent( In ) :: A
+
+    Integer :: my_ks, my_irrep
+
+    Call C%create( NO_DATA, NO_DATA, A )
+    
+    Do my_ks = 1, Size( A%my_k_points )
+       ! Irreps will need more thought - work currenly as burnt into as 1
+       Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
+          Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
+                     Cks => C%my_k_points( my_ks )%data( my_irrep )%matrix )
+            Cks = s * Aks
+          End Associate
+       End Do
+    End Do
+
+  End Function ks_array_rscal_mult
+
+  Function ks_array_mult_rscal( A, s ) Result( C )
+
+    !! Multiply the arays together element by element (i.e. matrix by matrix ) 
+
+    Type( ks_array ) :: C
+
+    Class( ks_array ), Intent( In ) :: A
+    Real( wp )       , Intent( In ) :: s
+
+    Integer :: my_ks, my_irrep
+
+    Call C%create( NO_DATA, NO_DATA, A )
+    
+    Do my_ks = 1, Size( A%my_k_points )
+       ! Irreps will need more thought - work currenly as burnt into as 1
+       Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
+          Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
+                     Cks => C%my_k_points( my_ks )%data( my_irrep )%matrix )
+            Cks = s * Aks
+          End Associate
+       End Do
+    End Do
+
+  End Function ks_array_mult_rscal
 
   Function ks_array_add( A, B ) Result( C )
 
