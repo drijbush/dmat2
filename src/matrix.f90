@@ -29,6 +29,8 @@ Module distributed_matrix_module
      Procedure, Public :: size                 => matrix_size                !! Get the dimensions of the matrix
      Procedure, Public :: get_comm             => matrix_communicator        !! Get the communicator containing the processes holding the matrix
      Generic  , Public :: Operator( * )        => multiply                   !! Multiply two matrices together
+     Generic  , Public :: Operator( * )        => rscal_multiply             !! Pre -scale by a real scalar
+     Generic  , Public :: Operator( * )        => multiply_rscal             !! Post-scale by a real scalar
      Generic  , Public :: Operator( + )        => add                        !! Add two matrices together
      Generic  , Public :: Operator( - )        => subtract                   !! Subtract two matrices 
      Generic  , Public :: Operator( .Dagger. ) => matrix_dagger              !! Apply the dagger operator to the matrix
@@ -40,24 +42,26 @@ Module distributed_matrix_module
      Procedure( remap_op   ), Deferred, Public :: remap                      !! Remap the data to another distribution
      Procedure( diag_op    ), Deferred, Public :: diag                       !! Diagonalise the (assumed Hermitian) matrix
      ! Private implementations
-     Procedure,                                            Private :: matrix_dagger           !! Apply the dagger operator to the matrix
-     Procedure( set_global_real    ), Deferred,            Private :: set_global_real         !! Set values with a real    array using global indexing
-     Procedure( set_global_complex ), Deferred,            Private :: set_global_complex      !! Set values with a complex array using global indexing
-     Procedure( get_global_real    ), Deferred,            Private :: get_global_real         !! Get values from a real    array using global indexing
-     Procedure( get_global_complex ), Deferred,            Private :: get_global_complex      !! Get values from a complex array using global indexing
-     Procedure(          binary_op ), Deferred,            Private :: multiply
-     Procedure(     real_binary_op ), Deferred, Pass( B ), Private :: real_multiply
-     Procedure(  complex_binary_op ), Deferred, Pass( B ), Private :: complex_multiply
-     Procedure(          binary_op ), Deferred,            Private :: add
-     Procedure(     real_binary_op ), Deferred, Pass( B ), Private :: real_add
-     Procedure(  complex_binary_op ), Deferred, Pass( B ), Private :: complex_add
-     Procedure(          binary_op ), Deferred,            Private :: subtract
-     Procedure(     real_binary_op ), Deferred, Pass( B ), Private :: real_subtract
-     Procedure(  complex_binary_op ), Deferred, Pass( B ), Private :: complex_subtract
-     Procedure(       real_diag_op ), Deferred, Pass( Q ), Private :: real_diag
-     Procedure(    complex_diag_op ), Deferred, Pass( Q ), Private :: complex_diag
-     Procedure(      real_remap_op ), Deferred, Pass( B ), Private :: real_remap
-     Procedure(   complex_remap_op ), Deferred, Pass( B ), Private :: complex_remap
+     Procedure,                                              Private :: matrix_dagger           !! Apply the dagger operator to the matrix
+     Procedure(  set_global_real     ), Deferred,            Private :: set_global_real         !! Set values with a real    array using global indexing
+     Procedure(  set_global_complex  ), Deferred,            Private :: set_global_complex      !! Set values with a complex array using global indexing
+     Procedure(  get_global_real     ), Deferred,            Private :: get_global_real         !! Get values from a real    array using global indexing
+     Procedure(  get_global_complex  ), Deferred,            Private :: get_global_complex      !! Get values from a complex array using global indexing
+     Procedure(         binary_op ), Deferred,            Private :: multiply
+     Procedure(    real_binary_op ), Deferred, Pass( B ), Private :: real_multiply
+     Procedure( complex_binary_op ), Deferred, Pass( B ), Private :: complex_multiply
+     Procedure(      pre_rscal_op ), Deferred, Pass( A ), Private :: rscal_multiply
+     Procedure(     post_rscal_op ), Deferred,            Private :: multiply_rscal
+     Procedure(         binary_op ), Deferred,            Private :: add
+     Procedure(    real_binary_op ), Deferred, Pass( B ), Private :: real_add
+     Procedure( complex_binary_op ), Deferred, Pass( B ), Private :: complex_add
+     Procedure(         binary_op ), Deferred,            Private :: subtract
+     Procedure(    real_binary_op ), Deferred, Pass( B ), Private :: real_subtract
+     Procedure( complex_binary_op ), Deferred, Pass( B ), Private :: complex_subtract
+     Procedure(      real_diag_op ), Deferred, Pass( Q ), Private :: real_diag
+     Procedure(   complex_diag_op ), Deferred, Pass( Q ), Private :: complex_diag
+     Procedure(     real_remap_op ), Deferred, Pass( B ), Private :: real_remap
+     Procedure(  complex_remap_op ), Deferred, Pass( B ), Private :: complex_remap
   End type distributed_matrix
 
   Type, Extends( distributed_matrix ), Public :: real_distributed_matrix
@@ -77,6 +81,8 @@ Module distributed_matrix_module
      Procedure,            Private :: multiply           => real_multiply
      Procedure, Pass( B ), Private :: real_multiply      => real_multiply_real
      Procedure, Pass( B ), Private :: complex_multiply   => complex_multiply_real
+     Procedure, Pass( A ), Private :: rscal_multiply     => rscal_multiply_real
+     Procedure,            Private :: multiply_rscal     => real_multiply_rscal
      Procedure,            Private :: add                => real_add
      Procedure, Pass( B ), Private :: real_add           => real_add_real
      Procedure, Pass( B ), Private :: complex_add        => complex_add_real
@@ -134,6 +140,8 @@ Module distributed_matrix_module
      Procedure,            Private :: multiply           => complex_multiply
      Procedure, Pass( B ), Private :: real_multiply      => real_multiply_complex
      Procedure, Pass( B ), Private :: complex_multiply   => complex_multiply_complex
+     Procedure, Pass( A ), Private :: rscal_multiply     => rscal_multiply_complex
+     Procedure,            Private :: multiply_rscal     => complex_multiply_rscal
      Procedure,            Private :: add                => complex_add
      Procedure, Pass( B ), Private :: real_add           => real_add_complex
      Procedure, Pass( B ), Private :: complex_add        => complex_add_complex
@@ -256,6 +264,22 @@ Module distributed_matrix_module
        Integer                           , Intent( In    ) :: q
        Complex( wp ), Dimension( m:, p: ), Intent(   Out ) :: data
      End Subroutine get_global_complex
+     Function pre_rscal_op( s, A ) Result( B )
+       Import :: wp
+       Import :: distributed_matrix
+       Implicit None
+       Class( distributed_matrix ), Allocatable  :: B
+       Real( wp )                 , Intent( In ) :: s
+       Class( distributed_matrix ), Intent( In ) :: A
+     End Function pre_rscal_op
+     Function post_rscal_op( A, s ) Result( B )
+       Import :: wp
+       Import :: distributed_matrix
+       Implicit None
+       Class( distributed_matrix ), Allocatable  :: B
+       Class( distributed_matrix ), Intent( In ) :: A
+       Real( wp )                 , Intent( In ) :: s
+     End Function post_rscal_op
      Function binary_op( A, B ) Result( C )
        !! A binary operation between two base class objects
        Import :: distributed_matrix
@@ -1149,6 +1173,66 @@ Contains
     C = T
     
   End Function complex_multiply_complex
+
+  Function real_multiply_rscal( A, s ) Result( B )
+
+    Class(      distributed_matrix ), Allocatable :: B
+
+    Class( real_distributed_matrix ), Intent( In ) :: A
+    Real( wp )                      , Intent( In ) :: s
+
+    Type( real_distributed_matrix ) :: T
+
+    T = A
+    T%data = s * T%data
+    B = T
+    
+  End Function real_multiply_rscal
+
+  Function rscal_multiply_real( s, A ) Result( B )
+
+    Class(      distributed_matrix ), Allocatable :: B
+
+    Real( wp )                      , Intent( In ) :: s
+    Class( real_distributed_matrix ), Intent( In ) :: A
+
+    Type( real_distributed_matrix ) :: T
+
+    T = A
+    T%data = s * A%data
+    B = T
+    
+  End Function rscal_multiply_real
+
+  Function  complex_multiply_rscal( A, s ) Result( B )
+
+    Class(         distributed_matrix ), Allocatable :: B
+
+    Class( complex_distributed_matrix ), Intent( In ) :: A
+    Real( wp )                         , Intent( In ) :: s
+
+    Type( complex_distributed_matrix ) :: T
+
+    T = A
+    T%data = s * A%data
+    B = T
+    
+  End Function complex_multiply_rscal
+
+  Function  rscal_multiply_complex( s, A ) Result( B )
+
+    Class(         distributed_matrix ), Allocatable :: B
+
+    Real( wp )                         , Intent( In ) :: s
+    Class( complex_distributed_matrix ), Intent( In ) :: A
+
+    Type( complex_distributed_matrix ) :: T
+
+    T = A
+    T%data = s * A%data
+    B = T
+    
+  End Function rscal_multiply_complex
 
   ! Addition routines
 

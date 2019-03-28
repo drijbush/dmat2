@@ -14,7 +14,7 @@ Program test_distributed_matrix
   Integer :: ns, nk
   Integer :: error
 
-  Character( Len = * ), Parameter :: error_format = '( "--> ", a, t35, g26.20, t65, a )'
+  Character( Len = * ), Parameter :: error_format = '( "--> ", a, t40, g26.20, t70, a )'
   Character( Len = * ), Parameter ::   run_format = '( a, t20, i0 )'
   Character( Len = * ), Parameter :: title_format = '( t5, a )'
 
@@ -83,6 +83,10 @@ Program test_distributed_matrix
   If( me == 0 ) Then
      Write( *, title_format ) 'Multiplies'
   End If
+  Call test_real_pre_scale_real
+  Call test_real_post_scale_real
+  Call test_complex_pre_scale_real
+  Call test_complex_post_scale_real
   Call test_real_matmul_NN
   Call test_real_matmul_TN
   Call test_real_matmul_NT
@@ -1020,6 +1024,186 @@ Contains
   End Subroutine test_complex_subtract_TT
 
   ! Multiply tests
+  Subroutine test_real_pre_scale_real
+    
+    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+
+    Use numbers_module           , Only : wp
+    Use distributed_matrix_module, Only : distributed_matrix, real_distributed_matrix, &
+         distributed_matrix_init, distributed_matrix_comm_to_base, distributed_matrix_finalise, &
+         distributed_matrix_set_default_blocking
+
+    Implicit None
+    
+    Real( wp ), Dimension( :, : ), Allocatable :: A, C, tmp
+
+    Type( real_distributed_matrix ) :: base
+    Class( distributed_matrix ), Allocatable :: Am, Cm
+
+    Allocate( A( 1:m, 1:n ) )
+    Allocate( C( 1:m, 1:n ) )
+    If( me == 0 ) Then
+       Call Random_number( A )
+       C = 3.0_wp * A
+    End If
+    Call mpi_bcast( A, Size( A ), mpi_double_precision, 0, mpi_comm_world, error )
+    Call mpi_bcast( C, Size( C ), mpi_double_precision, 0, mpi_comm_world, error )
+    
+    Allocate( tmp, Mold = C )
+    
+    Call distributed_matrix_init
+    Call distributed_matrix_set_default_blocking( n_block )
+    Call distributed_matrix_comm_to_base( mpi_comm_world, base )
+    Allocate( real_distributed_matrix :: Am )
+    Call Am%create( m, n, base )
+    Call Am%set_by_global( 1, m, 1, n, A )
+    Cm = 3.0_wp * Am
+    Call Cm%get_by_global( 1, m, 1, n, tmp )
+    If( me == 0 ) Then
+       Write( *, error_format ) 'Error in real pre_scale real ', Maxval( Abs( C - tmp ) ), &
+            Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
+    End If
+    Call distributed_matrix_finalise
+
+  End Subroutine test_real_pre_scale_real
+
+  Subroutine test_real_post_scale_real
+    
+    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+
+    Use numbers_module           , Only : wp
+    Use distributed_matrix_module, Only : distributed_matrix, real_distributed_matrix, &
+         distributed_matrix_init, distributed_matrix_comm_to_base, distributed_matrix_finalise, &
+         distributed_matrix_set_default_blocking
+
+    Implicit None
+    
+    Real( wp ), Dimension( :, : ), Allocatable :: A, C, tmp
+
+    Type( real_distributed_matrix ) :: base
+    Class( distributed_matrix ), Allocatable :: Am, Cm
+
+    Allocate( A( 1:m, 1:n ) )
+    Allocate( C( 1:m, 1:n ) )
+    If( me == 0 ) Then
+       Call Random_number( A )
+       C = 3.0_wp * A
+    End If
+    Call mpi_bcast( A, Size( A ), mpi_double_precision, 0, mpi_comm_world, error )
+    Call mpi_bcast( C, Size( C ), mpi_double_precision, 0, mpi_comm_world, error )
+    
+    Allocate( tmp, Mold = C )
+    
+    Call distributed_matrix_init
+    Call distributed_matrix_set_default_blocking( n_block )
+    Call distributed_matrix_comm_to_base( mpi_comm_world, base )
+    Allocate( real_distributed_matrix :: Am )
+    Call Am%create( m, n, base )
+    Call Am%set_by_global( 1, m, 1, n, A )
+    Cm =  Am * 3.0_wp
+    Call Cm%get_by_global( 1, m, 1, n, tmp )
+    If( me == 0 ) Then
+       Write( *, error_format ) 'Error in real post_scale real ', Maxval( Abs( C - tmp ) ), &
+            Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
+    End If
+    Call distributed_matrix_finalise
+
+  End Subroutine test_real_post_scale_real
+
+  Subroutine test_complex_pre_scale_real
+    
+    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+
+    Use numbers_module           , Only : wp
+    Use distributed_matrix_module, Only : distributed_matrix, complex_distributed_matrix, real_distributed_matrix, &
+         distributed_matrix_init, distributed_matrix_comm_to_base, distributed_matrix_finalise, &
+         distributed_matrix_set_default_blocking
+
+    Implicit None
+    
+    Complex( wp ), Dimension( :, : ), Allocatable :: A, C, tmp
+
+    Type( real_distributed_matrix ) :: base
+    Class( distributed_matrix ), Allocatable :: Am, Cm
+
+    Real( wp ), Dimension( :, : ), Allocatable :: rand1, rand2
+
+    Allocate( A( 1:m, 1:n ) )
+    Allocate( C( 1:m, 1:n ) )
+    If( me == 0 ) Then
+       Allocate( rand1( 1:m, 1:n ), rand2( 1:m, 1:n ) )
+       Call Random_number( rand1 ); Call Random_number( rand2 )
+       A = Cmplx( rand1, rand2, wp )
+       C = 3.0_wp * A
+    End If
+    Call mpi_bcast( A, Size( A ), mpi_double_complex, 0, mpi_comm_world, error )
+    Call mpi_bcast( C, Size( C ), mpi_double_complex, 0, mpi_comm_world, error )
+    
+    Allocate( tmp, Mold = C )
+    
+    Call distributed_matrix_init
+    Call distributed_matrix_set_default_blocking( n_block )
+    Call distributed_matrix_comm_to_base( mpi_comm_world, base )
+    Allocate( complex_distributed_matrix :: Am )
+    Call Am%create( m, n, base )
+    Call Am%set_by_global( 1, m, 1, n, A )
+    Cm = 3.0_wp * Am
+    Call Cm%get_by_global( 1, m, 1, n, tmp )
+    If( me == 0 ) Then
+       Write( *, error_format ) 'Error in complex pre_scale real ', Maxval( Abs( C - tmp ) ), &
+            Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
+    End If
+    Call distributed_matrix_finalise
+
+  End Subroutine test_complex_pre_scale_real
+
+  Subroutine test_complex_post_scale_real
+    
+    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+
+    Use numbers_module           , Only : wp
+    Use distributed_matrix_module, Only : distributed_matrix, complex_distributed_matrix, real_distributed_matrix, &
+         distributed_matrix_init, distributed_matrix_comm_to_base, distributed_matrix_finalise, &
+         distributed_matrix_set_default_blocking
+
+    Implicit None
+    
+    Complex( wp ), Dimension( :, : ), Allocatable :: A, C, tmp
+
+    Type( real_distributed_matrix ) :: base
+    Class( distributed_matrix ), Allocatable :: Am, Cm
+
+    Real( wp ), Dimension( :, : ), Allocatable :: rand1, rand2
+
+    Allocate( A( 1:m, 1:n ) )
+    Allocate( C( 1:m, 1:n ) )
+    If( me == 0 ) Then
+       Allocate( rand1( 1:m, 1:n ), rand2( 1:m, 1:n ) )
+       Call Random_number( rand1 ); Call Random_number( rand2 )
+       A = Cmplx( rand1, rand2, wp )
+       C = 3.0_wp * A
+    End If
+    Call mpi_bcast( A, Size( A ), mpi_double_complex, 0, mpi_comm_world, error )
+    Call mpi_bcast( C, Size( C ), mpi_double_complex, 0, mpi_comm_world, error )
+    
+    Allocate( tmp, Mold = C )
+    
+    Call distributed_matrix_init
+    Call distributed_matrix_set_default_blocking( n_block )
+    Call distributed_matrix_comm_to_base( mpi_comm_world, base )
+    Allocate( complex_distributed_matrix :: Am )
+    Call Am%create( m, n, base )
+    Call Am%set_by_global( 1, m, 1, n, A )
+    Cm = Am * 3.0_wp
+    Call Cm%get_by_global( 1, m, 1, n, tmp )
+    If( me == 0 ) Then
+       Write( *, error_format ) 'Error in complex post_scale real ', Maxval( Abs( C - tmp ) ), &
+            Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
+    End If
+    Call distributed_matrix_finalise
+
+  End Subroutine test_complex_post_scale_real
+
   Subroutine test_real_matmul_NN
     
     Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
