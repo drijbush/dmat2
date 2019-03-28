@@ -636,7 +636,8 @@ Contains
     Logical :: sending_data
     
     ! Make Q have the same set up as A
-    Call Q%create( NO_DATA, NO_DATA, A )
+!!$    Call Q%create( NO_DATA, NO_DATA, A )
+    Q = A
 
     Do my_ks = 1, Size( A%my_k_points )
        ! Irreps will need more thought - worrk currenly as burnt into as 1
@@ -646,7 +647,6 @@ Contains
                      Qks => Q%my_k_points( my_ks )%data( my_irrep )%matrix )
 !!$            E( ks )%spin      = A%all_k_point_info( ks )%spin
 !!$            E( ks )%k_indices = A%all_k_point_info( ks )%k_indices
-            E%ks_point = A%all_k_point_info( ks )
             Call Aks%diag( Qks, E( ks )%evals )
           End Associate
        End Do
@@ -656,6 +656,7 @@ Contains
     ! Again needs thought for ireps
     Call mpi_comm_rank( A%parent_communicator, me_parent, error )
     Do ks = 1, Size( A%all_k_point_info )
+       E( ks )%ks_point = A%all_k_point_info( ks )
        my_ks = A%get_my_ks_index( ks )
        ! Work out who holds this set of evals and send how many there are
        ! the root node of the communicator holding them back to the root node of the parent communicator

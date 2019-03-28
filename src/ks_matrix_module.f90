@@ -224,7 +224,7 @@ Contains
     !! Diagonalise a (assumed Hermitian) ks matrix
     
     Class( ks_matrix ),                      Intent( In    ) :: A
-    Type ( ks_matrix ),                      Intent(   Out ) :: Q
+    Type ( ks_matrix ),                      Intent( InOut ) :: Q
     Real( wp ), Dimension( : ), Allocatable, Intent(   Out ) :: E
 
     Call A%matrix%diag( Q%matrix, E )
