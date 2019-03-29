@@ -35,6 +35,8 @@ Module distributed_matrix_module
      Generic  , Public :: Operator( + )        => add_diagonal               !! Add a general matrix to a diagonal matrix
      Generic  , Public :: Operator( + )        => diagonal_add               !! Add a general matrix to a diagonal matrix
      Generic  , Public :: Operator( - )        => subtract                   !! Subtract two matrices 
+     Generic  , Public :: Operator( - )        => subtract_diagonal          !! Subtract a diagonal matrix from a generla matrix
+     Generic  , Public :: Operator( - )        => diagonal_subtract          !! Subtract a general matrix from a diagonal matrix
      Generic  , Public :: Operator( .Dagger. ) => matrix_dagger              !! Apply the dagger operator to the matrix
      Generic  , Public :: set_by_global        => set_global_real, set_global_complex !! Set a matrix using global indexing
      Generic  , Public :: get_by_global        => get_global_real, get_global_complex !! Get from a matrix using global indexing
@@ -62,6 +64,8 @@ Module distributed_matrix_module
      Procedure(           binary_op ), Deferred,            Private :: subtract
      Procedure(      real_binary_op ), Deferred, Pass( B ), Private :: real_subtract
      Procedure(   complex_binary_op ), Deferred, Pass( B ), Private :: complex_subtract
+     Procedure(    post_diagonal_op ), Deferred,            Private :: subtract_diagonal
+     Procedure(     pre_diagonal_op ), Deferred, Pass( A ), Private :: diagonal_subtract
      Procedure(        real_diag_op ), Deferred, Pass( Q ), Private :: real_diag
      Procedure(     complex_diag_op ), Deferred, Pass( Q ), Private :: complex_diag
      Procedure(       real_remap_op ), Deferred, Pass( B ), Private :: real_remap
@@ -95,6 +99,8 @@ Module distributed_matrix_module
      Procedure,            Private :: subtract           => real_subtract
      Procedure, Pass( B ), Private :: real_subtract      => real_subtract_real
      Procedure, Pass( B ), Private :: complex_subtract   => complex_subtract_real
+     Procedure,            Private :: subtract_diagonal  => real_subtract_diagonal
+     Procedure, Pass( A ), Private :: diagonal_subtract  => diagonal_subtract_real
      Procedure, Pass( Q ), Private :: real_diag          => real_diag_real
      Procedure, Pass( Q ), Private :: complex_diag       => complex_diag_real
      Procedure, Pass( B ), Private :: real_remap         => real_remap_real
@@ -156,6 +162,8 @@ Module distributed_matrix_module
      Procedure,            Private :: subtract           => complex_subtract
      Procedure, Pass( B ), Private :: real_subtract      => real_subtract_complex
      Procedure, Pass( B ), Private :: complex_subtract   => complex_subtract_complex
+     Procedure,            Private :: subtract_diagonal  => complex_subtract_diagonal
+     Procedure, Pass( A ), Private :: diagonal_subtract  => diagonal_subtract_complex
      Procedure, Pass( Q ), Private :: real_diag          => real_diag_complex
      Procedure, Pass( Q ), Private :: complex_diag       => complex_diag_complex
      Procedure, Pass( B ), Private :: real_remap         => real_remap_complex
@@ -1919,6 +1927,154 @@ Contains
     C = T
 
   End Function complex_subtract_complex
+
+  Function real_subtract_diagonal( A, d ) Result( B )
+
+    Class(      distributed_matrix ), Allocatable :: B
+
+    Class( real_distributed_matrix ),                 Intent( In ) :: A
+    Real( wp )                      , Dimension( : ), Intent( In ) :: d
+
+    Type( real_distributed_matrix ) :: T
+    
+    Integer :: m, n
+    Integer :: i_glob
+    Integer :: i_loc, j_loc
+    
+    Call A%matrix_map%get_data( m = m, n = n )
+
+    If( m == n .And. Size( d ) == n ) Then
+
+       T = A
+       Do i_glob = 1, n
+          i_loc = A%global_to_local_rows( i_glob )
+          j_loc = A%global_to_local_cols( i_glob )
+          If(  i_loc /= distributed_matrix_NOT_ME .And. &
+               j_loc /= distributed_matrix_NOT_ME ) Then
+             T%data( i_loc, j_loc ) = A%data( i_loc, j_loc ) - d( i_glob )
+          End If
+       End Do
+
+    Else
+
+       Stop "Inconsistent matrix dimensions in real_subtract_diagonal "
+
+    End If
+
+    B = T
+    
+  End Function real_subtract_diagonal
+
+  Function complex_subtract_diagonal( A, d ) Result( B )
+
+    Class(         distributed_matrix ), Allocatable :: B
+
+    Class( complex_distributed_matrix ),                 Intent( In ) :: A
+    Real( wp )                         , Dimension( : ), Intent( In ) :: d
+
+    Type( complex_distributed_matrix ) :: T
+
+    Integer :: m, n
+    Integer :: i_glob
+    Integer :: i_loc, j_loc
+    
+    Call A%matrix_map%get_data( m = m, n = n )
+
+    If( m == n .And. Size( d ) == n ) Then
+
+       T = A
+       Do i_glob = 1, n
+          i_loc = A%global_to_local_rows( i_glob )
+          j_loc = A%global_to_local_cols( i_glob )
+          If(  i_loc /= distributed_matrix_NOT_ME .And. &
+               j_loc /= distributed_matrix_NOT_ME ) Then
+             T%data( i_loc, j_loc ) = A%data( i_loc, j_loc ) - d( i_glob )
+          End If
+       End Do
+
+    Else
+
+       Stop "Inconsistent matrix dimensions in complex_subtract_diagonal "
+
+    End If
+
+    B = T
+    
+  End Function complex_subtract_diagonal
+
+  Function diagonal_subtract_real( d, A ) Result( B )
+
+    Class(      distributed_matrix ), Allocatable :: B
+
+    Real( wp )                      , Dimension( : ), Intent( In ) :: d
+    Class( real_distributed_matrix ),                 Intent( In ) :: A
+
+    Type( real_distributed_matrix ) :: T
+    
+    Integer :: m, n
+    Integer :: i_glob
+    Integer :: i_loc, j_loc
+    
+    Call A%matrix_map%get_data( m = m, n = n )
+
+    If( m == n .And. Size( d ) == n ) Then
+
+       T = A
+       Do i_glob = 1, n
+          i_loc = A%global_to_local_rows( i_glob )
+          j_loc = A%global_to_local_cols( i_glob )
+          If(  i_loc /= distributed_matrix_NOT_ME .And. &
+               j_loc /= distributed_matrix_NOT_ME ) Then
+             T%data( i_loc, j_loc ) = - A%data( i_loc, j_loc ) + d( i_glob )
+          End If
+       End Do
+
+    Else
+
+       Stop "Inconsistent matrix dimensions in diagonal_subtract_real"
+
+    End If
+
+    B = T
+    
+  End Function diagonal_subtract_real
+
+  Function diagonal_subtract_complex( d, A ) Result( B )
+
+    Class(         distributed_matrix ), Allocatable :: B
+
+    Real( wp )                         , Dimension( : ), Intent( In ) :: d
+    Class( complex_distributed_matrix ),                 Intent( In ) :: A
+
+    Type( complex_distributed_matrix ) :: T
+
+    Integer :: m, n
+    Integer :: i_glob
+    Integer :: i_loc, j_loc
+    
+    Call A%matrix_map%get_data( m = m, n = n )
+
+    If( m == n .And. Size( d ) == n ) Then
+
+       T = A
+       Do i_glob = 1, n
+          i_loc = A%global_to_local_rows( i_glob )
+          j_loc = A%global_to_local_cols( i_glob )
+          If(  i_loc /= distributed_matrix_NOT_ME .And. &
+               j_loc /= distributed_matrix_NOT_ME ) Then
+             T%data( i_loc, j_loc ) = - A%data( i_loc, j_loc ) + d( i_glob )
+          End If
+       End Do
+
+    Else
+
+       Stop "Inconsistent matrix dimensions in diagonal_subtract_complex"
+
+    End If
+
+    B = T
+    
+  End Function diagonal_subtract_complex
 
   ! Diagonalisation routines
 
