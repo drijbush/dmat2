@@ -2020,6 +2020,7 @@ Contains
     If( m == n .And. Size( d ) == n ) Then
 
        T = A
+       T%data = -T%data
        Do i_glob = 1, n
           i_loc = A%global_to_local_rows( i_glob )
           j_loc = A%global_to_local_cols( i_glob )
@@ -2057,6 +2058,7 @@ Contains
     If( m == n .And. Size( d ) == n ) Then
 
        T = A
+       T%data = -T%data
        Do i_glob = 1, n
           i_loc = A%global_to_local_rows( i_glob )
           j_loc = A%global_to_local_cols( i_glob )
