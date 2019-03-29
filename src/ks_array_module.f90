@@ -57,6 +57,7 @@ Module ks_array_module
      Generic  , Public :: Operator( * )        => multiply_rscal                    !! Post-multiply by a real scalar
      Generic  , Public :: Operator( + )        => add                               !! Add each element of the array with the corresponding element in another array
      Generic  , Public :: Operator( + )        => add_diagonal                      !! Add each element of the array to a diagonal matrix
+     Generic  , Public :: Operator( + )        => diagonal_add                      !! Add each element of the array to a diagonal matrix
      Generic  , Public :: Operator( - )        => subtract                          !! Subtract each element of the array with the corresponding element in another array
      Procedure, Public :: diag                 => ks_array_diag                     !! Diagonalise each matrix
      Generic  , Public :: set_by_global        => set_by_global_r, set_by_global_c  !! Set patches of an element
@@ -92,6 +93,7 @@ Module ks_array_module
      Procedure,            Private :: multiply_rscal       => ks_array_mult_rscal
      Procedure,            Private :: add                  => ks_array_add
      Procedure,            Private :: add_diagonal         => ks_array_add_diagonal
+     Procedure, Pass( A ), Private :: diagonal_add         => ks_array_diagonal_add
      Procedure,            Private :: subtract             => ks_array_subtract
 !!$     Procedure, Private, Pass( A ) :: pre_scale            => ks_array_pre_scale
 !!$     Procedure, Private            :: post_scale           => ks_array_post_scale
@@ -641,7 +643,7 @@ Contains
 
   Function ks_array_add_diagonal( A, d ) Result( C )
 
-    !! Add the arays together element by element (i.e. matrix by matrix ) 
+    !! Add a general matrix to a diagonal one
 
     Type( ks_array ) :: C
 
@@ -663,6 +665,19 @@ Contains
     End Do
 
   End Function ks_array_add_diagonal
+
+  Function ks_array_diagonal_add( d, A ) Result( C )
+
+    !! Add a general matrix to a diagonal one
+
+    Type( ks_array ) :: C
+
+    Real( wp ), Dimension( : ), Intent( In ) :: d
+    Class( ks_array )         , Intent( In ) :: A
+
+    C = A + d
+    
+  End Function ks_array_diagonal_add
 
   Function ks_array_subtract( A, B ) Result( C )
 

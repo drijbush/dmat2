@@ -33,6 +33,7 @@ Module distributed_matrix_module
      Generic  , Public :: Operator( * )        => multiply_rscal             !! Post-scale by a real scalar
      Generic  , Public :: Operator( + )        => add                        !! Add two matrices together
      Generic  , Public :: Operator( + )        => add_diagonal               !! Add a general matrix to a diagonal matrix
+     Generic  , Public :: Operator( + )        => diagonal_add               !! Add a general matrix to a diagonal matrix
      Generic  , Public :: Operator( - )        => subtract                   !! Subtract two matrices 
      Generic  , Public :: Operator( .Dagger. ) => matrix_dagger              !! Apply the dagger operator to the matrix
      Generic  , Public :: set_by_global        => set_global_real, set_global_complex !! Set a matrix using global indexing
@@ -55,6 +56,7 @@ Module distributed_matrix_module
      Procedure(       post_rscal_op ), Deferred,            Private :: multiply_rscal
      Procedure(           binary_op ), Deferred,            Private :: add
      Procedure(    post_diagonal_op ), Deferred,            Private :: add_diagonal
+     Procedure(     pre_diagonal_op ), Deferred, Pass( A ), Private :: diagonal_add
      Procedure(      real_binary_op ), Deferred, Pass( B ), Private :: real_add
      Procedure(   complex_binary_op ), Deferred, Pass( B ), Private :: complex_add
      Procedure(           binary_op ), Deferred,            Private :: subtract
@@ -89,6 +91,7 @@ Module distributed_matrix_module
      Procedure, Pass( B ), Private :: real_add           => real_add_real
      Procedure, Pass( B ), Private :: complex_add        => complex_add_real
      Procedure,            Private :: add_diagonal       => real_add_diagonal
+     Procedure, Pass( A ), Private :: diagonal_add       => diagonal_add_real
      Procedure,            Private :: subtract           => real_subtract
      Procedure, Pass( B ), Private :: real_subtract      => real_subtract_real
      Procedure, Pass( B ), Private :: complex_subtract   => complex_subtract_real
@@ -149,6 +152,7 @@ Module distributed_matrix_module
      Procedure, Pass( B ), Private :: real_add           => real_add_complex
      Procedure, Pass( B ), Private :: complex_add        => complex_add_complex
      Procedure,            Private :: add_diagonal       => complex_add_diagonal
+     Procedure, Pass( A ), Private :: diagonal_add       => diagonal_add_complex
      Procedure,            Private :: subtract           => complex_subtract
      Procedure, Pass( B ), Private :: real_subtract      => real_subtract_complex
      Procedure, Pass( B ), Private :: complex_subtract   => complex_subtract_complex
@@ -1615,6 +1619,28 @@ Contains
     B = T
     
   End Function complex_add_diagonal
+
+  Function diagonal_add_real( d, A ) Result( B )
+
+    Class(      distributed_matrix ), Allocatable :: B
+
+    Real( wp )                      , Dimension( : ), Intent( In ) :: d
+    Class( real_distributed_matrix ),                 Intent( In ) :: A
+
+    B = A + d
+    
+  End Function diagonal_add_real
+
+  Function diagonal_add_complex( d, A ) Result( B )
+
+    Class(         distributed_matrix ), Allocatable :: B
+
+    Real( wp )                         , Dimension( : ), Intent( In ) :: d
+    Class( complex_distributed_matrix ),                 Intent( In ) :: A
+
+    B = A + d
+
+  End Function diagonal_add_complex
 
   ! Subtraction Routines
   

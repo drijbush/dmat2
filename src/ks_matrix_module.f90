@@ -20,6 +20,7 @@ Module ks_matrix_module
      Generic  , Public :: Operator( * )        => multiply_rscal                       !! Post-multiply by a real scalar
      Generic  , Public :: Operator( + )        => add                                  !! Add 2 ks_matrix's
      Generic  , Public :: Operator( + )        => add_diagonal                         !! Add a ks_matrix to a diagonal matrix
+     Generic  , Public :: Operator( + )        => diagonal_add                         !! Add a ks_matrix to a diagonal matrix
      Generic  , Public :: Operator( - )        => subtract                             !! Subtract 2 ks_matrix's
      Procedure, Public :: diag                 => ks_matrix_diag                       !! Diagonalise a ks_matrix
      Procedure, Public :: size                 => ks_matrix_size                       !! Get the dimensions of the matrix
@@ -35,6 +36,7 @@ Module ks_matrix_module
      Procedure,            Private :: multiply_rscal       => ks_matrix_mult_rscal
      Procedure,            Private :: add                  => ks_matrix_add
      Procedure,            Private :: add_diagonal         => ks_matrix_add_diagonal
+     Procedure, Pass( A ), Private :: diagonal_add         => ks_matrix_diagonal_add
      Procedure,            Private :: subtract             => ks_matrix_subtract
      Procedure,            Private :: set_global_real      => ks_matrix_set_global_real
      Procedure,            Private :: set_global_complex   => ks_matrix_set_global_complex
@@ -250,6 +252,19 @@ Contains
     C%matrix = A%matrix + d
 
   End Function ks_matrix_add_diagonal
+
+  Function ks_matrix_diagonal_add( d, A ) Result( C )
+
+    !! Add a matrix to a diagonal amtrix
+    
+    Type( ks_matrix ) :: C
+
+    Real( wp ), Dimension( : ), Intent( In ) :: d
+    Class( ks_matrix )        , Intent( In ) :: A
+
+    C%matrix = d + A%matrix
+
+  End Function ks_matrix_diagonal_add
 
   Function ks_matrix_subtract( A, B ) Result( C )
 
