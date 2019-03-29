@@ -56,6 +56,7 @@ Module ks_array_module
      Generic  , Public :: Operator( * )        => rscal_multiply                    !! Pre-multiply by a real scalar
      Generic  , Public :: Operator( * )        => multiply_rscal                    !! Post-multiply by a real scalar
      Generic  , Public :: Operator( + )        => add                               !! Add each element of the array with the corresponding element in another array
+     Generic  , Public :: Operator( + )        => add_diagonal                      !! Add each element of the array to a diagonal matrix
      Generic  , Public :: Operator( - )        => subtract                          !! Subtract each element of the array with the corresponding element in another array
      Procedure, Public :: diag                 => ks_array_diag                     !! Diagonalise each matrix
      Generic  , Public :: set_by_global        => set_by_global_r, set_by_global_c  !! Set patches of an element
@@ -90,6 +91,7 @@ Module ks_array_module
      Procedure, Pass( A ), Private :: rscal_multiply       => ks_array_rscal_mult
      Procedure,            Private :: multiply_rscal       => ks_array_mult_rscal
      Procedure,            Private :: add                  => ks_array_add
+     Procedure,            Private :: add_diagonal         => ks_array_add_diagonal
      Procedure,            Private :: subtract             => ks_array_subtract
 !!$     Procedure, Private, Pass( A ) :: pre_scale            => ks_array_pre_scale
 !!$     Procedure, Private            :: post_scale           => ks_array_post_scale
@@ -636,6 +638,31 @@ Contains
     End Do
 
   End Function ks_array_add
+
+  Function ks_array_add_diagonal( A, d ) Result( C )
+
+    !! Add the arays together element by element (i.e. matrix by matrix ) 
+
+    Type( ks_array ) :: C
+
+    Class( ks_array )         , Intent( In ) :: A
+    Real( wp ), Dimension( : ), Intent( In ) :: d
+
+    Integer :: my_ks, my_irrep
+
+    Call C%create( NO_DATA, NO_DATA, A )
+    
+    Do my_ks = 1, Size( A%my_k_points )
+       ! Irreps will need more thought - work currenly as burnt into as 1
+       Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
+          Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
+                     Cks => C%my_k_points( my_ks )%data( my_irrep )%matrix )
+            Cks = Aks + d
+          End Associate
+       End Do
+    End Do
+
+  End Function ks_array_add_diagonal
 
   Function ks_array_subtract( A, B ) Result( C )
 

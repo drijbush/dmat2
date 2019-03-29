@@ -32,6 +32,7 @@ Module distributed_matrix_module
      Generic  , Public :: Operator( * )        => rscal_multiply             !! Pre -scale by a real scalar
      Generic  , Public :: Operator( * )        => multiply_rscal             !! Post-scale by a real scalar
      Generic  , Public :: Operator( + )        => add                        !! Add two matrices together
+     Generic  , Public :: Operator( + )        => add_diagonal               !! Add a general matrix to a diagonal matrix
      Generic  , Public :: Operator( - )        => subtract                   !! Subtract two matrices 
      Generic  , Public :: Operator( .Dagger. ) => matrix_dagger              !! Apply the dagger operator to the matrix
      Generic  , Public :: set_by_global        => set_global_real, set_global_complex !! Set a matrix using global indexing
@@ -42,26 +43,27 @@ Module distributed_matrix_module
      Procedure( remap_op   ), Deferred, Public :: remap                      !! Remap the data to another distribution
      Procedure( diag_op    ), Deferred, Public :: diag                       !! Diagonalise the (assumed Hermitian) matrix
      ! Private implementations
-     Procedure,                                              Private :: matrix_dagger           !! Apply the dagger operator to the matrix
-     Procedure(  set_global_real     ), Deferred,            Private :: set_global_real         !! Set values with a real    array using global indexing
-     Procedure(  set_global_complex  ), Deferred,            Private :: set_global_complex      !! Set values with a complex array using global indexing
-     Procedure(  get_global_real     ), Deferred,            Private :: get_global_real         !! Get values from a real    array using global indexing
-     Procedure(  get_global_complex  ), Deferred,            Private :: get_global_complex      !! Get values from a complex array using global indexing
-     Procedure(         binary_op ), Deferred,            Private :: multiply
-     Procedure(    real_binary_op ), Deferred, Pass( B ), Private :: real_multiply
-     Procedure( complex_binary_op ), Deferred, Pass( B ), Private :: complex_multiply
-     Procedure(      pre_rscal_op ), Deferred, Pass( A ), Private :: rscal_multiply
-     Procedure(     post_rscal_op ), Deferred,            Private :: multiply_rscal
-     Procedure(         binary_op ), Deferred,            Private :: add
-     Procedure(    real_binary_op ), Deferred, Pass( B ), Private :: real_add
-     Procedure( complex_binary_op ), Deferred, Pass( B ), Private :: complex_add
-     Procedure(         binary_op ), Deferred,            Private :: subtract
-     Procedure(    real_binary_op ), Deferred, Pass( B ), Private :: real_subtract
-     Procedure( complex_binary_op ), Deferred, Pass( B ), Private :: complex_subtract
-     Procedure(      real_diag_op ), Deferred, Pass( Q ), Private :: real_diag
-     Procedure(   complex_diag_op ), Deferred, Pass( Q ), Private :: complex_diag
-     Procedure(     real_remap_op ), Deferred, Pass( B ), Private :: real_remap
-     Procedure(  complex_remap_op ), Deferred, Pass( B ), Private :: complex_remap
+     Procedure,                                             Private :: matrix_dagger           !! Apply the dagger operator to the matrix
+     Procedure(  set_global_real    ), Deferred,            Private :: set_global_real         !! Set values with a real    array using global indexing
+     Procedure(  set_global_complex ), Deferred,            Private :: set_global_complex      !! Set values with a complex array using global indexing
+     Procedure(  get_global_real    ), Deferred,            Private :: get_global_real         !! Get values from a real    array using global indexing
+     Procedure(  get_global_complex ), Deferred,            Private :: get_global_complex      !! Get values from a complex array using global indexing
+     Procedure(           binary_op ), Deferred,            Private :: multiply
+     Procedure(      real_binary_op ), Deferred, Pass( B ), Private :: real_multiply
+     Procedure(   complex_binary_op ), Deferred, Pass( B ), Private :: complex_multiply
+     Procedure(        pre_rscal_op ), Deferred, Pass( A ), Private :: rscal_multiply
+     Procedure(       post_rscal_op ), Deferred,            Private :: multiply_rscal
+     Procedure(           binary_op ), Deferred,            Private :: add
+     Procedure(    post_diagonal_op ), Deferred,            Private :: add_diagonal
+     Procedure(      real_binary_op ), Deferred, Pass( B ), Private :: real_add
+     Procedure(   complex_binary_op ), Deferred, Pass( B ), Private :: complex_add
+     Procedure(           binary_op ), Deferred,            Private :: subtract
+     Procedure(      real_binary_op ), Deferred, Pass( B ), Private :: real_subtract
+     Procedure(   complex_binary_op ), Deferred, Pass( B ), Private :: complex_subtract
+     Procedure(        real_diag_op ), Deferred, Pass( Q ), Private :: real_diag
+     Procedure(     complex_diag_op ), Deferred, Pass( Q ), Private :: complex_diag
+     Procedure(       real_remap_op ), Deferred, Pass( B ), Private :: real_remap
+     Procedure(    complex_remap_op ), Deferred, Pass( B ), Private :: complex_remap
   End type distributed_matrix
 
   Type, Extends( distributed_matrix ), Public :: real_distributed_matrix
@@ -86,6 +88,7 @@ Module distributed_matrix_module
      Procedure,            Private :: add                => real_add
      Procedure, Pass( B ), Private :: real_add           => real_add_real
      Procedure, Pass( B ), Private :: complex_add        => complex_add_real
+     Procedure,            Private :: add_diagonal       => real_add_diagonal
      Procedure,            Private :: subtract           => real_subtract
      Procedure, Pass( B ), Private :: real_subtract      => real_subtract_real
      Procedure, Pass( B ), Private :: complex_subtract   => complex_subtract_real
@@ -145,6 +148,7 @@ Module distributed_matrix_module
      Procedure,            Private :: add                => complex_add
      Procedure, Pass( B ), Private :: real_add           => real_add_complex
      Procedure, Pass( B ), Private :: complex_add        => complex_add_complex
+     Procedure,            Private :: add_diagonal       => complex_add_diagonal
      Procedure,            Private :: subtract           => complex_subtract
      Procedure, Pass( B ), Private :: real_subtract      => real_subtract_complex
      Procedure, Pass( B ), Private :: complex_subtract   => complex_subtract_complex
@@ -199,6 +203,7 @@ Module distributed_matrix_module
   Integer,            Private :: block_fac = default_block_fac
 
   Abstract Interface
+
      Subroutine create( A, m, n, source_matrix )
        !! Create storage for the data of the matrix
        Import :: distributed_matrix
@@ -208,6 +213,7 @@ Module distributed_matrix_module
        Integer                    , Intent( In    ) :: n
        Class( distributed_matrix ), Intent( In    ) :: source_matrix
      End Subroutine create
+
      Function local_size( A, dim ) Result( n )
        !! Get the dimensions of the local part of the matrix
        Import :: distributed_matrix
@@ -216,6 +222,7 @@ Module distributed_matrix_module
        Class( distributed_matrix ), Intent( In ) :: A
        Integer                    , Intent( In ) :: dim
      End Function local_size
+
      Subroutine set_global_real( A, m, n, p, q, data )
        !! Set values with a real    array using global indexing
        Import :: wp
@@ -240,6 +247,7 @@ Module distributed_matrix_module
        Integer                           , Intent( In    ) :: q
        Complex( wp ), Dimension( m:, p: ), Intent( In    ) :: data
      End Subroutine set_global_complex
+
      Subroutine get_global_real( A, m, n, p, q, data )
        !! Get values from a real    array using global indexing
        Import :: wp
@@ -264,6 +272,7 @@ Module distributed_matrix_module
        Integer                           , Intent( In    ) :: q
        Complex( wp ), Dimension( m:, p: ), Intent(   Out ) :: data
      End Subroutine get_global_complex
+
      Function pre_rscal_op( s, A ) Result( B )
        Import :: wp
        Import :: distributed_matrix
@@ -280,6 +289,24 @@ Module distributed_matrix_module
        Class( distributed_matrix ), Intent( In ) :: A
        Real( wp )                 , Intent( In ) :: s
      End Function post_rscal_op
+     
+     Function pre_diagonal_op( d, A ) Result( B )
+       Import :: wp
+       Import :: distributed_matrix
+       Implicit None
+       Class( distributed_matrix ), Allocatable  :: B
+       Real( wp ), Dimension( : ) , Intent( In ) :: d
+       Class( distributed_matrix ), Intent( In ) :: A
+     End Function pre_diagonal_op
+     Function post_diagonal_op( A, d ) Result( B )
+       Import :: wp
+       Import :: distributed_matrix
+       Implicit None
+       Class( distributed_matrix ), Allocatable  :: B
+       Class( distributed_matrix ), Intent( In ) :: A
+       Real( wp ), Dimension( : ) , Intent( In ) :: d
+     End Function post_diagonal_op
+
      Function binary_op( A, B ) Result( C )
        !! A binary operation between two base class objects
        Import :: distributed_matrix
@@ -306,6 +333,7 @@ Module distributed_matrix_module
        Class( complex_distributed_matrix ), Intent( In ) :: A
        Class(         distributed_matrix ), Intent( In ) :: B
      End Function complex_binary_op
+
      Subroutine diag_op( A, Q, E )
        !! Diagonalising a base class matrix with vectors returned as base class
        Import :: wp
@@ -335,6 +363,7 @@ Module distributed_matrix_module
        Class(         distributed_matrix ),     Intent(   Out ) :: Q
        Real( wp ), Dimension( : ), Allocatable, Intent(   Out ) :: E
      End Subroutine complex_diag_op
+
      Subroutine remap_op( A, is_A_dummy, parent_comm, B, is_B_dummy ) 
        !! A remap operation between two base class objects
        Import :: distributed_matrix
@@ -367,6 +396,7 @@ Module distributed_matrix_module
        Class(      distributed_matrix ), Intent( InOut ) :: B
        Logical                         , Intent( In    ) :: is_B_dummy
      End Subroutine complex_remap_op
+
   End Interface
   
 Contains
@@ -1511,6 +1541,80 @@ Contains
     C = T
 
   End Function complex_add_complex
+
+  Function real_add_diagonal( A, d ) Result( B )
+
+    Class(      distributed_matrix ), Allocatable :: B
+
+    Class( real_distributed_matrix ),                 Intent( In ) :: A
+    Real( wp )                      , Dimension( : ), Intent( In ) :: d
+
+    Type( real_distributed_matrix ) :: T
+    
+    Integer :: m, n
+    Integer :: i_glob
+    Integer :: i_loc, j_loc
+    
+    Call A%matrix_map%get_data( m = m, n = n )
+
+    If( m == n .And. Size( d ) == n ) Then
+
+       T = A
+       Do i_glob = 1, n
+          i_loc = A%global_to_local_rows( i_glob )
+          j_loc = A%global_to_local_cols( i_glob )
+          If(  i_loc /= distributed_matrix_NOT_ME .And. &
+               j_loc /= distributed_matrix_NOT_ME ) Then
+             T%data( i_loc, j_loc ) = A%data( i_loc, j_loc ) + d( i_glob )
+          End If
+       End Do
+
+    Else
+
+       Stop "Inconsistent matrix dimensions in real_add_diagonal "
+
+    End If
+
+    B = T
+    
+  End Function real_add_diagonal
+
+  Function complex_add_diagonal( A, d ) Result( B )
+
+    Class(         distributed_matrix ), Allocatable :: B
+
+    Class( complex_distributed_matrix ),                 Intent( In ) :: A
+    Real( wp )                         , Dimension( : ), Intent( In ) :: d
+
+    Type( complex_distributed_matrix ) :: T
+
+    Integer :: m, n
+    Integer :: i_glob
+    Integer :: i_loc, j_loc
+    
+    Call A%matrix_map%get_data( m = m, n = n )
+
+    If( m == n .And. Size( d ) == n ) Then
+
+       T = A
+       Do i_glob = 1, n
+          i_loc = A%global_to_local_rows( i_glob )
+          j_loc = A%global_to_local_cols( i_glob )
+          If(  i_loc /= distributed_matrix_NOT_ME .And. &
+               j_loc /= distributed_matrix_NOT_ME ) Then
+             T%data( i_loc, j_loc ) = A%data( i_loc, j_loc ) + d( i_glob )
+          End If
+       End Do
+
+    Else
+
+       Stop "Inconsistent matrix dimensions in complex_add_diagonal "
+
+    End If
+
+    B = T
+    
+  End Function complex_add_diagonal
 
   ! Subtraction Routines
   

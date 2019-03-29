@@ -63,10 +63,12 @@ Program test_distributed_matrix
   Call test_real_add_TN
   Call test_real_add_NT
   Call test_real_add_TT
+  Call test_real_post_add_diagonal
   Call test_complex_add_NN
   Call test_complex_add_NT
   Call test_complex_add_TN
   Call test_complex_add_TT
+  Call test_complex_post_add_diagonal
   ! Subtracts
   If( me == 0 ) Then
      Write( *, title_format ) 'Subtractions'
@@ -139,6 +141,7 @@ Program test_distributed_matrix
   Call test_ks_split_add_TN
   Call test_ks_split_add_NT
   Call test_ks_split_add_TT
+  Call test_ks_split_post_add_diagonal
   ! Subtracts
   If( me == 0 ) Then
      Write( *, title_format ) 'Split distribution subtractions'
@@ -375,6 +378,116 @@ Contains
     Call distributed_matrix_finalise
 
   End Subroutine test_real_add_TT
+
+  Subroutine test_real_post_add_diagonal
+    
+    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+
+    Use numbers_module           , Only : wp
+    Use distributed_matrix_module, Only : distributed_matrix, real_distributed_matrix, &
+         distributed_matrix_init, distributed_matrix_comm_to_base, distributed_matrix_finalise, &
+         distributed_matrix_set_default_blocking
+
+    Implicit None
+    
+    Real( wp ), Dimension( :, : ), Allocatable :: A, C, tmp
+
+    Real( wp ), Dimension( : ), Allocatable :: d
+
+    Type( real_distributed_matrix ) :: base
+    Class( distributed_matrix ), Allocatable :: Am, Cm
+
+    Integer :: i
+    
+    Allocate( A( 1:m, 1:m ) )
+    Allocate( d( 1:m      ) )
+    Allocate( C( 1:m, 1:m ) )
+    If( me == 0 ) Then
+       Call Random_number( A )
+       Call Random_number( d )
+       C = A
+       Do i = 1, m
+          C( i, i ) = A( i, i ) + d( i )
+       End Do
+    End If
+    Call mpi_bcast( A, Size( A ), mpi_double_precision, 0, mpi_comm_world, error )
+    Call mpi_bcast( d, Size( d ), mpi_double_precision, 0, mpi_comm_world, error )
+    Call mpi_bcast( C, Size( C ), mpi_double_precision, 0, mpi_comm_world, error )
+    
+    Allocate( tmp, Mold = C )
+    
+    Call distributed_matrix_init
+    Call distributed_matrix_set_default_blocking( n_block )
+    Call distributed_matrix_comm_to_base( mpi_comm_world, base )
+    Allocate( real_distributed_matrix :: Am )
+    Call Am%create( m, m, base )
+    Call Am%set_by_global( 1, m, 1, m, A )
+    Cm =  Am + d
+    Call Cm%get_by_global( 1, m, 1, m, tmp )
+    If( me == 0 ) Then
+       Write( *, error_format ) 'Error in real post_add diagonal ', Maxval( Abs( C - tmp ) ), &
+            Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
+    End If
+    Call distributed_matrix_finalise
+
+  End Subroutine test_real_post_add_diagonal
+
+  Subroutine test_complex_post_add_diagonal
+    
+    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision, mpi_double_complex
+
+    Use numbers_module           , Only : wp
+    Use distributed_matrix_module, Only : distributed_matrix, complex_distributed_matrix, real_distributed_matrix, &
+         distributed_matrix_init, distributed_matrix_comm_to_base, distributed_matrix_finalise, &
+         distributed_matrix_set_default_blocking
+
+    Implicit None
+    
+    Complex( wp ), Dimension( :, : ), Allocatable :: A, C, tmp
+
+    Real( wp ), Dimension( :, : ), Allocatable :: rand1, rand2
+
+    Real( wp ), Dimension( : ), Allocatable :: d
+
+    Type( real_distributed_matrix ) :: base
+    Class( distributed_matrix ), Allocatable :: Am, Cm
+
+    Integer :: i
+    
+    Allocate( A( 1:m, 1:m ) )
+    Allocate( d( 1:m      ) )
+    Allocate( C( 1:m, 1:m ) )
+    If( me == 0 ) Then
+       Allocate( rand1( 1:m, 1:m ), rand2( 1:m, 1:m ) )
+       Call Random_number( rand1 ); Call Random_number( rand2 ) 
+       A = Cmplx( rand1, rand2, wp )
+       Call Random_number( d )
+       C = A
+       Do i = 1, m
+          C( i, i ) = A( i, i ) + d( i )
+       End Do
+    End If
+    Call mpi_bcast( A, Size( A ), mpi_double_complex  , 0, mpi_comm_world, error )
+    Call mpi_bcast( d, Size( d ), mpi_double_precision, 0, mpi_comm_world, error )
+    Call mpi_bcast( C, Size( C ), mpi_double_complex  , 0, mpi_comm_world, error )
+    
+    Allocate( tmp, Mold = C )
+    
+    Call distributed_matrix_init
+    Call distributed_matrix_set_default_blocking( n_block )
+    Call distributed_matrix_comm_to_base( mpi_comm_world, base )
+    Allocate( complex_distributed_matrix :: Am )
+    Call Am%create( m, m, base )
+    Call Am%set_by_global( 1, m, 1, m, A )
+    Cm =  Am + d
+    Call Cm%get_by_global( 1, m, 1, m, tmp )
+    If( me == 0 ) Then
+       Write( *, error_format ) 'Error in real post_add diagonal ', Maxval( Abs( C - tmp ) ), &
+            Merge( 'Passed', 'FAILED', Maxval( Abs( C - tmp ) ) < tol )
+    End If
+    Call distributed_matrix_finalise
+
+  End Subroutine test_complex_post_add_diagonal
 
   Subroutine test_complex_add_NN
     
@@ -2696,6 +2809,140 @@ Contains
     Call ks_array_finalise
 
   End Subroutine test_ks_split_add_TT
+
+  Subroutine test_ks_split_post_add_diagonal
+
+    Use numbers_module , Only : wp
+    Use ks_array_module, Only : ks_array, ks_array_init, ks_array_comm_to_base, ks_array_finalise, &
+         K_POINT_REAL, K_POINT_COMPLEX
+    Use mpi            , Only : mpi_bcast, mpi_comm_world, mpi_double_complex, mpi_double_precision
+         
+
+    Real   ( wp ), Dimension( :, :, :, : ), Allocatable :: A_r, C_r
+    Complex( wp ), Dimension( :, :, :, : ), Allocatable :: A_c, C_c
+
+    Real   ( wp ), Dimension( :, : ), Allocatable :: tmp_r
+    Complex( wp ), Dimension( :, : ), Allocatable :: tmp_c
+
+    Real( wp ), Dimension( :, : ), Allocatable :: rand1, rand2
+
+    Real( wp ), Dimension( : ), Allocatable :: d
+    
+    Real( wp ) :: max_diff, this_diff
+    Real( wp ) :: rand
+
+    Type( ks_array ) :: base
+    Type( ks_array ) :: Am, Cm
+    Type( ks_array ) :: Am_base
+    
+    Integer, Dimension( 1:3, 1:nk ) :: k_points
+    Integer, Dimension(      1:nk ) :: k_types
+
+    Integer :: kpoint, spin
+    Integer :: i
+
+    Allocate( A_r( 1:m, 1:m, 1:nk, 1:ns ) )
+    Allocate( C_r( 1:m, 1:m, 1:nk, 1:ns ) )
+    Allocate( A_c( 1:m, 1:m, 1:nk, 1:ns ) )
+    Allocate( C_c( 1:m, 1:m, 1:nk, 1:ns ) )
+    A_r = Huge( 1.0_wp )
+    C_r = Huge( 1.0_wp )
+    A_c = Huge( 1.0_wp )
+    C_c = Huge( 1.0_wp )
+    Allocate( d( 1:m ) )
+    If( me == 0 ) Then
+       Call Random_number( d )
+       k_types = K_POINT_REAL
+       Do While( All( k_types == K_POINT_REAL ) .Or. All( k_types == K_POINT_COMPLEX ) )
+          Do kpoint = 1, nk
+             k_points( :, kpoint ) = [ kpoint - 1, 0, 0 ]
+             Call Random_number( rand )
+             k_types( kpoint ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
+          End Do
+       End Do
+       Do spin = 1, ns
+          Do kpoint = 1, nk
+             If( k_types( kpoint ) == K_POINT_REAL ) Then
+                ! Real
+                Call Random_number( A_r( :, :, kpoint, spin ) )
+                C_r( :, :, kpoint, spin ) = A_r( :, :, kpoint, spin )
+                Do i = 1, m
+                   C_r( i, i, kpoint, spin ) = A_r( i, i, kpoint, spin ) + d( i )
+                End Do
+             Else
+                ! Complex
+                Allocate( rand1( 1:m, 1:m ), rand2( 1:m, 1:m ) )
+                Call Random_number( rand1 ); Call Random_number( rand2 ) 
+                A_c( :, :, kpoint, spin ) = Cmplx( rand1, rand2, wp )
+                Deallocate( rand1, rand2 )
+                C_c( :, :, kpoint, spin ) = A_c( :, :, kpoint, spin )
+                Do i = 1, m
+                   C_c( i, i, kpoint, spin ) = A_c( i, i, kpoint, spin ) + d( i )
+                End Do
+             End If
+          End Do
+       End Do
+    End If
+
+    Call mpi_bcast( k_points, Size( k_points ), mpi_integer, 0, mpi_comm_world, error )
+    Call mpi_bcast( k_types , Size( k_types  ), mpi_integer, 0, mpi_comm_world, error )
+    
+    Call mpi_bcast( A_r, Size( A_r ), mpi_double_precision, 0, mpi_comm_world, error )
+    Call mpi_bcast( C_r, Size( C_r ), mpi_double_precision, 0, mpi_comm_world, error )
+
+    Call mpi_bcast( A_c, Size( A_c ), mpi_double_complex  , 0, mpi_comm_world, error )
+    Call mpi_bcast( C_c, Size( C_c ), mpi_double_complex  , 0, mpi_comm_world, error )
+    
+    Call mpi_bcast( d, Size( d ), mpi_double_precision, 0, mpi_comm_world, error )
+
+    Allocate( tmp_r( 1:m, 1:m ) )
+    Allocate( tmp_c( 1:m, 1:m ) )
+
+    Call ks_array_init( n_block )
+    Call ks_array_comm_to_base( MPI_COMM_WORLD, ns, k_types, k_points, base )
+
+    Call Am_base%create( m, m, base )
+    Call Am_base%split( 2.0_wp, Am )
+    If( verbose ) Then
+       Call Am%print_info( 'Am - the split matrix', 9999 )
+    End If
+
+    Do spin = 1, ns
+       Do kpoint = 1, nk
+          If( k_types( kpoint ) == K_POINT_REAL ) Then
+             Call Am%set_by_global( k_points( :, kpoint ), spin, 1, m, 1, m, A_r( :, :, kpoint, spin ) )
+          Else
+             Call Am%set_by_global( k_points( :, kpoint ), spin, 1, m, 1, m, A_c( :, :, kpoint, spin ) )
+          End If
+       End Do
+    End Do
+
+    Cm = Am + d
+    If( verbose ) Then
+       Call Cm%print_info( 'Cm_split - the result matrix', 9999 )
+    End If
+
+    max_diff = -1.0_wp
+    Do spin = 1, ns
+       Do kpoint = 1, nk
+          If( k_types( kpoint ) == K_POINT_REAL ) Then
+             Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, m, tmp_r )
+             this_diff = Maxval( Abs( C_r( :, :, kpoint, spin ) - tmp_r ) )
+          Else
+             Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, m, tmp_c ) 
+             this_diff = Maxval( Abs( C_c( :, :, kpoint, spin ) - tmp_c ) )
+          End If
+          max_diff = Max( this_diff, max_diff )
+       End Do
+    End Do
+    If( me == 0 ) Then
+       Write( *, error_format ) 'Error in ks_split post-add ', max_diff, &
+            Merge( 'Passed', 'FAILED', max_diff < tol )
+    End If
+
+    Call ks_array_finalise
+
+  End Subroutine test_ks_split_post_add_diagonal
 
   ! Subtract tests
   Subroutine test_ks_split_subtract_NN
