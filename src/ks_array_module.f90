@@ -59,6 +59,8 @@ Module ks_array_module
      Generic  , Public :: Operator( + )        => add_diagonal                      !! Add each element of the array to a diagonal matrix
      Generic  , Public :: Operator( + )        => diagonal_add                      !! Add each element of the array to a diagonal matrix
      Generic  , Public :: Operator( - )        => subtract                          !! Subtract each element of the array with the corresponding element in another array
+     Generic  , Public :: Operator( - )        => subtract_diagonal                 !! Subtract a diagonal matrix from a general one
+     Generic  , Public :: Operator( - )        => diagonal_subtract                 !! Subtract a general matrix from a diagonal one
      Procedure, Public :: diag                 => ks_array_diag                     !! Diagonalise each matrix
      Generic  , Public :: set_by_global        => set_by_global_r, set_by_global_c  !! Set patches of an element
      Generic  , Public :: get_by_global        => get_by_global_r, get_by_global_c  !! Get patches of an element
@@ -95,6 +97,8 @@ Module ks_array_module
      Procedure,            Private :: add_diagonal         => ks_array_add_diagonal
      Procedure, Pass( A ), Private :: diagonal_add         => ks_array_diagonal_add
      Procedure,            Private :: subtract             => ks_array_subtract
+     Procedure,            Private :: subtract_diagonal    => ks_array_subtract_diagonal
+     Procedure, Pass( A ), Private :: diagonal_subtract    => ks_array_diagonal_subtract
 !!$     Procedure, Private, Pass( A ) :: pre_scale            => ks_array_pre_scale
 !!$     Procedure, Private            :: post_scale           => ks_array_post_scale
 !!$     Procedure, Private, Pass( A ) :: pre_mult_diag        => ks_array_pre_mult_diag
@@ -674,9 +678,21 @@ Contains
 
     Real( wp ), Dimension( : ), Intent( In ) :: d
     Class( ks_array )         , Intent( In ) :: A
-
-    C = A + d
     
+    Integer :: my_ks, my_irrep
+
+    Call C%create( NO_DATA, NO_DATA, A )
+    
+    Do my_ks = 1, Size( A%my_k_points )
+       ! Irreps will need more thought - work currenly as burnt into as 1
+       Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
+          Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
+                     Cks => C%my_k_points( my_ks )%data( my_irrep )%matrix )
+            Cks = d + Aks
+          End Associate
+       End Do
+    End Do
+
   End Function ks_array_diagonal_add
 
   Function ks_array_subtract( A, B ) Result( C )
@@ -704,6 +720,56 @@ Contains
     End Do
 
   End Function ks_array_subtract
+
+  Function ks_array_subtract_diagonal( A, d ) Result( C )
+
+    !! Subtract a diagonal matrix from a general matrix 
+
+    Type( ks_array ) :: C
+
+    Class( ks_array )         , Intent( In ) :: A
+    Real( wp ), Dimension( : ), Intent( In ) :: d
+
+    Integer :: my_ks, my_irrep
+
+    Call C%create( NO_DATA, NO_DATA, A )
+    
+    Do my_ks = 1, Size( A%my_k_points )
+       ! Irreps will need more thought - work currenly as burnt into as 1
+       Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
+          Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
+                     Cks => C%my_k_points( my_ks )%data( my_irrep )%matrix )
+            Cks = Aks - d
+          End Associate
+       End Do
+    End Do
+
+  End Function ks_array_subtract_diagonal
+
+  Function ks_array_diagonal_subtract( d, A ) Result( C )
+
+    !! Subtract a general matrix from a diagonal one
+
+    Type( ks_array ) :: C
+
+    Real( wp ), Dimension( : ), Intent( In ) :: d
+    Class( ks_array )         , Intent( In ) :: A
+    
+    Integer :: my_ks, my_irrep
+
+    Call C%create( NO_DATA, NO_DATA, A )
+    
+    Do my_ks = 1, Size( A%my_k_points )
+       ! Irreps will need more thought - work currenly as burnt into as 1
+       Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
+          Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
+                     Cks => C%my_k_points( my_ks )%data( my_irrep )%matrix )
+            Cks = d - Aks
+          End Associate
+       End Do
+    End Do
+
+  End Function ks_array_diagonal_subtract
 
   Subroutine ks_array_diag( A, Q, E )
 

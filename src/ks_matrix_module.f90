@@ -22,6 +22,8 @@ Module ks_matrix_module
      Generic  , Public :: Operator( + )        => add_diagonal                         !! Add a ks_matrix to a diagonal matrix
      Generic  , Public :: Operator( + )        => diagonal_add                         !! Add a ks_matrix to a diagonal matrix
      Generic  , Public :: Operator( - )        => subtract                             !! Subtract 2 ks_matrix's
+     Generic  , Public :: Operator( - )        => subtract_diagonal                    !! Subtract a diagonal matrix from a ks_matrix 
+     Generic  , Public :: Operator( - )        => diagonal_subtract                    !! Subtract a ks_matrix from a diagonal matrix
      Procedure, Public :: diag                 => ks_matrix_diag                       !! Diagonalise a ks_matrix
      Procedure, Public :: size                 => ks_matrix_size                       !! Get the dimensions of the matrix
      Generic  , Public :: set_by_global        => set_global_real, set_global_complex  !! Set elements by global indices
@@ -38,6 +40,8 @@ Module ks_matrix_module
      Procedure,            Private :: add_diagonal         => ks_matrix_add_diagonal
      Procedure, Pass( A ), Private :: diagonal_add         => ks_matrix_diagonal_add
      Procedure,            Private :: subtract             => ks_matrix_subtract
+     Procedure,            Private :: subtract_diagonal    => ks_matrix_subtract_diagonal
+     Procedure, Pass( A ), Private :: diagonal_subtract    => ks_matrix_diagonal_subtract
      Procedure,            Private :: set_global_real      => ks_matrix_set_global_real
      Procedure,            Private :: set_global_complex   => ks_matrix_set_global_complex
      Procedure,            Private :: get_global_real      => ks_matrix_get_global_real
@@ -278,6 +282,32 @@ Contains
     C%matrix = A%matrix - B%matrix
 
   End Function ks_matrix_subtract
+
+  Function ks_matrix_subtract_diagonal( A, d ) Result( C )
+
+    !! Subtract a diagonal amtrix from a matrix
+    
+    Type( ks_matrix ) :: C
+
+    Class( ks_matrix )        , Intent( In ) :: A
+    Real( wp ), Dimension( : ), Intent( In ) :: d
+
+    C%matrix = A%matrix - d
+
+  End Function ks_matrix_subtract_diagonal
+
+  Function ks_matrix_diagonal_subtract( d, A ) Result( C )
+
+    !! Subtract a matrix from a diagonal amtrix
+    
+    Type( ks_matrix ) :: C
+
+    Real( wp ), Dimension( : ), Intent( In ) :: d
+    Class( ks_matrix )        , Intent( In ) :: A
+
+    C%matrix = d - A%matrix
+
+  End Function ks_matrix_diagonal_subtract
 
   Subroutine ks_matrix_diag( A, Q, E ) 
 
