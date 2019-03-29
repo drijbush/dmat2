@@ -1930,6 +1930,8 @@ Contains
 
   Function real_subtract_diagonal( A, d ) Result( B )
 
+    !! Subtract a real digaonal matrix from a real one
+
     Class(      distributed_matrix ), Allocatable :: B
 
     Class( real_distributed_matrix ),                 Intent( In ) :: A
@@ -1966,6 +1968,8 @@ Contains
   End Function real_subtract_diagonal
 
   Function complex_subtract_diagonal( A, d ) Result( B )
+
+    !! Subtract a real digaonal matrix from a complex one
 
     Class(         distributed_matrix ), Allocatable :: B
 
@@ -2004,6 +2008,8 @@ Contains
 
   Function diagonal_subtract_real( d, A ) Result( B )
 
+    !! Subtract a real matrix from a digaonal one
+
     Class(      distributed_matrix ), Allocatable :: B
 
     Real( wp )                      , Dimension( : ), Intent( In ) :: d
@@ -2041,6 +2047,8 @@ Contains
   End Function diagonal_subtract_real
 
   Function diagonal_subtract_complex( d, A ) Result( B )
+
+    !! Subtract a complex matrix from a digaonal one
 
     Class(         distributed_matrix ), Allocatable :: B
 
