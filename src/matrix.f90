@@ -38,7 +38,7 @@ Module distributed_matrix_module
      Generic  , Public :: Operator( - )          => subtract_diagonal          !! Subtract a diagonal matrix from a generla matrix
      Generic  , Public :: Operator( - )          => diagonal_subtract          !! Subtract a general matrix from a diagonal matrix
      Generic  , Public :: Operator( .Dagger.   ) => matrix_dagger              !! Apply the dagger operator to the matrix
-     Generic  , Public :: Operator( .Choleski. ) => choleski                   !! Apply the dagger operator to the matrix
+     Generic  , Public :: Operator( .Choleski. ) => choleski                   !! choleski decompose a matrix
      Generic  , Public :: set_by_global          => set_global_real, set_global_complex !! Set a matrix using global indexing
      Generic  , Public :: get_by_global          => get_global_real, get_global_complex !! Get from a matrix using global indexing
      ! Public methods that are overridden

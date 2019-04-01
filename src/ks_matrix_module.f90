@@ -13,24 +13,25 @@ Module ks_matrix_module
      Class( distributed_matrix ), Allocatable, Private :: matrix
    Contains
      ! Public methods
-     Procedure, Public :: create               => ks_matrix_create                     !! Create a ks_matrix
-     Generic  , Public :: Operator( .Dagger. ) => dagger                               !! Dagger a ks_matrix
-     Generic  , Public :: Operator( * )        => multiply                             !! Multiply 2 ks_matrix's
-     Generic  , Public :: Operator( * )        => rscal_multiply                       !! Pre-multiply by a real scalar
-     Generic  , Public :: Operator( * )        => multiply_rscal                       !! Post-multiply by a real scalar
-     Generic  , Public :: Operator( + )        => add                                  !! Add 2 ks_matrix's
-     Generic  , Public :: Operator( + )        => add_diagonal                         !! Add a ks_matrix to a diagonal matrix
-     Generic  , Public :: Operator( + )        => diagonal_add                         !! Add a ks_matrix to a diagonal matrix
-     Generic  , Public :: Operator( - )        => subtract                             !! Subtract 2 ks_matrix's
-     Generic  , Public :: Operator( - )        => subtract_diagonal                    !! Subtract a diagonal matrix from a ks_matrix 
-     Generic  , Public :: Operator( - )        => diagonal_subtract                    !! Subtract a ks_matrix from a diagonal matrix
-     Procedure, Public :: diag                 => ks_matrix_diag                       !! Diagonalise a ks_matrix
-     Procedure, Public :: size                 => ks_matrix_size                       !! Get the dimensions of the matrix
-     Generic  , Public :: set_by_global        => set_global_real, set_global_complex  !! Set elements by global indices
-     Generic  , Public :: get_by_global        => get_global_real, get_global_complex  !! Get elements using global indices
-     Procedure, Public :: get_comm             => ks_matrix_communicator               !! Get the communicator containing the processes holding the matrix
-     Procedure, Public :: global_to_local      => ks_matrix_global_to_local            !! Get an array for mapping global indices to local  ones
-     Procedure, Public :: local_to_global      => ks_matrix_local_to_global            !! Get an array for mapping local  indices to global ones
+     Procedure, Public :: create                 => ks_matrix_create                     !! Create a ks_matrix
+     Generic  , Public :: Operator( .Dagger. )   => dagger                               !! Dagger a ks_matrix
+     Generic  , Public :: Operator( * )          => multiply                             !! Multiply 2 ks_matrix's
+     Generic  , Public :: Operator( * )          => rscal_multiply                       !! Pre-multiply by a real scalar
+     Generic  , Public :: Operator( * )          => multiply_rscal                       !! Post-multiply by a real scalar
+     Generic  , Public :: Operator( + )          => add                                  !! Add 2 ks_matrix's
+     Generic  , Public :: Operator( + )          => add_diagonal                         !! Add a ks_matrix to a diagonal matrix
+     Generic  , Public :: Operator( + )          => diagonal_add                         !! Add a ks_matrix to a diagonal matrix
+     Generic  , Public :: Operator( - )          => subtract                             !! Subtract 2 ks_matrix's
+     Generic  , Public :: Operator( - )          => subtract_diagonal                    !! Subtract a diagonal matrix from a ks_matrix 
+     Generic  , Public :: Operator( - )          => diagonal_subtract                    !! Subtract a ks_matrix from a diagonal matrix
+     Procedure, Public :: diag                   => ks_matrix_diag                       !! Diagonalise a ks_matrix
+     Generic  , Public :: Operator( .Choleski. ) => choleski                               !! Dagger a ks_matrix
+     Procedure, Public :: size                   => ks_matrix_size                       !! Get the dimensions of the matrix
+     Generic  , Public :: set_by_global          => set_global_real, set_global_complex  !! Set elements by global indices
+     Generic  , Public :: get_by_global          => get_global_real, get_global_complex  !! Get elements using global indices
+     Procedure, Public :: get_comm               => ks_matrix_communicator               !! Get the communicator containing the processes holding the matrix
+     Procedure, Public :: global_to_local        => ks_matrix_global_to_local            !! Get an array for mapping global indices to local  ones
+     Procedure, Public :: local_to_global        => ks_matrix_local_to_global            !! Get an array for mapping local  indices to global ones
      ! Private implementations
      Procedure,            Private :: dagger               => ks_matrix_dagger
      Procedure,            Private :: multiply             => ks_matrix_mult
@@ -42,6 +43,7 @@ Module ks_matrix_module
      Procedure,            Private :: subtract             => ks_matrix_subtract
      Procedure,            Private :: subtract_diagonal    => ks_matrix_subtract_diagonal
      Procedure, Pass( A ), Private :: diagonal_subtract    => ks_matrix_diagonal_subtract
+     Procedure,            Private :: choleski             => ks_matrix_choleski
      Procedure,            Private :: set_global_real      => ks_matrix_set_global_real
      Procedure,            Private :: set_global_complex   => ks_matrix_set_global_complex
      Procedure,            Private :: get_global_real      => ks_matrix_get_global_real
@@ -323,6 +325,18 @@ Contains
     Call A%matrix%diag( Q%matrix, E )
 
   End Subroutine ks_matrix_diag
+
+  Function ks_matrix_choleski( A ) Result( C )
+
+    !! Choleski decompose A
+
+    Type( ks_matrix ) :: C
+    
+    Class( ks_matrix ), Intent( In ) :: A
+
+    C%matrix = .Choleski. A%matrix
+    
+  End Function ks_matrix_choleski
 
   Function ks_matrix_size( A, dim ) Result( n )
 

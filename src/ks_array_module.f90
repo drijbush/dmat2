@@ -49,24 +49,25 @@ Module ks_array_module
    Contains
      ! Public Methods
      ! Methods at all levels
-     Procedure, Public :: create               => ks_array_create                   !! Create a ks_array
-     Procedure, Public :: split                => ks_array_split_ks                 !! Split the distribution so k point //ism can be used
-     Generic  , Public :: Operator( .Dagger. ) => dagger                            !! Dagger each element in the array
-     Generic  , Public :: Operator( * )        => multiply                          !! Multiply each element of the array with the corresponding element in another array
-     Generic  , Public :: Operator( * )        => rscal_multiply                    !! Pre-multiply by a real scalar
-     Generic  , Public :: Operator( * )        => multiply_rscal                    !! Post-multiply by a real scalar
-     Generic  , Public :: Operator( + )        => add                               !! Add each element of the array with the corresponding element in another array
-     Generic  , Public :: Operator( + )        => add_diagonal                      !! Add each element of the array to a diagonal matrix
-     Generic  , Public :: Operator( + )        => diagonal_add                      !! Add each element of the array to a diagonal matrix
-     Generic  , Public :: Operator( - )        => subtract                          !! Subtract each element of the array with the corresponding element in another array
-     Generic  , Public :: Operator( - )        => subtract_diagonal                 !! Subtract a diagonal matrix from a general one
-     Generic  , Public :: Operator( - )        => diagonal_subtract                 !! Subtract a general matrix from a diagonal one
-     Procedure, Public :: diag                 => ks_array_diag                     !! Diagonalise each matrix
-     Generic  , Public :: set_by_global        => set_by_global_r, set_by_global_c  !! Set patches of an element
-     Generic  , Public :: get_by_global        => get_by_global_r, get_by_global_c  !! Get patches of an element
-     Procedure, Public :: global_to_local      => ks_array_g_to_l
-     Procedure, Public :: local_to_global      => ks_array_l_to_g
-     Procedure, Public :: print_info           => ks_array_print_info               !! print info about a KS_array
+     Procedure, Public :: create                  => ks_array_create                   !! Create a ks_array
+     Procedure, Public :: split                   => ks_array_split_ks                 !! Split the distribution so k point //ism can be used
+     Generic  , Public :: Operator( .Dagger. )    => dagger                            !! Dagger each element in the array
+     Generic  , Public :: Operator( * )           => multiply                          !! Multiply each element of the array with the corresponding element in another array
+     Generic  , Public :: Operator( * )           => rscal_multiply                    !! Pre-multiply by a real scalar
+     Generic  , Public :: Operator( * )           => multiply_rscal                    !! Post-multiply by a real scalar
+     Generic  , Public :: Operator( + )           => add                               !! Add each element of the array with the corresponding element in another array
+     Generic  , Public :: Operator( + )           => add_diagonal                      !! Add each element of the array to a diagonal matrix
+     Generic  , Public :: Operator( + )           => diagonal_add                      !! Add each element of the array to a diagonal matrix
+     Generic  , Public :: Operator( - )           => subtract                          !! Subtract each element of the array with the corresponding element in another array
+     Generic  , Public :: Operator( - )           => subtract_diagonal                 !! Subtract a diagonal matrix from a general one
+     Generic  , Public :: Operator( - )           => diagonal_subtract                 !! Subtract a general matrix from a diagonal one
+     Procedure, Public :: diag                    => ks_array_diag                     !! Diagonalise each matrix
+     Generic  , Public :: Operator( .Choleski. )  => choleski                          !! choleski decompose a matrix
+     Generic  , Public :: set_by_global           => set_by_global_r, set_by_global_c  !! Set patches of an element
+     Generic  , Public :: get_by_global           => get_by_global_r, get_by_global_c  !! Get patches of an element
+     Procedure, Public :: global_to_local         => ks_array_g_to_l
+     Procedure, Public :: local_to_global         => ks_array_l_to_g
+     Procedure, Public :: print_info              => ks_array_print_info               !! print info about a KS_array
 !!$     Generic                       :: Operator( + )        => add, pre_add_diag, post_add_diag
 !!$     Generic                       :: Operator( - )        => subtract, post_subtract_diag
 !!$     Generic                       :: Operator( * )        => pre_scale, post_scale, &
@@ -99,6 +100,7 @@ Module ks_array_module
      Procedure,            Private :: subtract             => ks_array_subtract
      Procedure,            Private :: subtract_diagonal    => ks_array_subtract_diagonal
      Procedure, Pass( A ), Private :: diagonal_subtract    => ks_array_diagonal_subtract
+     Procedure,            Private :: choleski             => ks_array_choleski
 !!$     Procedure, Private, Pass( A ) :: pre_scale            => ks_array_pre_scale
 !!$     Procedure, Private            :: post_scale           => ks_array_post_scale
 !!$     Procedure, Private, Pass( A ) :: pre_mult_diag        => ks_array_pre_mult_diag
@@ -851,6 +853,31 @@ Contains
     
   End Subroutine ks_array_diag
 
+  ! Cgoleski decompose each matrix
+  
+  Function ks_array_choleski( A ) Result( C )
+
+    !! Subtract a general matrix from a diagonal one
+
+    Type( ks_array ) :: C
+
+    Class( ks_array )         , Intent( In ) :: A
+    
+    Integer :: my_ks, my_irrep
+
+!!$    Call C%create( NO_DATA, NO_DATA, A )
+    
+    Do my_ks = 1, Size( A%my_k_points )
+       ! Irreps will need more thought - work currenly as burnt into as 1
+       Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
+          Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
+                     Cks => C%my_k_points( my_ks )%data( my_irrep )%matrix )
+            Cks = .Choleski. Aks
+          End Associate
+       End Do
+    End Do
+
+  End Function ks_array_choleski
 !!$  Function ks_array_pre_scale( s, A ) Result( C )
 !!$
 !!$    Type( ks_array ), Allocatable :: C
