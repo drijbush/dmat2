@@ -63,19 +63,12 @@ Module ks_array_module
      Generic  , Public :: Operator( - )           => diagonal_subtract                 !! Subtract a general matrix from a diagonal one
      Procedure, Public :: diag                    => ks_array_diag                     !! Diagonalise each matrix
      Generic  , Public :: Operator( .Choleski. )  => choleski                          !! choleski decompose a matrix
+     Generic  , Public :: Operator( .TrInv. )     => tr_inv                            !! Invert a lower traingular set of matrices
      Generic  , Public :: set_by_global           => set_by_global_r, set_by_global_c  !! Set patches of an element
      Generic  , Public :: get_by_global           => get_by_global_r, get_by_global_c  !! Get patches of an element
      Procedure, Public :: global_to_local         => ks_array_g_to_l
      Procedure, Public :: local_to_global         => ks_array_l_to_g
      Procedure, Public :: print_info              => ks_array_print_info               !! print info about a KS_array
-!!$     Generic                       :: Operator( + )        => add, pre_add_diag, post_add_diag
-!!$     Generic                       :: Operator( - )        => subtract, post_subtract_diag
-!!$     Generic                       :: Operator( * )        => pre_scale, post_scale, &
-!!$                                                              pre_mult_diag, post_mult_diag
-!!$     Generic                       :: Operator( * )        => multiply, pre_scale, post_scale, &
-!!$                                                              pre_mult_diag, post_mult_diag
-!!$     Procedure                     :: diag                 => ks_array_diag
-!!$     Procedure                     :: Choleski             => ks_array_Choleski
 !!$     Procedure                     :: solve                => ks_array_solve
 !!$     Procedure                     :: set_to_identity      => ks_array_set_to_identity
 !!$     Procedure                     :: size                 => ks_array_size
@@ -101,6 +94,7 @@ Module ks_array_module
      Procedure,            Private :: subtract_diagonal    => ks_array_subtract_diagonal
      Procedure, Pass( A ), Private :: diagonal_subtract    => ks_array_diagonal_subtract
      Procedure,            Private :: choleski             => ks_array_choleski
+     Procedure,            Private :: tr_inv               => ks_array_tr_inv
 !!$     Procedure, Private, Pass( A ) :: pre_scale            => ks_array_pre_scale
 !!$     Procedure, Private            :: post_scale           => ks_array_post_scale
 !!$     Procedure, Private, Pass( A ) :: pre_mult_diag        => ks_array_pre_mult_diag
@@ -878,6 +872,30 @@ Contains
     End Do
 
   End Function ks_array_choleski
+  
+  Function ks_array_tr_inv( A ) Result( C )
+
+    !! Subtract a general matrix from a diagonal one
+
+    Type( ks_array ) :: C
+
+    Class( ks_array )         , Intent( In ) :: A
+    
+    Integer :: my_ks, my_irrep
+
+    Call C%create( NO_DATA, NO_DATA, A )
+    
+    Do my_ks = 1, Size( A%my_k_points )
+       ! Irreps will need more thought - work currenly as burnt into as 1
+       Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
+          Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
+                     Cks => C%my_k_points( my_ks )%data( my_irrep )%matrix )
+            Cks = .TrInv. Aks
+          End Associate
+       End Do
+    End Do
+
+  End Function ks_array_tr_inv
   
 !!$  Function ks_array_pre_scale( s, A ) Result( C )
 !!$

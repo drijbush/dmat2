@@ -25,7 +25,8 @@ Module ks_matrix_module
      Generic  , Public :: Operator( - )          => subtract_diagonal                    !! Subtract a diagonal matrix from a ks_matrix 
      Generic  , Public :: Operator( - )          => diagonal_subtract                    !! Subtract a ks_matrix from a diagonal matrix
      Procedure, Public :: diag                   => ks_matrix_diag                       !! Diagonalise a ks_matrix
-     Generic  , Public :: Operator( .Choleski. ) => choleski                               !! Dagger a ks_matrix
+     Generic  , Public :: Operator( .Choleski. ) => choleski                             !! Choleski factor ks_matrix
+     Generic  , Public :: Operator( .TrInv.    ) => tr_inv                               !! Invert a lower triangular ks_matrix
      Procedure, Public :: size                   => ks_matrix_size                       !! Get the dimensions of the matrix
      Generic  , Public :: set_by_global          => set_global_real, set_global_complex  !! Set elements by global indices
      Generic  , Public :: get_by_global          => get_global_real, get_global_complex  !! Get elements using global indices
@@ -44,6 +45,7 @@ Module ks_matrix_module
      Procedure,            Private :: subtract_diagonal    => ks_matrix_subtract_diagonal
      Procedure, Pass( A ), Private :: diagonal_subtract    => ks_matrix_diagonal_subtract
      Procedure,            Private :: choleski             => ks_matrix_choleski
+     Procedure,            Private :: tr_inv               => ks_matrix_tr_inv
      Procedure,            Private :: set_global_real      => ks_matrix_set_global_real
      Procedure,            Private :: set_global_complex   => ks_matrix_set_global_complex
      Procedure,            Private :: get_global_real      => ks_matrix_get_global_real
@@ -337,6 +339,18 @@ Contains
     C%matrix = .Choleski. A%matrix
     
   End Function ks_matrix_choleski
+
+  Function ks_matrix_tr_inv( A ) Result( C )
+
+    !! Choleski decompose A
+
+    Type( ks_matrix ) :: C
+    
+    Class( ks_matrix ), Intent( In ) :: A
+
+    C%matrix = .TrInv. A%matrix
+    
+  End Function ks_matrix_tr_inv
 
   Function ks_matrix_size( A, dim ) Result( n )
 
