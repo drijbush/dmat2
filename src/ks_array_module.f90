@@ -865,7 +865,7 @@ Contains
     
     Integer :: my_ks, my_irrep
 
-!!$    Call C%create( NO_DATA, NO_DATA, A )
+    Call C%create( NO_DATA, NO_DATA, A )
     
     Do my_ks = 1, Size( A%my_k_points )
        ! Irreps will need more thought - work currenly as burnt into as 1
@@ -878,6 +878,7 @@ Contains
     End Do
 
   End Function ks_array_choleski
+  
 !!$  Function ks_array_pre_scale( s, A ) Result( C )
 !!$
 !!$    Type( ks_array ), Allocatable :: C
@@ -1073,29 +1074,6 @@ Contains
 !!$    End Do
 !!$
 !!$  End Function ks_array_post_subtract_diag
-!!$
-!!$  Function ks_array_Choleski( A ) Result( C )
-!!$
-!!$    Type( ks_array ), Allocatable :: C
-!!$
-!!$    Class( ks_array ), Intent( In ) :: A
-!!$
-!!$    Integer :: my_ks, my_irrep
-!!$
-!!$    Allocate( C )
-!!$    C = A
-!!$    
-!!$    Do my_ks = 1, Size( A%my_k_points )
-!!$       ! Irreps will need more thought - work currenly as burnt into as 1
-!!$       Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
-!!$          Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
-!!$                     Cks => C%my_k_points( my_ks )%data( my_irrep )%matrix )
-!!$            Cks = Aks%Choleski()
-!!$          End Associate
-!!$       End Do
-!!$    End Do
-!!$
-!!$  End Function ks_array_Choleski
 !!$
 !!$  Function ks_array_solve( A, B ) Result( C )
 !!$

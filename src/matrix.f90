@@ -2274,6 +2274,7 @@ Contains
   Function choleski_real( A ) Result( C )
 
     !! Choleski decompose into lower triangular factors a real symmetric positive definite matrix
+    !! Return value is deallocated on error
 
     Use Scalapack_interfaces, Only : pdpotrf
     
@@ -2305,8 +2306,6 @@ Contains
     Call pdpotrf( 'L', m, T%data, 1, 1, T%matrix_map%get_descriptor(), error )
     If( error == 0 ) Then
        C = T
-    Else
-       Deallocate( C )
     End If
     
   End Function choleski_real
@@ -2314,6 +2313,7 @@ Contains
   Function choleski_complex( A ) Result( C )
 
     !! Choleski decompose into lower triangular factors a Hermitian positive definite matrix
+    !! Return value is deallocated on error
 
     Use Scalapack_interfaces, Only : pzpotrf
 
@@ -2345,8 +2345,6 @@ Contains
     Call pzpotrf( 'L', m, T%data, 1, 1, T%matrix_map%get_descriptor(), error )
     If( error == 0 ) Then
        C = T
-    Else
-       Deallocate( C )
     End If
     
   End Function choleski_complex
