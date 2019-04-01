@@ -43,33 +43,6 @@ Module matrix_mapping_module
   Integer, Parameter, Private :: csrc_a  = 8 ! first process col which golds a
   Integer, Parameter, Private :: lld_a   = 9 ! leading dimension of LOCAL a
 
-!!$  Interface
-!!$     !! Interfaces for the BLACS routines we use
-!!$     Subroutine blacs_gridinit( ctxt, order, nprow, npcol )
-!!$       Implicit None
-!!$       Integer             , Intent( InOut ) :: ctxt
-!!$       Character( Len = * ), Intent( In    ) :: order
-!!$       Integer             , Intent( In    ) :: nprow
-!!$       Integer             , Intent( In    ) :: npcol
-!!$     End Subroutine blacs_gridinit
-!!$     Subroutine blacs_gridinfo( ctxt, nprow, npcol, myprow, mypcol )
-!!$       Implicit None
-!!$       Integer             , Intent( In    ) :: ctxt
-!!$       Integer             , Intent(   Out ) :: nprow
-!!$       Integer             , Intent(   Out ) :: npcol
-!!$       Integer             , Intent(   Out ) :: myprow
-!!$       Integer             , Intent(   Out ) :: mypcol
-!!$     End Subroutine blacs_gridinfo
-!!$     Subroutine blacs_gridexit( ctxt )
-!!$       Implicit None
-!!$       Integer, Intent( InOut ) :: ctxt
-!!$     End Subroutine blacs_gridexit
-!!$     Subroutine blacs_exit( cont )
-!!$       Implicit None
-!!$       Integer, Intent( In ) :: cont
-!!$     End Subroutine blacs_exit
-!!$  End Interface
-
 Contains
 
   Subroutine matrix_mapping_init
