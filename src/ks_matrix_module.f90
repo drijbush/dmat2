@@ -29,6 +29,7 @@ Module ks_matrix_module
      Procedure, Public :: diag                   => ks_matrix_diag                       !! Diagonalise a ks_matrix
      Generic  , Public :: Operator( .Choleski. ) => choleski                             !! Choleski factor ks_matrix
      Generic  , Public :: Operator( .TrInv.    ) => tr_inv                               !! Invert a lower triangular ks_matrix
+     Procedure, Public :: extract                => ks_matrix_extract                    !! Extract a patch of one matrix into another
      Procedure, Public :: size                   => ks_matrix_size                       !! Get the dimensions of the matrix
      Generic  , Public :: set_by_global          => set_global_real, set_global_complex  !! Set elements by global indices
      Generic  , Public :: get_by_global          => get_global_real, get_global_complex  !! Get elements using global indices
@@ -392,6 +393,22 @@ Contains
     n = A%matrix%size( dim )
     
   End Function ks_matrix_size
+
+  Function ks_matrix_extract( A, m, n, p, q ) Result( C )
+
+    !! Choleski decompose A
+
+    Type( ks_matrix ) :: C
+    
+    Class( ks_matrix ), Intent( In ) :: A
+    Integer           , Intent( In ) :: m
+    Integer           , Intent( In ) :: n
+    Integer           , Intent( In ) :: p
+    Integer           , Intent( In ) :: q
+
+    C%matrix = A%matrix%extract( m, n, p, q )
+    
+  End Function ks_matrix_extract
 
   Subroutine ks_matrix_set_global_real( A, m, n, p, q, data )
 
