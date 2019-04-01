@@ -21,6 +21,7 @@ Module ks_matrix_module
      Generic  , Public :: Operator( + )          => add                                  !! Add 2 ks_matrix's
      Generic  , Public :: Operator( + )          => add_diagonal                         !! Add a ks_matrix to a diagonal matrix
      Generic  , Public :: Operator( + )          => diagonal_add                         !! Add a ks_matrix to a diagonal matrix
+     Generic  , Public :: Operator( - )          => minus                                !! Unary minus operation
      Generic  , Public :: Operator( - )          => subtract                             !! Subtract 2 ks_matrix's
      Generic  , Public :: Operator( - )          => subtract_diagonal                    !! Subtract a diagonal matrix from a ks_matrix 
      Generic  , Public :: Operator( - )          => diagonal_subtract                    !! Subtract a ks_matrix from a diagonal matrix
@@ -41,6 +42,7 @@ Module ks_matrix_module
      Procedure,            Private :: add                  => ks_matrix_add
      Procedure,            Private :: add_diagonal         => ks_matrix_add_diagonal
      Procedure, Pass( A ), Private :: diagonal_add         => ks_matrix_diagonal_add
+     Procedure,            Private :: minus                => ks_matrix_minus
      Procedure,            Private :: subtract             => ks_matrix_subtract
      Procedure,            Private :: subtract_diagonal    => ks_matrix_subtract_diagonal
      Procedure, Pass( A ), Private :: diagonal_subtract    => ks_matrix_diagonal_subtract
@@ -351,6 +353,18 @@ Contains
     C%matrix = .TrInv. A%matrix
     
   End Function ks_matrix_tr_inv
+
+  Function ks_matrix_minus( A ) Result( C )
+
+    !! Unary minus
+
+    Type( ks_matrix ) :: C
+    
+    Class( ks_matrix ), Intent( In ) :: A
+
+    C%matrix = - A%matrix
+    
+  End Function ks_matrix_minus
 
   Function ks_matrix_size( A, dim ) Result( n )
 

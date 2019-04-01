@@ -58,6 +58,7 @@ Module ks_array_module
      Generic  , Public :: Operator( + )           => add                               !! Add each element of the array with the corresponding element in another array
      Generic  , Public :: Operator( + )           => add_diagonal                      !! Add each element of the array to a diagonal matrix
      Generic  , Public :: Operator( + )           => diagonal_add                      !! Add each element of the array to a diagonal matrix
+     Generic  , Public :: Operator( - )           => minus                             !! Unary minus operator
      Generic  , Public :: Operator( - )           => subtract                          !! Subtract each element of the array with the corresponding element in another array
      Generic  , Public :: Operator( - )           => subtract_diagonal                 !! Subtract a diagonal matrix from a general one
      Generic  , Public :: Operator( - )           => diagonal_subtract                 !! Subtract a general matrix from a diagonal one
@@ -90,6 +91,7 @@ Module ks_array_module
      Procedure,            Private :: add                  => ks_array_add
      Procedure,            Private :: add_diagonal         => ks_array_add_diagonal
      Procedure, Pass( A ), Private :: diagonal_add         => ks_array_diagonal_add
+     Procedure,            Private :: minus                => ks_array_minus
      Procedure,            Private :: subtract             => ks_array_subtract
      Procedure,            Private :: subtract_diagonal    => ks_array_subtract_diagonal
      Procedure, Pass( A ), Private :: diagonal_subtract    => ks_array_diagonal_subtract
@@ -897,201 +899,30 @@ Contains
 
   End Function ks_array_tr_inv
   
-!!$  Function ks_array_pre_scale( s, A ) Result( C )
-!!$
-!!$    Type( ks_array ), Allocatable :: C
-!!$
-!!$    Real( wp )       , Intent( In ) :: s
-!!$    Class( ks_array ), Intent( In ) :: A
-!!$
-!!$    Integer :: my_ks, my_irrep
-!!$
-!!$    Allocate( C )
-!!$    C = A
-!!$    
-!!$    Do my_ks = 1, Size( A%my_k_points )
-!!$       ! Irreps will need more thought - work currenly as burnt into as 1
-!!$       Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
-!!$          Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
-!!$                     Cks => C%my_k_points( my_ks )%data( my_irrep )%matrix )
-!!$            Cks = s * Aks
-!!$          End Associate
-!!$       End Do
-!!$    End Do
-!!$
-!!$  End Function ks_array_pre_scale
-!!$
-!!$  Function ks_array_post_scale( A, s ) Result( C )
-!!$
-!!$    Type( ks_array ), Allocatable :: C
-!!$
-!!$    Class( ks_array ), Intent( In ) :: A
-!!$    Real( wp )       , Intent( In ) :: s
-!!$
-!!$    Integer :: my_ks, my_irrep
-!!$
-!!$    Allocate( C )
-!!$    C = A
-!!$    
-!!$    Do my_ks = 1, Size( A%my_k_points )
-!!$       ! Irreps will need more thought - work currenly as burnt into as 1
-!!$       Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
-!!$          Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
-!!$                     Cks => C%my_k_points( my_ks )%data( my_irrep )%matrix )
-!!$            Cks = Aks * s
-!!$          End Associate
-!!$       End Do
-!!$    End Do
-!!$
-!!$  End Function ks_array_post_scale
-!!$
-!!$  Function ks_array_pre_mult_diag( s, A ) Result( C )
-!!$
-!!$    Type( ks_array ), Allocatable :: C
-!!$
-!!$    Real( wp )       , Dimension( : ), Intent( In ) :: s
-!!$    Class( ks_array ),                Intent( In ) :: A
-!!$
-!!$    Integer :: my_ks, my_irrep
-!!$
-!!$    Allocate( C )
-!!$    C = A
-!!$    
-!!$    Do my_ks = 1, Size( A%my_k_points )
-!!$       ! Irreps will need more thought - work currenly as burnt into as 1
-!!$       Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
-!!$          Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
-!!$                     Cks => C%my_k_points( my_ks )%data( my_irrep )%matrix )
-!!$            Cks = s * Aks
-!!$          End Associate
-!!$       End Do
-!!$    End Do
-!!$
-!!$  End Function ks_array_pre_mult_diag
-!!$
-!!$  Function ks_array_post_mult_diag( A, s ) Result( C )
-!!$
-!!$    Type( ks_array ), Allocatable :: C
-!!$
-!!$    Class( ks_array ),                Intent( In ) :: A
-!!$    Real( wp )       , Dimension( : ), Intent( In ) :: s
-!!$
-!!$    Integer :: my_ks, my_irrep
-!!$
-!!$    Allocate( C )
-!!$    C = A
-!!$    
-!!$    Do my_ks = 1, Size( A%my_k_points )
-!!$       ! Irreps will need more thought - work currenly as burnt into as 1
-!!$       Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
-!!$          Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
-!!$                     Cks => C%my_k_points( my_ks )%data( my_irrep )%matrix )
-!!$            Cks = Aks * s
-!!$          End Associate
-!!$       End Do
-!!$    End Do
-!!$
-!!$  End Function ks_array_post_mult_diag
-!!$
-!!$
-!!$  End Function ks_array_add
-!!$
-!!$  Function ks_array_pre_add_diag( d, A ) Result( C )
-!!$
-!!$    Type( ks_array ), Allocatable :: C
-!!$
-!!$    Real( wp )       , Dimension( : ), Intent( In ) :: d
-!!$    Class( ks_array )                , Intent( In ) :: A
-!!$
-!!$    Integer :: my_ks, my_irrep
-!!$
-!!$    Allocate( C )
-!!$    C = A
-!!$    
-!!$    Do my_ks = 1, Size( A%my_k_points )
-!!$       ! Irreps will need more thought - work currenly as burnt into as 1
-!!$       Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
-!!$          Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
-!!$                     Cks => C%my_k_points( my_ks )%data( my_irrep )%matrix )
-!!$            Cks = d + Aks
-!!$          End Associate
-!!$       End Do
-!!$    End Do
-!!$
-!!$  End Function ks_array_pre_add_diag
-!!$
-!!$  Function ks_array_post_add_diag( A, d ) Result( C )
-!!$
-!!$    Type( ks_array ), Allocatable :: C
-!!$
-!!$    Class( ks_array )                , Intent( In ) :: A
-!!$    Real( wp )       , Dimension( : ), Intent( In ) :: d
-!!$
-!!$    Integer :: my_ks, my_irrep
-!!$
-!!$    Allocate( C )
-!!$    C = A
-!!$    
-!!$    Do my_ks = 1, Size( A%my_k_points )
-!!$       ! Irreps will need more thought - work currenly as burnt into as 1
-!!$       Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
-!!$          Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
-!!$                     Cks => C%my_k_points( my_ks )%data( my_irrep )%matrix )
-!!$            Cks = Aks + d
-!!$          End Associate
-!!$       End Do
-!!$    End Do
-!!$
-!!$  End Function ks_array_post_add_diag
-!!$
-!!$  Function ks_array_subtract( A, B ) Result( C )
-!!$
-!!$    Type( ks_array ), Allocatable :: C
-!!$
-!!$    Class( ks_array ), Intent( In ) :: A
-!!$    Type ( ks_array ), Intent( In ) :: B
-!!$
-!!$    Integer :: my_ks, my_irrep
-!!$
-!!$    Allocate( C )
-!!$    C = A
-!!$    
-!!$    Do my_ks = 1, Size( A%my_k_points )
-!!$       ! Irreps will need more thought - work currenly as burnt into as 1
-!!$       Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
-!!$          Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
-!!$                     Bks => B%my_k_points( my_ks )%data( my_irrep )%matrix, &
-!!$                     Cks => C%my_k_points( my_ks )%data( my_irrep )%matrix )
-!!$            Cks = Aks - Bks
-!!$          End Associate
-!!$       End Do
-!!$    End Do
-!!$
-!!$  End Function ks_array_subtract
-!!$
-!!$  Function ks_array_post_subtract_diag( A, d ) Result( C )
-!!$
-!!$    Type( ks_array ), Allocatable :: C
-!!$
-!!$    Class( ks_array )                , Intent( In ) :: A
-!!$    Real( wp )       , Dimension( : ), Intent( In ) :: d
-!!$
-!!$    Integer :: my_ks, my_irrep
-!!$
-!!$    Allocate( C )
-!!$    C = A
-!!$    
-!!$    Do my_ks = 1, Size( A%my_k_points )
-!!$       ! Irreps will need more thought - work currenly as burnt into as 1
-!!$       Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
-!!$          Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
-!!$                     Cks => C%my_k_points( my_ks )%data( my_irrep )%matrix )
-!!$            Cks = Aks - d
-!!$          End Associate
-!!$       End Do
-!!$    End Do
-!!$
-!!$  End Function ks_array_post_subtract_diag
+  Function ks_array_minus( A ) Result( C )
+
+    !! Subtract a general matrix from a diagonal one
+
+    Type( ks_array ) :: C
+
+    Class( ks_array )         , Intent( In ) :: A
+    
+    Integer :: my_ks, my_irrep
+
+    Call C%create( NO_DATA, NO_DATA, A )
+    
+    Do my_ks = 1, Size( A%my_k_points )
+       ! Irreps will need more thought - work currenly as burnt into as 1
+       Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
+          Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
+                     Cks => C%my_k_points( my_ks )%data( my_irrep )%matrix )
+            Cks = - Aks
+          End Associate
+       End Do
+    End Do
+
+  End Function ks_array_minus
+  
 !!$
 !!$  Function ks_array_solve( A, B ) Result( C )
 !!$
