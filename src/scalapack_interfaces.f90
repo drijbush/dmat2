@@ -200,6 +200,36 @@ Module scalapack_interfaces
   
   Interface
 
+     !! Triangular invert routines
+
+     Subroutine pdtrtri( uplo, diag, n, a, ia, ja, desca, info )
+       Import :: wp
+       Character                   , Intent( In    ) :: uplo
+       Character                   , Intent( In    ) :: diag
+       Integer                     , Intent( In    ) :: n
+       Real( wp ), Dimension( *   ), Intent( InOut ) :: a
+       Integer                     , Intent( In    ) :: ia
+       Integer                     , Intent( In    ) :: ja
+       Integer   , Dimension( 1:9 ), Intent( In    ) :: desca
+       Integer                        , Intent(   Out ) :: info
+     End Subroutine pdtrtri
+     
+     Subroutine pztrtri( uplo, diag, n, a, ia, ja, desca, info )
+       Import :: wp
+       Character                      , Intent( In    ) :: uplo
+       Character                   , Intent( In    ) :: diag
+       Integer                        , Intent( In    ) :: n
+       Complex( wp ), Dimension( *   ), Intent( InOut ) :: a
+       Integer                        , Intent( In    ) :: ia
+       Integer                        , Intent( In    ) :: ja
+       Integer      , Dimension( 1:9 ), Intent( In    ) :: desca
+       Integer                        , Intent(   Out ) :: info
+     End Subroutine pztrtri
+     
+  End Interface
+  
+  Interface
+
      !! Redistribution routines
 
      Subroutine pdgemr2d( m, n, a, ia, ja, desca, b, ib, jb, descb, ictxt )

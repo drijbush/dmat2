@@ -39,6 +39,7 @@ Module distributed_matrix_module
      Generic  , Public :: Operator( - )          => diagonal_subtract          !! Subtract a general matrix from a diagonal matrix
      Generic  , Public :: Operator( .Dagger.   ) => matrix_dagger              !! Apply the dagger operator to the matrix
      Generic  , Public :: Operator( .Choleski. ) => choleski                   !! choleski decompose a matrix
+     Generic  , Public :: Operator( .Trinv.    ) => tr_inv                     !! invert a traingular matrix
      Generic  , Public :: set_by_global          => set_global_real, set_global_complex !! Set a matrix using global indexing
      Generic  , Public :: get_by_global          => get_global_real, get_global_complex !! Get from a matrix using global indexing
      ! Public methods that are overridden
@@ -70,6 +71,7 @@ Module distributed_matrix_module
      Procedure(        real_diag_op ), Deferred, Pass( Q ), Private :: real_diag
      Procedure(     complex_diag_op ), Deferred, Pass( Q ), Private :: complex_diag
      Procedure(            unary_op ), Deferred,            Private :: choleski
+     Procedure(            unary_op ), Deferred,            Private :: tr_inv
      Procedure(       real_remap_op ), Deferred, Pass( B ), Private :: real_remap
      Procedure(    complex_remap_op ), Deferred, Pass( B ), Private :: complex_remap
   End type distributed_matrix
@@ -106,6 +108,7 @@ Module distributed_matrix_module
      Procedure, Pass( Q ), Private :: real_diag          => real_diag_real
      Procedure, Pass( Q ), Private :: complex_diag       => complex_diag_real
      Procedure           , Private :: choleski           => choleski_real
+     Procedure           , Private :: tr_inv             => tr_inv_real
      Procedure, Pass( B ), Private :: real_remap         => real_remap_real
      Procedure, Pass( B ), Private :: complex_remap      => complex_remap_real
 !!$     Procedure, Private   :: diag_r               => matrix_diag_real
@@ -170,6 +173,7 @@ Module distributed_matrix_module
      Procedure, Pass( Q ), Private :: real_diag          => real_diag_complex
      Procedure, Pass( Q ), Private :: complex_diag       => complex_diag_complex
      Procedure           , Private :: choleski           => choleski_complex
+     Procedure           , Private :: tr_inv             => tr_inv_complex
      Procedure, Pass( B ), Private :: real_remap         => real_remap_complex
      Procedure, Pass( B ), Private :: complex_remap      => complex_remap_complex
 !!$     Procedure, Private   :: diag_c               => matrix_diag_complex
@@ -2348,6 +2352,60 @@ Contains
     End If
     
   End Function choleski_complex
+
+  ! Triangular invert Routines
+  
+  Function tr_inv_real( A ) Result( C )
+
+    !! Invert a lower triangular real matrix
+    !! Return value is deallocated on error
+
+    Use Scalapack_interfaces, Only : pdtrtri
+    
+    Class(      distributed_matrix ), Allocatable :: C
+
+    Class( real_distributed_matrix ), Intent( In ) :: A
+
+    Type( real_distributed_matrix ) :: T
+    
+    Integer :: m
+    Integer :: error
+
+    T = A
+    
+    Call T%matrix_map%get_data( m = m )
+    Call pdtrtri( 'L', 'N', m, T%data, 1, 1, T%matrix_map%get_descriptor(), error )
+    If( error == 0 ) Then
+       C = T
+    End If
+    
+  End Function tr_inv_real
+  
+  Function tr_inv_complex( A ) Result( C )
+
+    !! Invert a lower triangular complex matrix
+    !! Return value is deallocated on error
+
+    Use Scalapack_interfaces, Only : pztrtri
+
+    Class(         distributed_matrix ), Allocatable :: C
+
+    Class( complex_distributed_matrix ), Intent( In ) :: A
+
+    Type( complex_distributed_matrix ) :: T
+
+    Integer :: m
+    Integer :: error
+
+    T = A
+    
+    Call T%matrix_map%get_data( m = m )
+    Call pztrtri( 'L', 'N', m, T%data, 1, 1, T%matrix_map%get_descriptor(), error )
+    If( error == 0 ) Then
+       C = T
+    End If
+    
+  End Function tr_inv_complex
 
   !##########################################################################
   ! Auxiliary routines
