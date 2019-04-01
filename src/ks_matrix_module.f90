@@ -18,6 +18,7 @@ Module ks_matrix_module
      Generic  , Public :: Operator( * )          => multiply                             !! Multiply 2 ks_matrix's
      Generic  , Public :: Operator( * )          => rscal_multiply                       !! Pre-multiply by a real scalar
      Generic  , Public :: Operator( * )          => multiply_rscal                       !! Post-multiply by a real scalar
+     Generic  , Public :: Operator( + )          => plus                                 !! Unary plus operation
      Generic  , Public :: Operator( + )          => add                                  !! Add 2 ks_matrix's
      Generic  , Public :: Operator( + )          => add_diagonal                         !! Add a ks_matrix to a diagonal matrix
      Generic  , Public :: Operator( + )          => diagonal_add                         !! Add a ks_matrix to a diagonal matrix
@@ -39,6 +40,7 @@ Module ks_matrix_module
      Procedure,            Private :: multiply             => ks_matrix_mult
      Procedure, Pass( A ), Private :: rscal_multiply       => ks_matrix_rscal_mult
      Procedure,            Private :: multiply_rscal       => ks_matrix_mult_rscal
+     Procedure,            Private :: plus                 => ks_matrix_plus
      Procedure,            Private :: add                  => ks_matrix_add
      Procedure,            Private :: add_diagonal         => ks_matrix_add_diagonal
      Procedure, Pass( A ), Private :: diagonal_add         => ks_matrix_diagonal_add
@@ -353,6 +355,18 @@ Contains
     C%matrix = .TrInv. A%matrix
     
   End Function ks_matrix_tr_inv
+
+  Function ks_matrix_plus( A ) Result( C )
+
+    !! Unary plus
+
+    Type( ks_matrix ) :: C
+    
+    Class( ks_matrix ), Intent( In ) :: A
+
+    C%matrix = + A%matrix
+    
+  End Function ks_matrix_plus
 
   Function ks_matrix_minus( A ) Result( C )
 

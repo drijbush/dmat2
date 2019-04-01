@@ -31,6 +31,7 @@ Module distributed_matrix_module
      Generic  , Public :: Operator( * )          => multiply                   !! Multiply two matrices together
      Generic  , Public :: Operator( * )          => rscal_multiply             !! Pre -scale by a real scalar
      Generic  , Public :: Operator( * )          => multiply_rscal             !! Post-scale by a real scalar
+     Generic  , Public :: Operator( + )          => plus                       !! Unary plus operation
      Generic  , Public :: Operator( + )          => add                        !! Add two matrices together
      Generic  , Public :: Operator( + )          => add_diagonal               !! Add a general matrix to a diagonal matrix
      Generic  , Public :: Operator( + )          => diagonal_add               !! Add a general matrix to a diagonal matrix
@@ -59,6 +60,7 @@ Module distributed_matrix_module
      Procedure(   complex_binary_op ), Deferred, Pass( B ), Private :: complex_multiply
      Procedure(        pre_rscal_op ), Deferred, Pass( A ), Private :: rscal_multiply
      Procedure(       post_rscal_op ), Deferred,            Private :: multiply_rscal
+     Procedure(            unary_op ), Deferred,            Private :: plus
      Procedure(           binary_op ), Deferred,            Private :: add
      Procedure(    post_diagonal_op ), Deferred,            Private :: add_diagonal
      Procedure(     pre_diagonal_op ), Deferred, Pass( A ), Private :: diagonal_add
@@ -97,6 +99,7 @@ Module distributed_matrix_module
      Procedure, Pass( B ), Private :: complex_multiply   => complex_multiply_real
      Procedure, Pass( A ), Private :: rscal_multiply     => rscal_multiply_real
      Procedure,            Private :: multiply_rscal     => real_multiply_rscal
+     Procedure,            Private :: plus               => plus_real
      Procedure,            Private :: add                => real_add
      Procedure, Pass( B ), Private :: real_add           => real_add_real
      Procedure, Pass( B ), Private :: complex_add        => complex_add_real
@@ -135,6 +138,7 @@ Module distributed_matrix_module
      Procedure, Pass( B ), Private :: complex_multiply   => complex_multiply_complex
      Procedure, Pass( A ), Private :: rscal_multiply     => rscal_multiply_complex
      Procedure,            Private :: multiply_rscal     => complex_multiply_rscal
+     Procedure,            Private :: plus               => plus_complex
      Procedure,            Private :: add                => complex_add
      Procedure, Pass( B ), Private :: real_add           => real_add_complex
      Procedure, Pass( B ), Private :: complex_add        => complex_add_complex
@@ -2351,7 +2355,39 @@ Contains
     
   End Function tr_inv_complex
 
-  ! Unary minus routines
+  ! Unary plus/minus routines
+  
+  Function plus_real( A ) Result( C )
+
+    !! Unary minus operation
+    
+    Class(      distributed_matrix ), Allocatable :: C
+
+    Class( real_distributed_matrix ), Intent( In ) :: A
+
+    Type( real_distributed_matrix ) :: T
+    
+    T = A
+    T%data = + T%data
+    C = T
+    
+  End Function plus_real
+  
+  Function plus_complex( A ) Result( C )
+
+    !! Unary minus operation
+    
+    Class(         distributed_matrix ), Allocatable :: C
+
+    Class( complex_distributed_matrix ), Intent( In ) :: A
+
+    Type( complex_distributed_matrix ) :: T
+    
+    T = A
+    T%data = + T%data
+    C = T
+    
+  End Function plus_complex
   
   Function minus_real( A ) Result( C )
 
