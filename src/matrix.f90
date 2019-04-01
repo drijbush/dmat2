@@ -49,6 +49,7 @@ Module distributed_matrix_module
      Procedure( local_size ), Deferred, Public :: local_size                 !! Get the dimensions of the local part of the matrix
      Procedure( remap_op   ), Deferred, Public :: remap                      !! Remap the data to another distribution
      Procedure( diag_op    ), Deferred, Public :: diag                       !! Diagonalise the (assumed Hermitian) matrix
+     Procedure( extract_op ), Deferred, Public :: extract                    !! Extract a patch of one matrix into another matrix
      ! Private implementations
      Procedure,                                             Private :: matrix_dagger           !! Apply the dagger operator to the matrix
      Procedure(  set_global_real    ), Deferred,            Private :: set_global_real         !! Set values with a real    array using global indexing
@@ -89,6 +90,7 @@ Module distributed_matrix_module
      Procedure, Public :: local_size    => matrix_local_size_real          !! Get the dimensions of the local part of the matrix
      Procedure, Public :: remap         => real_remap                      !! Remap the data to another distribution
      Procedure, Public :: diag          => real_diag                       !! Diagonalise the (assumed symmetric) matrix
+     Procedure, Public :: extract       => extract_real
      ! Private implementations
      Procedure,            Private :: set_global_real    => real_matrix_set_global_real
      Procedure,            Private :: set_global_complex => real_matrix_set_global_complex
@@ -128,6 +130,7 @@ Module distributed_matrix_module
      Procedure, Public :: local_size => matrix_local_size_complex             !! Get the dimensions of the local part of the matrix
      Procedure, Public :: remap      => complex_remap                         !! Remap the data to another distribution
      Procedure, Public :: diag       => complex_diag                          !! Diagonalise the (assumed Hermitian) matrix
+     Procedure, Public :: extract    => extract_complex
      ! Private implementations
      Procedure,            Private :: set_global_real    => complex_matrix_set_global_real
      Procedure,            Private :: set_global_complex => complex_matrix_set_global_complex
@@ -372,6 +375,18 @@ Module distributed_matrix_module
        Class(      distributed_matrix ), Intent( InOut ) :: B
        Logical                         , Intent( In    ) :: is_B_dummy
      End Subroutine complex_remap_op
+
+     Function extract_op( A, m, n, p, q ) Result( B )
+       Import :: wp
+       Import :: distributed_matrix
+       Implicit None
+       Class( distributed_matrix )    , Allocatable  :: B
+       Class( distributed_matrix )    , Intent( In ) :: A
+       Integer                        , Intent( In ) :: m
+       Integer                        , Intent( In ) :: n
+       Integer                        , Intent( In ) :: p
+       Integer                        , Intent( In ) :: q
+     End Function extract_op
 
   End Interface
   
@@ -2420,7 +2435,79 @@ Contains
     C = T
     
   End Function minus_complex
+
+  ! Matrix extract routines
   
+  Function extract_real( A, m, n, p, q ) Result( B )
+
+    !! Extract a pach of one matrix into another matrix
+
+    Use scalapack_interfaces, Only : pdgemr2d
+
+    Class( distributed_matrix ), Allocatable :: B
+
+    ! ALSO NEED TO THINK ABOUT TRANSPOSES
+    
+    Class( real_distributed_matrix ), Intent( In    ) :: A
+    Integer                         , Intent( In    ) :: m
+    Integer                         , Intent( In    ) :: n
+    Integer                         , Intent( In    ) :: p 
+    Integer                         , Intent( In    ) :: q
+
+    Type( real_distributed_matrix ) :: T
+
+    Integer :: mb
+    Integer :: nb
+    Integer :: a_ctxt
+
+    mb = m - n + 1
+    nb = p - q + 1
+    Call T%create( mb, nb, A )
+    T%daggered = A%daggered
+
+    Call A%matrix_map%get_data( ctxt = a_ctxt )
+    Call pdgemr2d( mb, nb, A%data, m, p, A%matrix_map%get_descriptor(), &
+                           T%data, 1, 1, T%matrix_map%get_descriptor(), a_ctxt )
+
+    B = T
+
+  End Function extract_real
+
+  Function extract_complex( A, m, n, p, q ) Result( B )
+
+    !! Extract a pach of one matrix into another matrix
+
+    Use scalapack_interfaces, Only : pzgemr2d
+    
+    Class( distributed_matrix ), Allocatable :: B
+
+    ! ALSO NEED TO THINK ABOUT TRANSPOSES
+    
+    Class( complex_distributed_matrix ), Intent( In    ) :: A
+    Integer                            , Intent( In    ) :: m
+    Integer                            , Intent( In    ) :: n
+    Integer                            , Intent( In    ) :: p 
+    Integer                            , Intent( In    ) :: q
+
+    Type( complex_distributed_matrix ) :: T
+
+    Integer :: mb
+    Integer :: nb
+    Integer :: a_ctxt
+
+    mb = m - n + 1
+    nb = p - q + 1
+    Call T%create( mb, nb, A )
+    T%daggered = A%daggered
+    
+    Call A%matrix_map%get_data( ctxt = a_ctxt )
+    Call pzgemr2d( mb, nb, A%data, m, p, A%matrix_map%get_descriptor(), &
+                           T%data, 1, 1, T%matrix_map%get_descriptor(), a_ctxt )
+
+    B = T
+
+  End Function extract_complex
+
   !##########################################################################
   ! Auxiliary routines
   
@@ -2651,65 +2738,6 @@ Contains
 !!$  End Subroutine matrix_get_local_complex
 !!$  
 !!$
-!!$  Function matrix_extract_real( A, r1, r2, c1, c2 ) Result( B )
-!!$
-!!$    Class( real_distributed_matrix ), Allocatable :: B
-!!$
-!!$    ! ALSO NEED TO THINK ABOUT TRANSPOSES
-!!$    
-!!$    Class( real_distributed_matrix ), Intent( In    ) :: A
-!!$    Integer                         , Intent( In    ) :: r1 
-!!$    Integer                         , Intent( In    ) :: r2
-!!$    Integer                         , Intent( In    ) :: c1 
-!!$    Integer                         , Intent( In    ) :: c2
-!!$
-!!$    Integer :: mb
-!!$    Integer :: nb
-!!$    Integer :: a_ctxt
-!!$
-!!$    Allocate( real_distributed_matrix :: B )
-!!$
-!!$    mb = r2 - r1 + 1
-!!$    nb = c2 - c1 + 1
-!!$    Call matrix_create( B, mb, nb, A )
-!!$    !!!TRANSPOSES!!!! 
-!!$    B%daggered = A%daggered
-!!$
-!!$    Call A%matrix_map%get_data( ctxt = a_ctxt )
-!!$    Call pdgemr2d( mb, nb, A%data, r1, c1, A%matrix_map%get_descriptor(), &
-!!$                           B%data,  1,  1, B%matrix_map%get_descriptor(), a_ctxt )
-!!$
-!!$  End Function matrix_extract_real
-!!$
-!!$  Function matrix_extract_complex( A, r1, r2, c1, c2 ) Result( B )
-!!$
-!!$    Class( complex_distributed_matrix ), Allocatable :: B
-!!$
-!!$    ! ALSO NEED TO THINK ABOUT TRANSPOSES
-!!$    
-!!$    Class( complex_distributed_matrix ), Intent( In    ) :: A
-!!$    Integer                         , Intent( In    ) :: r1 
-!!$    Integer                         , Intent( In    ) :: r2
-!!$    Integer                         , Intent( In    ) :: c1 
-!!$    Integer                         , Intent( In    ) :: c2
-!!$
-!!$    Integer :: mb
-!!$    Integer :: nb
-!!$    Integer :: a_ctxt
-!!$
-!!$    Allocate( complex_distributed_matrix :: B )
-!!$
-!!$    mb = r2 - r1 + 1
-!!$    nb = c2 - c1 + 1
-!!$    Call matrix_create( B, mb, nb, A )
-!!$    !!!TRANSPOSES!!!! 
-!!$    B%daggered = A%daggered
-!!$    
-!!$    Call A%matrix_map%get_data( ctxt = a_ctxt )
-!!$    Call pzgemr2d( mb, nb, A%data, r1, c1, A%matrix_map%get_descriptor(), &
-!!$                           B%data,  1,  1, B%matrix_map%get_descriptor(), a_ctxt )
-!!$
-!!$  End Function matrix_extract_complex
 !!$
 !!$
 !!$  Subroutine matrix_set_to_identity_real( A ) 
