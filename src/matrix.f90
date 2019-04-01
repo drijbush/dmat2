@@ -34,6 +34,7 @@ Module distributed_matrix_module
      Generic  , Public :: Operator( + )          => add                        !! Add two matrices together
      Generic  , Public :: Operator( + )          => add_diagonal               !! Add a general matrix to a diagonal matrix
      Generic  , Public :: Operator( + )          => diagonal_add               !! Add a general matrix to a diagonal matrix
+     Generic  , Public :: Operator( - )          => minus                      !! Unary minus operation
      Generic  , Public :: Operator( - )          => subtract                   !! Subtract two matrices 
      Generic  , Public :: Operator( - )          => subtract_diagonal          !! Subtract a diagonal matrix from a generla matrix
      Generic  , Public :: Operator( - )          => diagonal_subtract          !! Subtract a general matrix from a diagonal matrix
@@ -63,6 +64,7 @@ Module distributed_matrix_module
      Procedure(     pre_diagonal_op ), Deferred, Pass( A ), Private :: diagonal_add
      Procedure(      real_binary_op ), Deferred, Pass( B ), Private :: real_add
      Procedure(   complex_binary_op ), Deferred, Pass( B ), Private :: complex_add
+     Procedure(            unary_op ), Deferred,            Private :: minus
      Procedure(           binary_op ), Deferred,            Private :: subtract
      Procedure(      real_binary_op ), Deferred, Pass( B ), Private :: real_subtract
      Procedure(   complex_binary_op ), Deferred, Pass( B ), Private :: complex_subtract
@@ -100,6 +102,7 @@ Module distributed_matrix_module
      Procedure, Pass( B ), Private :: complex_add        => complex_add_real
      Procedure,            Private :: add_diagonal       => real_add_diagonal
      Procedure, Pass( A ), Private :: diagonal_add       => diagonal_add_real
+     Procedure,            Private :: minus              => minus_real
      Procedure,            Private :: subtract           => real_subtract
      Procedure, Pass( B ), Private :: real_subtract      => real_subtract_real
      Procedure, Pass( B ), Private :: complex_subtract   => complex_subtract_real
@@ -111,34 +114,6 @@ Module distributed_matrix_module
      Procedure           , Private :: tr_inv             => tr_inv_real
      Procedure, Pass( B ), Private :: real_remap         => real_remap_real
      Procedure, Pass( B ), Private :: complex_remap      => complex_remap_real
-!!$     Procedure, Private   :: diag_r               => matrix_diag_real
-!!$     Generic              :: diag                 => diag_r
-!!$     Procedure, Private   :: dagger_r             => matrix_dagger_real
-!!$     Generic              :: dagger               => dagger_r
-!!$     Generic              :: Operator( .Dagger. ) => dagger_r
-!!$     Procedure            :: multiply             => matrix_multiply_real
-!!$     Procedure, Pass( A ) :: pre_scale            => matrix_pre_scale_real
-!!$     Procedure            :: post_scale           => matrix_post_scale_real
-!!$     Procedure, Pass( A ) :: pre_mult_diag        => matrix_pre_mult_diag_real
-!!$     Procedure            :: post_mult_diag       => matrix_post_mult_diag_real
-!!$     Generic              :: Operator( * )        => multiply, pre_scale, post_scale
-!!$     Generic              :: Operator( * )        => pre_mult_diag, post_mult_diag
-!!$     Procedure            :: add                  => matrix_add_real
-!!$     Procedure            :: post_add_diag        => matrix_post_add_diag_real
-!!$     Procedure, Pass( A ) :: pre_add_diag         => matrix_pre_add_diag_real
-!!$     Generic              :: Operator( + )        => add, post_add_diag, pre_add_diag
-!!$     Procedure            :: subtract             => matrix_subtract_real
-!!$     Procedure            :: subtract_diag        => matrix_post_subtract_diag_real
-!!$     Generic              :: Operator( - )        => subtract, subtract_diag
-!!$     Procedure            :: Choleski             => matrix_choleski_real
-!!$     Procedure            :: Solve                => matrix_solve_real
-!!$     Procedure            :: set_to_identity      => matrix_set_to_identity_real
-!!$     Procedure, Private   :: set_by_local_r       => matrix_set_local_real
-!!$     Procedure, Private   :: get_by_local_r       => matrix_get_local_real
-!!$     Generic              :: set_by_local         => set_by_local_r
-!!$     Generic              :: get_by_local         => get_by_local_r
-!!$     Procedure, Private   :: extract_r            => matrix_extract_real
-!!$     Generic              :: extract              => extract_r
   End type real_distributed_matrix
 
   Type, Extends( distributed_matrix ), Public :: complex_distributed_matrix
@@ -165,6 +140,7 @@ Module distributed_matrix_module
      Procedure, Pass( B ), Private :: complex_add        => complex_add_complex
      Procedure,            Private :: add_diagonal       => complex_add_diagonal
      Procedure, Pass( A ), Private :: diagonal_add       => diagonal_add_complex
+     Procedure,            Private :: minus              => minus_complex
      Procedure,            Private :: subtract           => complex_subtract
      Procedure, Pass( B ), Private :: real_subtract      => real_subtract_complex
      Procedure, Pass( B ), Private :: complex_subtract   => complex_subtract_complex
@@ -176,38 +152,6 @@ Module distributed_matrix_module
      Procedure           , Private :: tr_inv             => tr_inv_complex
      Procedure, Pass( B ), Private :: real_remap         => real_remap_complex
      Procedure, Pass( B ), Private :: complex_remap      => complex_remap_complex
-!!$     Procedure, Private   :: diag_c               => matrix_diag_complex
-!!$     Generic              :: diag                 => diag_c
-!!$     Procedure, Private   :: dagger_c             => matrix_dagger_complex
-!!$     Generic              :: dagger               => dagger_c 
-!!$     Generic              :: Operator( .Dagger. ) => dagger_c
-!!$     Procedure            :: multiply             => matrix_multiply_complex
-!!$     Procedure, Pass( A ) :: pre_scale            => matrix_pre_scale_complex
-!!$     Procedure            :: post_scale           => matrix_post_scale_complex
-!!$     Procedure, Pass( A ) :: pre_mult_diag        => matrix_pre_mult_diag_complex
-!!$     Procedure            :: post_mult_diag       => matrix_post_mult_diag_complex
-!!$     Generic              :: Operator( * )        => multiply, pre_scale, post_scale
-!!$     Generic              :: Operator( * )        => pre_mult_diag, post_mult_diag
-!!$     Procedure            :: add                  => matrix_add_complex
-!!$     Procedure            :: post_add_diag        => matrix_post_add_diag_complex
-!!$     Procedure, Pass( A ) :: pre_add_diag         => matrix_pre_add_diag_complex
-!!$     Generic              :: Operator( + )        => add, post_add_diag, pre_add_diag
-!!$     Procedure            :: subtract             => matrix_subtract_complex
-!!$     Procedure            :: subtract_diag        => matrix_post_subtract_diag_complex
-!!$     Generic              :: Operator( - )        => subtract, subtract_diag
-!!$     Procedure            :: Choleski             => matrix_choleski_complex
-!!$     Procedure            :: Solve                => matrix_solve_complex
-!!$     Procedure            :: set_to_identity      => matrix_set_to_identity_complex
-!!$     Procedure, Private   :: set_by_global_c      => matrix_set_global_complex
-!!$     Procedure, Private   :: set_by_local_c       => matrix_set_local_complex
-!!$     Procedure, Private   :: get_by_global_c      => matrix_get_global_complex
-!!$     Procedure, Private   :: get_by_local_c       => matrix_get_local_complex
-!!$     Generic              :: set_by_global        => set_by_global_c
-!!$     Generic              :: set_by_local         => set_by_local_c
-!!$     Generic              :: get_by_global        => get_by_global_c
-!!$     Generic              :: get_by_local         => get_by_local_c
-!!$     Procedure, Private   :: extract_c            => matrix_extract_complex
-!!$     Generic              :: extract              => extract_c
   End type complex_distributed_matrix
 
   Public :: distributed_matrix_init
@@ -2407,6 +2351,40 @@ Contains
     
   End Function tr_inv_complex
 
+  ! Unary minus routines
+  
+  Function minus_real( A ) Result( C )
+
+    !! Unary minus operation
+    
+    Class(      distributed_matrix ), Allocatable :: C
+
+    Class( real_distributed_matrix ), Intent( In ) :: A
+
+    Type( real_distributed_matrix ) :: T
+    
+    T = A
+    T%data = - T%data
+    C = T
+    
+  End Function minus_real
+  
+  Function minus_complex( A ) Result( C )
+
+    !! Unary minus operation
+    
+    Class(         distributed_matrix ), Allocatable :: C
+
+    Class( complex_distributed_matrix ), Intent( In ) :: A
+
+    Type( complex_distributed_matrix ) :: T
+    
+    T = A
+    T%data = - T%data
+    C = T
+    
+  End Function minus_complex
+  
   !##########################################################################
   ! Auxiliary routines
   
