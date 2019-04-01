@@ -847,7 +847,7 @@ Contains
     
   End Subroutine ks_array_diag
 
-  ! Cgoleski decompose each matrix
+  ! Choleski decompose each matrix
   
   Function ks_array_choleski( A ) Result( C )
 
