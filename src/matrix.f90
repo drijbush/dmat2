@@ -23,23 +23,24 @@ Module distributed_matrix_module
      Logical                             , Private :: daggered = .False.     !! If true use the matrix in daggered form
    Contains
      ! Public methods that are NOT overridden
-     Procedure, Public :: get_maps             => matrix_get_maps            !! Get all the mapping arrays
-     Procedure, Public :: global_to_local      => matrix_global_to_local     !! Get an array for mapping global indices to local  ones
-     Procedure, Public :: local_to_global      => matrix_local_to_global     !! Get an array for mapping local  indices to global ones
-     Procedure, Public :: size                 => matrix_size                !! Get the dimensions of the matrix
-     Procedure, Public :: get_comm             => matrix_communicator        !! Get the communicator containing the processes holding the matrix
-     Generic  , Public :: Operator( * )        => multiply                   !! Multiply two matrices together
-     Generic  , Public :: Operator( * )        => rscal_multiply             !! Pre -scale by a real scalar
-     Generic  , Public :: Operator( * )        => multiply_rscal             !! Post-scale by a real scalar
-     Generic  , Public :: Operator( + )        => add                        !! Add two matrices together
-     Generic  , Public :: Operator( + )        => add_diagonal               !! Add a general matrix to a diagonal matrix
-     Generic  , Public :: Operator( + )        => diagonal_add               !! Add a general matrix to a diagonal matrix
-     Generic  , Public :: Operator( - )        => subtract                   !! Subtract two matrices 
-     Generic  , Public :: Operator( - )        => subtract_diagonal          !! Subtract a diagonal matrix from a generla matrix
-     Generic  , Public :: Operator( - )        => diagonal_subtract          !! Subtract a general matrix from a diagonal matrix
-     Generic  , Public :: Operator( .Dagger. ) => matrix_dagger              !! Apply the dagger operator to the matrix
-     Generic  , Public :: set_by_global        => set_global_real, set_global_complex !! Set a matrix using global indexing
-     Generic  , Public :: get_by_global        => get_global_real, get_global_complex !! Get from a matrix using global indexing
+     Procedure, Public :: get_maps               => matrix_get_maps            !! Get all the mapping arrays
+     Procedure, Public :: global_to_local        => matrix_global_to_local     !! Get an array for mapping global indices to local  ones
+     Procedure, Public :: local_to_global        => matrix_local_to_global     !! Get an array for mapping local  indices to global ones
+     Procedure, Public :: size                   => matrix_size                !! Get the dimensions of the matrix
+     Procedure, Public :: get_comm               => matrix_communicator        !! Get the communicator containing the processes holding the matrix
+     Generic  , Public :: Operator( * )          => multiply                   !! Multiply two matrices together
+     Generic  , Public :: Operator( * )          => rscal_multiply             !! Pre -scale by a real scalar
+     Generic  , Public :: Operator( * )          => multiply_rscal             !! Post-scale by a real scalar
+     Generic  , Public :: Operator( + )          => add                        !! Add two matrices together
+     Generic  , Public :: Operator( + )          => add_diagonal               !! Add a general matrix to a diagonal matrix
+     Generic  , Public :: Operator( + )          => diagonal_add               !! Add a general matrix to a diagonal matrix
+     Generic  , Public :: Operator( - )          => subtract                   !! Subtract two matrices 
+     Generic  , Public :: Operator( - )          => subtract_diagonal          !! Subtract a diagonal matrix from a generla matrix
+     Generic  , Public :: Operator( - )          => diagonal_subtract          !! Subtract a general matrix from a diagonal matrix
+     Generic  , Public :: Operator( .Dagger.   ) => matrix_dagger              !! Apply the dagger operator to the matrix
+     Generic  , Public :: Operator( .Choleski. ) => choleski                   !! Apply the dagger operator to the matrix
+     Generic  , Public :: set_by_global          => set_global_real, set_global_complex !! Set a matrix using global indexing
+     Generic  , Public :: get_by_global          => get_global_real, get_global_complex !! Get from a matrix using global indexing
      ! Public methods that are overridden
      Procedure( create     ), Deferred, Public :: create                     !! Create storage for the data of the matrix 
      Procedure( local_size ), Deferred, Public :: local_size                 !! Get the dimensions of the local part of the matrix
@@ -68,6 +69,7 @@ Module distributed_matrix_module
      Procedure(     pre_diagonal_op ), Deferred, Pass( A ), Private :: diagonal_subtract
      Procedure(        real_diag_op ), Deferred, Pass( Q ), Private :: real_diag
      Procedure(     complex_diag_op ), Deferred, Pass( Q ), Private :: complex_diag
+     Procedure(            unary_op ), Deferred,            Private :: choleski
      Procedure(       real_remap_op ), Deferred, Pass( B ), Private :: real_remap
      Procedure(    complex_remap_op ), Deferred, Pass( B ), Private :: complex_remap
   End type distributed_matrix
@@ -103,6 +105,7 @@ Module distributed_matrix_module
      Procedure, Pass( A ), Private :: diagonal_subtract  => diagonal_subtract_real
      Procedure, Pass( Q ), Private :: real_diag          => real_diag_real
      Procedure, Pass( Q ), Private :: complex_diag       => complex_diag_real
+     Procedure           , Private :: choleski           => choleski_real
      Procedure, Pass( B ), Private :: real_remap         => real_remap_real
      Procedure, Pass( B ), Private :: complex_remap      => complex_remap_real
 !!$     Procedure, Private   :: diag_r               => matrix_diag_real
@@ -166,6 +169,7 @@ Module distributed_matrix_module
      Procedure, Pass( A ), Private :: diagonal_subtract  => diagonal_subtract_complex
      Procedure, Pass( Q ), Private :: real_diag          => real_diag_complex
      Procedure, Pass( Q ), Private :: complex_diag       => complex_diag_complex
+     Procedure           , Private :: choleski           => choleski_complex
      Procedure, Pass( B ), Private :: real_remap         => real_remap_complex
      Procedure, Pass( B ), Private :: complex_remap      => complex_remap_complex
 !!$     Procedure, Private   :: diag_c               => matrix_diag_complex
@@ -318,6 +322,14 @@ Module distributed_matrix_module
        Class( distributed_matrix ), Intent( In ) :: A
        Real( wp ), Dimension( : ) , Intent( In ) :: d
      End Function post_diagonal_op
+
+     Function unary_op( A ) Result( C )
+       !! A unary operation on a base class object
+       Import :: distributed_matrix
+       Implicit None
+       Class( distributed_matrix ), Allocatable  :: C
+       Class( distributed_matrix ), Intent( In ) :: A
+     End Function unary_op
 
      Function binary_op( A, B ) Result( C )
        !! A binary operation between two base class objects
@@ -2257,6 +2269,88 @@ Contains
 
   End Subroutine complex_diag_complex
 
+  ! Choleski Routines
+  
+  Function choleski_real( A ) Result( C )
+
+    !! Choleski decompose into lower triangular factors a real symmetric positive definite matrix
+
+    Use Scalapack_interfaces, Only : pdpotrf
+    
+    Class(      distributed_matrix ), Allocatable :: C
+
+    Class( real_distributed_matrix ), Intent( In ) :: A
+
+    Type( real_distributed_matrix ) :: T
+    
+    Integer :: m
+    Integer :: i_glob, j_glob
+    Integer :: i, j
+    Integer :: error
+
+    T = A
+    
+    ! Zero Upper half of T
+    Do j = 1, Size( T%data, Dim = 2 )
+       j_glob = T%local_to_global_cols( j )
+       Do i = 1, Size( T%data, Dim = 1 )
+          i_glob = T%local_to_global_rows( i )
+          If( j_glob > i_glob ) Then
+             T%data( i, j ) = 0.0_wp
+          End If
+       End Do
+    End Do
+
+    Call T%matrix_map%get_data( m = m )
+    Call pdpotrf( 'L', m, T%data, 1, 1, T%matrix_map%get_descriptor(), error )
+    If( error == 0 ) Then
+       C = T
+    Else
+       Deallocate( C )
+    End If
+    
+  End Function choleski_real
+
+  Function choleski_complex( A ) Result( C )
+
+    !! Choleski decompose into lower triangular factors a Hermitian positive definite matrix
+
+    Use Scalapack_interfaces, Only : pzpotrf
+
+    Class(         distributed_matrix ), Allocatable :: C
+
+    Class( complex_distributed_matrix ), Intent( In ) :: A
+
+    Type( complex_distributed_matrix ) :: T
+
+    Integer :: m
+    Integer :: i_glob, j_glob
+    Integer :: i, j
+    Integer :: error
+
+    T = A
+    
+    ! Zero Upper half of T
+    Do j = 1, Size( T%data, Dim = 2 )
+       j_glob = T%local_to_global_cols( j )
+       Do i = 1, Size( T%data, Dim = 1 )
+          i_glob = T%local_to_global_rows( i )
+          If( j_glob > i_glob ) Then
+             T%data( i, j ) = 0.0_wp
+          End If
+       End Do
+    End Do
+
+    Call T%matrix_map%get_data( m = m )
+    Call pzpotrf( 'L', m, T%data, 1, 1, T%matrix_map%get_descriptor(), error )
+    If( error == 0 ) Then
+       C = T
+    Else
+       Deallocate( C )
+    End If
+    
+  End Function choleski_complex
+
   !##########################################################################
   ! Auxiliary routines
   
@@ -2364,103 +2458,6 @@ Contains
 
   
 
-
-
-!!$  Pure Function matrix_dagger_real( matrix ) Result( tm )
-!!$
-!!$    Class( real_distributed_matrix ), Allocatable :: tm
-!!$
-!!$    Class( real_distributed_matrix ), Intent( In ) :: matrix
-!!$
-!!$    Allocate( tm, Source = matrix )
-!!$    tm%daggered = .Not. tm%daggered
-!!$    
-!!$  End Function matrix_dagger_real
-!!$
-!!$  Pure Function matrix_dagger_complex( matrix ) Result( tm )
-!!$
-!!$    Class( complex_distributed_matrix ), Allocatable :: tm
-!!$
-!!$    Class( complex_distributed_matrix ), Intent( In ) :: matrix
-!!$
-!!$    Allocate( tm, Source = matrix )
-!!$    tm%daggered = .Not. tm%daggered
-!!$    
-!!$  End Function matrix_dagger_complex
-!!$
-!!$  Function matrix_choleski_real( A ) Result( C )
-!!$
-!!$    Class( real_distributed_matrix ), Allocatable :: C
-!!$
-!!$    Class( real_distributed_matrix ), Intent( In ) :: A
-!!$
-!!$    Integer :: m
-!!$    Integer :: i_glob, j_glob
-!!$    Integer :: i, j
-!!$    Integer :: error
-!!$    
-!!$    Allocate( C, Source = A )
-!!$
-!!$    ! Transpose don't matter as A must be symmetric. So set it as untransposed
-!!$    ! so I don't get confused
-!!$    C%daggered = .False.
-!!$
-!!$    ! Zero Upper half of C
-!!$    Do j = 1, Size( C%data, Dim = 2 )
-!!$       j_glob = C%local_to_global_cols( j )
-!!$       Do i = 1, Size( C%data, Dim = 1 )
-!!$          i_glob = C%local_to_global_rows( i )
-!!$          If( j_glob > i_glob ) Then
-!!$             C%data( i, j ) = 0.0_wp
-!!$          End If
-!!$       End Do
-!!$    End Do
-!!$
-!!$    Call C%matrix_map%get_data( m = m )
-!!$    Call pdpotrf( 'L', m, C%data, 1, 1, C%matrix_map%get_descriptor(), error )
-!!$    If( error /= 0 ) Then
-!!$       Deallocate( C )
-!!$    End If
-!!$    
-!!$  End Function matrix_choleski_real
-!!$
-!!$  Function matrix_choleski_complex( A ) Result( C )
-!!$
-!!$    Class( complex_distributed_matrix ), Allocatable :: C
-!!$
-!!$    Class( complex_distributed_matrix ), Intent( In ) :: A
-!!$
-!!$    Integer :: m
-!!$    Integer :: i_glob, j_glob
-!!$    Integer :: i, j
-!!$    Integer :: error
-!!$    
-!!$    Allocate( C, Source = A )
-!!$
-!!$    ! Transpose don't matter as A must be symmetric. So set it as untransposed
-!!$    ! so I don't get confused
-!!$    C%daggered = .False.
-!!$
-!!$    ! Zero Upper half of C
-!!$    Do j = 1, Size( C%data, Dim = 2 )
-!!$       j_glob = C%local_to_global_cols( j )
-!!$       Do i = 1, Size( C%data, Dim = 1 )
-!!$          i_glob = C%local_to_global_rows( i )
-!!$          If( j_glob > i_glob ) Then
-!!$             C%data( i, j ) = 0.0_wp
-!!$          End If
-!!$       End Do
-!!$    End Do
-!!$
-!!$    Call C%matrix_map%get_data( m = m )
-!!$    Call pzpotrf( 'L', m, C%data, 1, 1, C%matrix_map%get_descriptor(), error )
-!!$    
-!!$    If( error /= 0 ) Then
-!!$       Deallocate( C )
-!!$    End If
-!!$    
-!!$  End Function matrix_choleski_complex
-!!$
 !!$  Function matrix_solve_real( A, B ) Result( C )
 !!$
 !!$    ! Need to think tranposes!!!

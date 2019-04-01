@@ -172,6 +172,34 @@ Module scalapack_interfaces
 
   Interface
 
+     !! Choleski decompostion routines
+
+     Subroutine pdpotrf( uplo, n, a, ia, ja, desca, info )
+       Import :: wp
+       Character                   , Intent( In    ) :: uplo
+       Integer                     , Intent( In    ) :: n
+       Real( wp ), Dimension( *   ), Intent( InOut ) :: a
+       Integer                     , Intent( In    ) :: ia
+       Integer                     , Intent( In    ) :: ja
+       Integer   , Dimension( 1:9 ), Intent( In    ) :: desca
+       Integer                        , Intent(   Out ) :: info
+     End Subroutine pdpotrf
+     
+     Subroutine pzpotrf( uplo, n, a, ia, ja, desca, info )
+       Import :: wp
+       Character                      , Intent( In    ) :: uplo
+       Integer                        , Intent( In    ) :: n
+       Complex( wp ), Dimension( *   ), Intent( InOut ) :: a
+       Integer                        , Intent( In    ) :: ia
+       Integer                        , Intent( In    ) :: ja
+       Integer      , Dimension( 1:9 ), Intent( In    ) :: desca
+       Integer                        , Intent(   Out ) :: info
+     End Subroutine pzpotrf
+     
+  End Interface
+  
+  Interface
+
      !! Redistribution routines
 
      Subroutine pdgemr2d( m, n, a, ia, ja, desca, b, ib, jb, descb, ictxt )
