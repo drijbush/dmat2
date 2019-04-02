@@ -2376,7 +2376,7 @@ Contains
     Allocate( tmp_c( r1:r2, c1:c2 ) )
 
     A_split = .Dagger. A_split
-    B = A_split%extract( c1, c2, r1, r2 )
+    B = A_split%extract( r1, r2, c1, c2 )
     If( verbose ) Then
        Call B%print_info( 'B', 100 )
     End If

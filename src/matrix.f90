@@ -2445,8 +2445,6 @@ Contains
     Use scalapack_interfaces, Only : pdgemr2d, pdgeadd
 
     Class( distributed_matrix ), Allocatable :: B
-
-    ! ALSO NEED TO THINK ABOUT TRANSPOSES
     
     Class( real_distributed_matrix ), Intent( In    ) :: A
     Integer                         , Intent( In    ) :: m
@@ -2462,23 +2460,29 @@ Contains
 
     mb = n - m + 1
     nb = q - p + 1
+
     Call T1%create( mb, nb, A )
-
     Call A%matrix_map%get_data( ctxt = a_ctxt )
-    Call pdgemr2d( mb, nb,  A%data, m, p,  A%matrix_map%get_descriptor(), &
-                           T1%data, 1, 1, T1%matrix_map%get_descriptor(), a_ctxt )
 
-    ! Problem - if A is flagged as daggered and we are getting an off-diagonal block
-    ! simply flagging T as daggered is not correct. So we actually have to move the data
-    If( A%daggered ) Then
-       Call T2%create( nb, mb, T1 )
-       ! Use the addition routine to perform the transpose
-       Call pdgeadd( 'T', nb, mb, 1.0_wp, T1%data, 1, 1, T1%matrix_map%get_descriptor(), &
-                                  0.0_wp, T2%data, 1, 1, T2%matrix_map%get_descriptor() )
-       B = T2
+    If( .Not. A%daggered ) Then
+
+       ! Non-tranposed matrix - just extract the patch
+       Call pdgemr2d( mb, nb,  A%data, m, p,  A%matrix_map%get_descriptor(), &
+                              T1%data, 1, 1, T1%matrix_map%get_descriptor(), a_ctxt )
+
     Else
-       B = T1
+
+       ! Tranposed matrix - extract the transposed patch and then tranpose that to the right layout
+       Call T2%create( nb, mb, A )
+       Call pdgemr2d( nb, mb,  A%data, p, m,  A%matrix_map%get_descriptor(), &
+                              T2%data, 1, 1, T2%matrix_map%get_descriptor(), a_ctxt )
+
+       ! Use the addition routine to perform the transpose
+       Call pdgeadd( 'T', mb, nb, 1.0_wp, T2%data, 1, 1, T2%matrix_map%get_descriptor(), &
+                                  0.0_wp, T1%data, 1, 1, T1%matrix_map%get_descriptor() )
     End If
+
+    B = T1
 
   End Function extract_real
 
@@ -2487,16 +2491,14 @@ Contains
     !! Extract a pach of one matrix into another matrix
 
     Use scalapack_interfaces, Only : pzgemr2d, pzgeadd
-    
-    Class( distributed_matrix ), Allocatable :: B
 
-    ! ALSO NEED TO THINK ABOUT TRANSPOSES
+    Class( distributed_matrix ), Allocatable :: B
     
     Class( complex_distributed_matrix ), Intent( In    ) :: A
-    Integer                            , Intent( In    ) :: m
-    Integer                            , Intent( In    ) :: n
-    Integer                            , Intent( In    ) :: p 
-    Integer                            , Intent( In    ) :: q
+    Integer                         , Intent( In    ) :: m
+    Integer                         , Intent( In    ) :: n
+    Integer                         , Intent( In    ) :: p 
+    Integer                         , Intent( In    ) :: q
 
     Type( complex_distributed_matrix ) :: T1, T2
 
@@ -2506,25 +2508,32 @@ Contains
 
     mb = n - m + 1
     nb = q - p + 1
-    Call T1%create( mb, nb, A )
-    
-    Call A%matrix_map%get_data( ctxt = a_ctxt )
-    Call pzgemr2d( mb, nb,  A%data, m, p,  A%matrix_map%get_descriptor(), &
-                           T1%data, 1, 1, T1%matrix_map%get_descriptor(), a_ctxt )
 
-    ! Problem - if A is flagged as daggered and we are getting an off-diagonal block
-    ! simply flagging T as daggered is not correct. So we actually have to move the data
-    If( A%daggered ) Then
-       Call T2%create( nb, mb, T1 )
-       ! Use the addition routine to perform the transpose
-       Call pzgeadd( 'C', nb, mb, ( 1.0_wp, 0.0_wp ), T1%data, 1, 1, T1%matrix_map%get_descriptor(), &
-                                  ( 0.0_wp, 0.0_wp ), T2%data, 1, 1, T2%matrix_map%get_descriptor() )
-       B = T2
+    Call T1%create( mb, nb, A )
+    Call A%matrix_map%get_data( ctxt = a_ctxt )
+
+    If( .Not. A%daggered ) Then
+
+       ! Non-daggered matrix - just extract the patch
+       Call pzgemr2d( mb, nb,  A%data, m, p,  A%matrix_map%get_descriptor(), &
+                              T1%data, 1, 1, T1%matrix_map%get_descriptor(), a_ctxt )
+
     Else
-       B = T1
+
+       ! Daggered matrix - extract the daggered patch and then dagger that to the right layout
+       Call T2%create( nb, mb, A )       
+       Call pzgemr2d( nb, mb,  A%data, p, m,  A%matrix_map%get_descriptor(), &
+                              T2%data, 1, 1, T2%matrix_map%get_descriptor(), a_ctxt )
+
+       ! Use the addition routine to perform the transpose
+       Call pzgeadd( 'C', mb, nb, ( 1.0_wp, 0.0_wp ), T2%data, 1, 1, T2%matrix_map%get_descriptor(), &
+                                  ( 0.0_wp, 0.0_wp ), T1%data, 1, 1, T1%matrix_map%get_descriptor() )
     End If
 
+    B = T1
+
   End Function extract_complex
+
 
   !##########################################################################
   ! Auxiliary routines
