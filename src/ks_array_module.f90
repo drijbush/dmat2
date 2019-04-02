@@ -66,6 +66,7 @@ Module ks_array_module
      Procedure, Public :: diag                    => ks_array_diag                     !! Diagonalise each matrix
      Generic  , Public :: Operator( .Choleski. )  => choleski                          !! choleski decompose a matrix
      Generic  , Public :: Operator( .TrInv. )     => tr_inv                            !! Invert a lower traingular set of matrices
+     Procedure, Public :: extract                 => ks_array_extract                  !! Extract a patch from the matrices and return a new ks_array holding it
      Generic  , Public :: set_by_global           => set_by_global_r, set_by_global_c  !! Set patches of an element
      Generic  , Public :: get_by_global           => get_by_global_r, get_by_global_c  !! Get patches of an element
      Procedure, Public :: global_to_local         => ks_array_g_to_l
@@ -74,7 +75,6 @@ Module ks_array_module
 !!$     Procedure                     :: solve                => ks_array_solve
 !!$     Procedure                     :: set_to_identity      => ks_array_set_to_identity
 !!$     Procedure                     :: size                 => ks_array_size
-!!$     Procedure                     :: extract              => ks_array_extract
 !!$     ! Methods only at this level
 !!$     Procedure                     :: split_ks             => ks_array_split_ks
      ! Private implementations
@@ -949,6 +949,36 @@ Contains
 
   End Function ks_array_minus
   
+  Function ks_array_extract( A, r1, r2, c1, c2 ) Result( C )
+
+    !! Extract a patch from each of the matrices and return a new matrix
+    
+    Type( ks_array ) :: C
+
+    Class( ks_array ), Intent( In ) :: A
+    ! Do we want the indices on the patches to be arrays so each ks point
+    ! can extract a different patch??
+    Integer          , Intent( In ) :: r1 
+    Integer          , Intent( In ) :: r2
+    Integer          , Intent( In ) :: c1 
+    Integer          , Intent( In ) :: c2
+    
+    Integer :: my_ks, my_irrep
+
+    Call C%create( NO_DATA, NO_DATA, A )
+    
+    Do my_ks = 1, Size( A%my_k_points )
+       ! Irreps will need more thought - work currenly as burnt into as 1
+       Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
+          Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
+                     Cks => C%my_k_points( my_ks )%data( my_irrep )%matrix )
+            Cks = Aks%extract( r1, r2, c1, c2 )
+          End Associate
+       End Do
+    End Do
+
+  End Function ks_array_extract
+
 !!$
 !!$  Function ks_array_solve( A, B ) Result( C )
 !!$
@@ -1318,33 +1348,5 @@ Contains
 !!$
 !!$  End Function ks_array_size
 !!$
-!!$  Function ks_array_extract( A, r1, r2, c1, c2 ) Result( C )
-!!$
-!!$    Type( ks_array ), Allocatable :: C
-!!$
-!!$    Class( ks_array ), Intent( In ) :: A
-!!$    ! Do we want the indices on the patches to be arrays so each ks point
-!!$    ! can extract a different patch??
-!!$    Integer          , Intent( In ) :: r1 
-!!$    Integer          , Intent( In ) :: r2
-!!$    Integer          , Intent( In ) :: c1 
-!!$    Integer          , Intent( In ) :: c2
-!!$    
-!!$    Integer :: my_ks, my_irrep
-!!$
-!!$    Allocate( C )
-!!$    C = A
-!!$    
-!!$    Do my_ks = 1, Size( A%my_k_points )
-!!$       ! Irreps will need more thought - work currenly as burnt into as 1
-!!$       Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
-!!$          Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
-!!$                     Cks => C%my_k_points( my_ks )%data( my_irrep )%matrix )
-!!$            Cks = Aks%extract( r1, r2, c1, c2 )
-!!$          End Associate
-!!$       End Do
-!!$    End Do
-!!$
-!!$  End Function ks_array_extract
 
 End Module ks_array_module
