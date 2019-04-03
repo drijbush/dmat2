@@ -44,7 +44,8 @@ Module ks_array_module
      Type( ks_point_info ), Dimension( : ), Allocatable, Private :: all_k_point_info
      ! this splitting allows multiple k points on this process
      Type( k_point       ), Dimension( : ), Allocatable, Private :: my_k_points
-     Integer                                                     :: parent_communicator = INVALID
+     Integer                                           , Private :: parent_communicator = INVALID
+     Integer                                           , Private :: iterator_value      = INVALID
    Contains
      ! Public Methods
      ! Methods at all levels
@@ -72,6 +73,10 @@ Module ks_array_module
      Procedure, Public :: local_to_global         => ks_array_l_to_g                   !! Get the local  -> global mapping arrays
      Procedure, Public :: size                    => ks_array_size                     !! Get the size of the matrix along a given dimension
      Procedure, Public :: print_info              => ks_array_print_info               !! print info about a KS_array
+     Procedure, Public :: iterator_init           => ks_array_iterator_init            !! Initialise an iterator
+     Procedure, Public :: iterator_reset          => ks_array_iterator_reset           !! Reset an iterator
+     Procedure, Public :: iterator_next           => ks_array_iterator_next            !! Move to the next matrix in the ks_array
+     Procedure, Public :: iterator_previous       => ks_array_iterator_previous        !! Move to the previous matrix in the ks_array
 !!$     Procedure                     :: solve                => ks_array_solve
 !!$     Procedure                     :: set_to_identity      => ks_array_set_to_identity
 !!$     ! Methods only at this level
@@ -1332,5 +1337,64 @@ Contains
 
   End Function ks_array_size
 
+  Subroutine ks_array_iterator_init( A )
+
+    !! Initialise an iterator
+
+    Class( ks_array ), Intent( InOut ) :: A
+
+    A%iterator_value = 0
+
+  End Subroutine ks_array_iterator_init
+
+  Subroutine ks_array_iterator_reset( A )
+
+    !! Reset an iterator
+
+    Class( ks_array ), Intent( InOut ) :: A
+
+    A%iterator_value = INVALID
+
+  End Subroutine ks_array_iterator_reset
+
+  Function ks_array_iterator_next( A ) Result( ks )
+
+    !! Move to the next matrix in the ks_array
+    !! Return an unallocated info value if there is no next value, and set the iterator
+    !! to ke beyond the end of the array
+
+    Type( ks_point_info ), Allocatable :: ks
+    
+    Class( ks_array ), Intent( InOut ) :: A
+
+    A%iterator_value = A%iterator_value + 1
+
+    If( A%iterator_value <= Ubound( A%my_k_points, Dim = 1 ) ) Then
+       ks = A%my_k_points( A%iterator_value )%info
+    Else
+       A%iterator_value = Ubound( A%my_k_points, Dim = 1 ) + 1
+    End If
+
+  End Function ks_array_iterator_next
+
+  Function ks_array_iterator_previous( A ) Result( ks )
+
+    !! Move to the previous matrix in the ks_array
+    !! Return an unallocated info value if there is no previous value, and set the iterator
+    !! to ke beyond the end of the array
+
+    Type( ks_point_info ), Allocatable :: ks
+    
+    Class( ks_array ), Intent( InOut ) :: A
+
+    A%iterator_value = A%iterator_value - 1
+
+    If( A%iterator_value >= Lbound( A%my_k_points, Dim = 1 ) ) Then
+       ks = A%my_k_points( A%iterator_value )%info
+    Else
+       A%iterator_value = Lbound( A%my_k_points, Dim = 1 ) - 1
+    End If
+
+  End Function ks_array_iterator_previous
 
 End Module ks_array_module
