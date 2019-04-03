@@ -46,11 +46,12 @@ Module ks_array_module
      Type( k_point       ), Dimension( : ), Allocatable, Private :: my_k_points
      Integer                                           , Private :: parent_communicator = INVALID
      Integer                                           , Private :: iterator_value      = INVALID
+     Logical                                           , Private :: ks_split            = .False.
    Contains
      ! Public Methods
-     ! Methods at all levels
      Procedure, Public :: create                  => ks_array_create                   !! Create a ks_array
      Procedure, Public :: split_ks                => ks_array_split_ks                 !! Split the distribution so k point //ism can be used
+     Procedure, Public :: join_ks                 => ks_array_join_ks                  !! Rejoin a split_ks array into all k point mode
      Generic  , Public :: Operator( .Dagger. )    => dagger                            !! Dagger each element in the array
      Generic  , Public :: Operator( * )           => multiply                          !! Multiply each element of the array with the corresponding element in another array
      Generic  , Public :: Operator( * )           => rscal_multiply                    !! Pre-multiply by a real scalar
@@ -79,8 +80,6 @@ Module ks_array_module
      Procedure, Public :: iterator_previous       => ks_array_iterator_previous        !! Move to the previous matrix in the ks_array
 !!$     Procedure                     :: solve                => ks_array_solve
 !!$     Procedure                     :: set_to_identity      => ks_array_set_to_identity
-!!$     ! Methods only at this level
-!!$     Procedure                     :: split_ks             => ks_array_split_ks
      ! Private implementations
      Procedure,            Private :: get_all_ks_index
      Procedure,            Private :: get_my_ks_index
@@ -228,17 +227,21 @@ Contains
     Allocate( A%my_k_points( 1:n_my_ks ) )
     Do ks = 1, n_my_ks
        A%my_k_points( ks )%info = source%my_k_points( ks )%info
-          Allocate( A%my_k_points( ks )%data( 1:1 ) )
-          A%my_k_points( ks )%data( 1 )%label = 1
-          If( m /= NO_DATA .And. n /= NO_DATA ) Then
-             Call A%my_k_points( ks )%data( 1 )%matrix%create( &
-                  A%my_k_points( ks )%info%k_type == K_POINT_COMPLEX, &
-                  m, n, source%my_k_points( ks )%data( 1 )%matrix )
-          End If
-          A%my_k_points( ks )%communicator = source%my_k_points( ks )%communicator 
+       Allocate( A%my_k_points( ks )%data( 1:1 ) )
+       A%my_k_points( ks )%data( 1 )%label = 1
+       If( m /= NO_DATA .And. n /= NO_DATA ) Then
+          Call A%my_k_points( ks )%data( 1 )%matrix%create( &
+               A%my_k_points( ks )%info%k_type == K_POINT_COMPLEX, &
+               m, n, source%my_k_points( ks )%data( 1 )%matrix )
+       End If
+       A%my_k_points( ks )%communicator = source%my_k_points( ks )%communicator 
     End Do
 
     A%parent_communicator = source%parent_communicator
+
+    A%iterator_value = INVALID
+
+    A%ks_split = .False.
     
   End Subroutine ks_array_create
 
@@ -381,6 +384,14 @@ Contains
 
     Logical :: loc_redist
 
+    ! If A is already split across ks points no need to do very much except copy ...
+    If( A%ks_split ) Then
+       split_A = A
+       ! .. and make sure the iterator in the new ks_array is reset
+       Call split_A%iterator_reset()
+       Return
+    End If
+
     If( Present( redistribute ) ) Then
        loc_redist = redistribute
     Else
@@ -477,7 +488,7 @@ Contains
        this_k_type    = split_A%all_k_point_info( my_ks( ks ) )%k_type
        this_s         = split_A%all_k_point_info( my_ks( ks ) )%spin
        this_k_indices = split_A%all_k_point_info( my_ks( ks ) )%k_indices
-       ! Now need to generate a source matrix from the communicator - precisely what the init routine does!!
+       ! Now need to generate a source matrix from the communicator 
        Call ks_matrix_comm_to_base( k_comm, base_matrix )
        ! Need to get sizes for creation
        m = A%my_k_points( my_ks( ks ) )%data( 1 )%matrix%size( 1 )
@@ -487,7 +498,7 @@ Contains
        split_A%my_k_points( ks )%communicator = base_matrix%get_comm()
     End Do
 
-    ! Finally if required redistribute the data from the all procs distribution into the split distribution
+    ! If required redistribute the data from the all procs distribution into the split distribution
     ! Note all procs in parent comm must be involved as all hold data for the unsplit matrx
     If( loc_redist ) Then
        Allocate( this_ks_matrix )
@@ -510,7 +521,126 @@ Contains
        Deallocate( this_ks_matrix )
     End If
 
+    ! NEED TO THINK ABOUT PRESERVING DAGGERS
+
+    ! Make sure the iterator in the new ks_array is reset
+    Call split_A%iterator_reset()
+
+    ! And finally indicate the new matrix is ks_split
+    split_A%ks_split = .True.
+
   End Subroutine ks_array_split_ks
+
+  Subroutine ks_array_join_ks( A, joined_A, redistribute )
+
+    !! Split a ks_array A so the resulting ks_array is ks point distributed
+
+    Use mpi             , Only : MPI_Comm_rank, MPI_Allreduce, MPI_IN_PLACE, MPI_INTEGER, MPI_SUM
+    Use ks_matrix_module, Only : ks_matrix, ks_matrix_comm_to_base, ks_matrix_remap_data
+    
+    Class( ks_array     ), Intent( In    ) :: A                 !! The new array
+    Type ( ks_array     ), Intent(   Out ) :: joined_A          !! The new unsplit array
+    Logical, Optional    , Intent( In    ) :: redistribute      !! By default the data associated with the matrix is redistributed
+
+    Type( ks_matrix ), Allocatable :: this_ks_matrix
+    Type( ks_matrix ), Allocatable :: split_ks_matrix
+
+    Type( ks_matrix ) :: base
+    
+    Integer, Dimension( :, : ), Allocatable :: matrix_sizes
+
+    Integer :: m, n
+    Integer :: me_split
+    Integer :: n_ks, this_ks
+    Integer :: ks
+    Integer :: i
+    Integer :: error
+    
+    Logical :: loc_redist
+
+    ! If A is NOT already split across ks points no need to do very much except copy ...
+    If( A%ks_split ) Then
+       joined_A = A
+       ! .. and make sure the iterator in the new ks_array is reset
+       Call joined_A%iterator_reset()
+       Return
+    End If
+
+    If( Present( redistribute ) ) Then
+       loc_redist = redistribute
+    Else
+       loc_redist =.True.
+    End If
+
+    ! Have to get the sizes of the matrices. This is only known locally on the processes that
+    ! actually hold data for the ks point. Thus we need to replicate those values.
+    Allocate( matrix_sizes( 1:2, 1:Size( A%all_k_point_info ) ) )
+    matrix_sizes = 0
+    Do i = 1, Size( matrix_sizes, Dim = 2 )
+       m = A%size( A%all_k_point_info( i )%k_indices, A%all_k_point_info( i )%spin, 1 )
+       n = A%size( A%all_k_point_info( i )%k_indices, A%all_k_point_info( i )%spin, 2 )
+       If( m /= NOT_ME ) Then
+          ! This process holds data on this k point. If I am rank zero in this communicator fill in
+          ! the size in the buffer
+          Call MPI_Comm_rank( A%my_k_points( i )%data( 1 )%matrix%get_comm(), me_split, error )
+          If( me_split == 0 ) Then
+             matrix_sizes( 1, i ) = m
+             matrix_sizes( 2, i ) = n
+          End If
+       End If
+    End Do
+    Call MPI_Allreduce( MPI_IN_PLACE, matrix_sizes, Size( matrix_sizes ), MPI_Integer, MPI_SUM, A%parent_communicator, error )
+
+    ! OK, now know the size of all of the matrices, can create a base object to act as a template
+    Call ks_matrix_comm_to_base( A%parent_communicator, base )
+
+    ! Now create the matrices in the joined array
+    ! Once we can create arrays with matrices of different sizes this should be revisited as it can be simplified
+
+    ! Set up stuff relevant to all ks points
+    joined_A%all_k_point_info    = A%all_k_point_info
+    joined_A%parent_communicator = A%parent_communicator
+
+    ! As joined_A contains all the ks points setting up the list of my ks points is easy
+    Allocate( joined_A%my_k_points( 1:Size( joined_A%all_k_point_info ) ) )
+    joined_A%my_k_points( : )%info = joined_A%all_k_point_info
+
+    n_ks = Size( joined_A%all_k_point_info )
+    Do ks = 1, n_ks
+       m = matrix_sizes( 1, ks )
+       n = matrix_sizes( 2, ks )
+       Call joined_A%my_k_points( ks )%data( 1 )%matrix%create( &
+            joined_A%my_k_points( ks )%info%k_type == K_POINT_COMPLEX, &
+            m, n, base )
+       joined_A%my_k_points( ks )%communicator = joined_A%parent_communicator
+    End Do
+
+    If( loc_redist ) Then
+       ! If required redistribute the data from the split matrix back to the unsplit one
+       Allocate( this_ks_matrix )
+       Do ks = 1, n_ks
+          this_ks = A%get_my_ks_index( ks )
+          If( this_ks /= NOT_ME ) Then
+             Allocate( split_ks_matrix )
+             split_ks_matrix = A%my_k_points( this_ks )%data( 1 )%matrix
+          End If
+          Call ks_matrix_remap_data( split_ks_matrix, A%parent_communicator, this_ks_matrix )
+          If( this_ks /= NOT_ME ) Then
+             Deallocate( split_ks_matrix ) ! Important as an deallocated matrix indicates no data on this process in the remap routine
+          End If
+          joined_A%my_k_points( ks )%data( 1 )%matrix = this_ks_matrix
+       End Do
+    End If
+
+    ! NEED TO THINK ABOUT PRESERVING DAGGERS
+    
+    ! Make sure the iterator in the new ks_array is reset
+    Call joined_A%iterator_reset()
+
+    ! And finally indicate the new matrix is NOT ks_split
+    joined_A%ks_split = .False.
+
+  End Subroutine ks_array_join_ks
 
   Function ks_array_dagger( A ) Result( tA )
 
