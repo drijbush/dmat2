@@ -2365,7 +2365,7 @@ Contains
        End Do
     End Do
 
-    Call A%split( 2.0_wp, A_split )
+    Call A%split_ks( 2.0_wp, A_split )
     If( verbose ) Then
        Call A_split%print_info( 'A_split', 100 )
     End If
@@ -2495,7 +2495,7 @@ Contains
        End Do
     End Do
 
-    Call A%split( 2.0_wp, A_split )
+    Call A%split_ks( 2.0_wp, A_split )
     If( verbose ) Then
        Call A_split%print_info( 'A_split', 100 )
     End If
@@ -2628,7 +2628,7 @@ Contains
        End Do
     End Do
 
-    Call A%split( 2.0_wp, A_split )
+    Call A%split_ks( 2.0_wp, A_split )
     If( verbose ) Then
        Call A_split%print_info( 'A_split', 100 )
     End If
@@ -2755,7 +2755,7 @@ Contains
        End Do
     End Do
 
-    Call A%split( 2.0_wp, A_split )
+    Call A%split_ks( 2.0_wp, A_split )
     If( verbose ) Then
        Call A_split%print_info( 'A_split', 100 )
     End If
@@ -2879,7 +2879,7 @@ Contains
     Call ks_array_comm_to_base( MPI_COMM_WORLD, ns, k_types, k_points, base )
 
     Call Am_base%create( m, n, base )
-    Call Am_base%split( 2.0_wp, Am )
+    Call Am_base%split_ks( 2.0_wp, Am )
     If( verbose ) Then
        Call Am%print_info( 'Am - the split matrix', 9999 )
     End If
@@ -3019,7 +3019,7 @@ Contains
     Call ks_array_comm_to_base( MPI_COMM_WORLD, ns, k_types, k_points, base )
 
     Call Am_base%create( n, m, base )
-    Call Am_base%split( 2.0_wp, Am )
+    Call Am_base%split_ks( 2.0_wp, Am )
     If( verbose ) Then
        Call Am%print_info( 'Am - the split matrix', 9999 )
     End If
@@ -3160,7 +3160,7 @@ Contains
     Call ks_array_comm_to_base( MPI_COMM_WORLD, ns, k_types, k_points, base )
 
     Call Am_base%create( m, n, base )
-    Call Am_base%split( 2.0_wp, Am )
+    Call Am_base%split_ks( 2.0_wp, Am )
     If( verbose ) Then
        Call Am%print_info( 'Am - the split matrix', 9999 )
     End If
@@ -3302,7 +3302,7 @@ Contains
     Call ks_array_comm_to_base( MPI_COMM_WORLD, ns, k_types, k_points, base )
 
     Call Am_base%create( n, m, base )
-    Call Am_base%split( 2.0_wp, Am )
+    Call Am_base%split_ks( 2.0_wp, Am )
     If( verbose ) Then
        Call Am%print_info( 'Am - the split matrix', 9999 )
     End If
@@ -3444,7 +3444,7 @@ Contains
     Call ks_array_comm_to_base( MPI_COMM_WORLD, ns, k_types, k_points, base )
 
     Call Am_base%create( m, m, base )
-    Call Am_base%split( 2.0_wp, Am )
+    Call Am_base%split_ks( 2.0_wp, Am )
     If( verbose ) Then
        Call Am%print_info( 'Am - the split matrix', 9999 )
     End If
@@ -3578,7 +3578,7 @@ Contains
     Call ks_array_comm_to_base( MPI_COMM_WORLD, ns, k_types, k_points, base )
 
     Call Am_base%create( m, m, base )
-    Call Am_base%split( 2.0_wp, Am )
+    Call Am_base%split_ks( 2.0_wp, Am )
     If( verbose ) Then
        Call Am%print_info( 'Am - the split matrix', 9999 )
     End If
@@ -3711,7 +3711,7 @@ Contains
     Call ks_array_comm_to_base( MPI_COMM_WORLD, ns, k_types, k_points, base )
 
     Call Am_base%create( m, n, base )
-    Call Am_base%split( 2.0_wp, Am )
+    Call Am_base%split_ks( 2.0_wp, Am )
     If( verbose ) Then
        Call Am%print_info( 'Am - the split matrix', 9999 )
     End If
@@ -3851,7 +3851,7 @@ Contains
     Call ks_array_comm_to_base( MPI_COMM_WORLD, ns, k_types, k_points, base )
 
     Call Am_base%create( n, m, base )
-    Call Am_base%split( 2.0_wp, Am )
+    Call Am_base%split_ks( 2.0_wp, Am )
     If( verbose ) Then
        Call Am%print_info( 'Am - the split matrix', 9999 )
     End If
@@ -3992,7 +3992,7 @@ Contains
     Call ks_array_comm_to_base( MPI_COMM_WORLD, ns, k_types, k_points, base )
 
     Call Am_base%create( m, n, base )
-    Call Am_base%split( 2.0_wp, Am )
+    Call Am_base%split_ks( 2.0_wp, Am )
     If( verbose ) Then
        Call Am%print_info( 'Am - the split matrix', 9999 )
     End If
@@ -4134,7 +4134,7 @@ Contains
     Call ks_array_comm_to_base( MPI_COMM_WORLD, ns, k_types, k_points, base )
 
     Call Am_base%create( n, m, base )
-    Call Am_base%split( 2.0_wp, Am )
+    Call Am_base%split_ks( 2.0_wp, Am )
     If( verbose ) Then
        Call Am%print_info( 'Am - the split matrix', 9999 )
     End If
@@ -4276,7 +4276,7 @@ Contains
     Call ks_array_comm_to_base( MPI_COMM_WORLD, ns, k_types, k_points, base )
 
     Call Am_base%create( m, m, base )
-    Call Am_base%split( 2.0_wp, Am )
+    Call Am_base%split_ks( 2.0_wp, Am )
     If( verbose ) Then
        Call Am%print_info( 'Am - the split matrix', 9999 )
     End If
@@ -4410,7 +4410,7 @@ Contains
     Call ks_array_comm_to_base( MPI_COMM_WORLD, ns, k_types, k_points, base )
 
     Call Am_base%create( m, m, base )
-    Call Am_base%split( 2.0_wp, Am )
+    Call Am_base%split_ks( 2.0_wp, Am )
     If( verbose ) Then
        Call Am%print_info( 'Am - the split matrix', 9999 )
     End If
@@ -5050,7 +5050,7 @@ Contains
     Call ks_array_comm_to_base( MPI_COMM_WORLD, ns, k_types, k_points, base )
 
     Call Am_base%create( m, n, base )
-    Call Am_base%split( 2.0_wp, Am )
+    Call Am_base%split_ks( 2.0_wp, Am )
     If( verbose ) Then
        Call Am%print_info( 'Am - the split matrix', 9999 )
     End If
@@ -5171,7 +5171,7 @@ Contains
     Call ks_array_comm_to_base( MPI_COMM_WORLD, ns, k_types, k_points, base )
 
     Call Am_base%create( m, n, base )
-    Call Am_base%split( 2.0_wp, Am )
+    Call Am_base%split_ks( 2.0_wp, Am )
     If( verbose ) Then
        Call Am%print_info( 'Am - the split matrix', 9999 )
     End If
@@ -5305,7 +5305,7 @@ Contains
     Call ks_array_comm_to_base( MPI_COMM_WORLD, ns, k_types, k_points, base )
 
     Call Am_base%create( m, k, base )
-    Call Am_base%split( 2.0_wp, Am )
+    Call Am_base%split_ks( 2.0_wp, Am )
     If( verbose ) Then
        Call Am%print_info( 'Am - the split matrix', 9999 )
     End If
@@ -5443,7 +5443,7 @@ Contains
 
     Call Am_base%create( k, m, base )
 
-    Call Am_base%split( 2.0_wp, Am )
+    Call Am_base%split_ks( 2.0_wp, Am )
     Call Bm%create( k, n, Am   )
     Do spin = 1, ns
        Do kpoint = 1, nk
@@ -5574,7 +5574,7 @@ Contains
     Call ks_array_comm_to_base( MPI_COMM_WORLD, ns, k_types, k_points, base )
 
     Call Am_base%create( m, k, base )
-    Call Am_base%split( 2.0_wp, Am )
+    Call Am_base%split_ks( 2.0_wp, Am )
     Call Bm%create( n, k, Am   )
     Do spin = 1, ns
        Do kpoint = 1, nk
@@ -5706,7 +5706,7 @@ Contains
     Call ks_array_comm_to_base( MPI_COMM_WORLD, ns, k_types, k_points, base )
 
     Call Am_base%create( k, m, base )
-    Call Am_base%split( 2.0_wp, Am )
+    Call Am_base%split_ks( 2.0_wp, Am )
     Call Bm%create( n, k, Am   )
     Do spin = 1, ns
        Do kpoint = 1, nk
@@ -5846,7 +5846,7 @@ Contains
        End Do
     End Do
 
-    Call A%split( 2.0_wp, A_split )
+    Call A%split_ks( 2.0_wp, A_split )
     If( verbose ) Then
        Call A_split%print_info( 'A_split', 100 )
     End If
@@ -5981,7 +5981,7 @@ Contains
        End Do
     End Do
 
-    Call A%split( 2.0_wp, A_split )
+    Call A%split_ks( 2.0_wp, A_split )
     If( verbose ) Then
        Call A_split%print_info( 'A_split', 100 )
     End If
@@ -6113,7 +6113,7 @@ Contains
        End Do
     End Do
 
-    Call A%split( 2.0_wp, A_split )
+    Call A%split_ks( 2.0_wp, A_split )
     If( verbose ) Then
        Call A_split%print_info( 'A_split', 100 )
     End If

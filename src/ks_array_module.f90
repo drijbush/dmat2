@@ -50,7 +50,7 @@ Module ks_array_module
      ! Public Methods
      ! Methods at all levels
      Procedure, Public :: create                  => ks_array_create                   !! Create a ks_array
-     Procedure, Public :: split                   => ks_array_split_ks                 !! Split the distribution so k point //ism can be used
+     Procedure, Public :: split_ks                => ks_array_split_ks                 !! Split the distribution so k point //ism can be used
      Generic  , Public :: Operator( .Dagger. )    => dagger                            !! Dagger each element in the array
      Generic  , Public :: Operator( * )           => multiply                          !! Multiply each element of the array with the corresponding element in another array
      Generic  , Public :: Operator( * )           => rscal_multiply                    !! Pre-multiply by a real scalar
@@ -349,7 +349,7 @@ Contains
 
   Subroutine ks_array_split_ks( A, complex_weight, split_A, redistribute )
 
-    !! Split a ks_array A so the resulting ks_array is k point distributed
+    !! Split a ks_array A so the resulting ks_array is ks point distributed
 
     Use mpi             , Only : MPI_Comm_size, MPI_Comm_rank, MPI_Comm_split, MPI_UNDEFINED
     Use ks_matrix_module, Only : ks_matrix_comm_to_base, ks_matrix_remap_data
