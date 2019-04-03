@@ -1,7 +1,8 @@
 Module blacs_interfaces
 
+  !! Interfaces for the BLACS routines we use
+  
   Interface
-     !! Interfaces for the BLACS routines we use
      Subroutine blacs_gridinit( ctxt, order, nprow, npcol )
        Implicit None
        Integer             , Intent( InOut ) :: ctxt

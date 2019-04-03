@@ -245,6 +245,7 @@ Module distributed_matrix_module
      End Subroutine get_global_complex
 
      Function pre_rscal_op( s, A ) Result( B )
+       !! Pre-scale a matrix with a scalar
        Import :: wp
        Import :: distributed_matrix
        Implicit None
@@ -253,6 +254,7 @@ Module distributed_matrix_module
        Class( distributed_matrix ), Intent( In ) :: A
      End Function pre_rscal_op
      Function post_rscal_op( A, s ) Result( B )
+       !! Post-scale a matrix with a scalar
        Import :: wp
        Import :: distributed_matrix
        Implicit None
@@ -262,6 +264,7 @@ Module distributed_matrix_module
      End Function post_rscal_op
      
      Function pre_diagonal_op( d, A ) Result( B )
+       !! Pre-apply a digonal matrix to a matrix
        Import :: wp
        Import :: distributed_matrix
        Implicit None
@@ -270,6 +273,7 @@ Module distributed_matrix_module
        Class( distributed_matrix ), Intent( In ) :: A
      End Function pre_diagonal_op
      Function post_diagonal_op( A, d ) Result( B )
+       !! Post-apply a digonal matrix to a matrix
        Import :: wp
        Import :: distributed_matrix
        Implicit None
@@ -377,6 +381,7 @@ Module distributed_matrix_module
      End Subroutine complex_remap_op
 
      Function extract_op( A, m, n, p, q ) Result( B )
+       !! Extract a pacth from one matrix to form another matrix
        Import :: wp
        Import :: distributed_matrix
        Implicit None
@@ -1197,6 +1202,8 @@ Contains
 
   Function real_multiply_rscal( A, s ) Result( B )
 
+    !! Post-scale a real matrix
+
     Class(      distributed_matrix ), Allocatable :: B
 
     Class( real_distributed_matrix ), Intent( In ) :: A
@@ -1211,6 +1218,8 @@ Contains
   End Function real_multiply_rscal
 
   Function rscal_multiply_real( s, A ) Result( B )
+
+    !! Pre-scale a real matrix
 
     Class(      distributed_matrix ), Allocatable :: B
 
@@ -1227,6 +1236,8 @@ Contains
 
   Function  complex_multiply_rscal( A, s ) Result( B )
 
+    !! Post-scale a complex matrix
+
     Class(         distributed_matrix ), Allocatable :: B
 
     Class( complex_distributed_matrix ), Intent( In ) :: A
@@ -1241,6 +1252,8 @@ Contains
   End Function complex_multiply_rscal
 
   Function  rscal_multiply_complex( s, A ) Result( B )
+
+    !! Pre-scale a complex matrix
 
     Class(         distributed_matrix ), Allocatable :: B
 
@@ -1535,6 +1548,8 @@ Contains
 
   Function real_add_diagonal( A, d ) Result( B )
 
+    !! Add a real matrix to a diagonal matrix
+
     Class(      distributed_matrix ), Allocatable :: B
 
     Class( real_distributed_matrix ),                 Intent( In ) :: A
@@ -1571,6 +1586,8 @@ Contains
   End Function real_add_diagonal
 
   Function complex_add_diagonal( A, d ) Result( B )
+
+    !! Add a complex matrix to a diagonal matrix
 
     Class(         distributed_matrix ), Allocatable :: B
 
@@ -1609,6 +1626,8 @@ Contains
 
   Function diagonal_add_real( d, A ) Result( B )
 
+    !! Add a diagonal matrix to a real matrix 
+
     Class(      distributed_matrix ), Allocatable :: B
 
     Real( wp )                      , Dimension( : ), Intent( In ) :: d
@@ -1619,6 +1638,8 @@ Contains
   End Function diagonal_add_real
 
   Function diagonal_add_complex( d, A ) Result( B )
+
+    !! Add a diagonal matrix to a complex matrix
 
     Class(         distributed_matrix ), Allocatable :: B
 

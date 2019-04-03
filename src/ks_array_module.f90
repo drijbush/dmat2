@@ -18,9 +18,9 @@ Module ks_array_module
 
   Type, Public :: ks_point_info
      !! A type to hold the basic info about a k point
-     Integer                              :: k_type
-     Integer                              :: spin
-     Integer, Dimension( : ), Allocatable :: k_indices
+     Integer                             , Public :: k_type
+     Integer                             , Public :: spin
+     Integer, Dimension( : ), Allocatable, Public :: k_indices
   End type ks_point_info
 
   Type, Private :: k_point_matrices
@@ -41,11 +41,10 @@ Module ks_array_module
 
   Type, Public :: ks_array
      !! An array of ks matrices, operations on which are (almost always) independent and hence parallelisable
-     Type( ks_point_info ), Dimension( : ), Allocatable :: all_k_point_info
+     Type( ks_point_info ), Dimension( : ), Allocatable, Private :: all_k_point_info
      ! this splitting allows multiple k points on this process
-     Type( k_point       ), Dimension( : ), Allocatable :: my_k_points
-     ! Want to hide eventually
-     Integer                                           :: parent_communicator = INVALID
+     Type( k_point       ), Dimension( : ), Allocatable, Private :: my_k_points
+     Integer                                                     :: parent_communicator = INVALID
    Contains
      ! Public Methods
      ! Methods at all levels
@@ -69,12 +68,12 @@ Module ks_array_module
      Procedure, Public :: extract                 => ks_array_extract                  !! Extract a patch from the matrices and return a new ks_array holding it
      Generic  , Public :: set_by_global           => set_by_global_r, set_by_global_c  !! Set patches of an element
      Generic  , Public :: get_by_global           => get_by_global_r, get_by_global_c  !! Get patches of an element
-     Procedure, Public :: global_to_local         => ks_array_g_to_l
-     Procedure, Public :: local_to_global         => ks_array_l_to_g
+     Procedure, Public :: global_to_local         => ks_array_g_to_l                   !! Get the global -> local  mapping arrays
+     Procedure, Public :: local_to_global         => ks_array_l_to_g                   !! Get the local  -> global mapping arrays
+     Procedure, Public :: size                    => ks_array_size                     !! Get the size of the matrix along a given dimension
      Procedure, Public :: print_info              => ks_array_print_info               !! print info about a KS_array
 !!$     Procedure                     :: solve                => ks_array_solve
 !!$     Procedure                     :: set_to_identity      => ks_array_set_to_identity
-!!$     Procedure                     :: size                 => ks_array_size
 !!$     ! Methods only at this level
 !!$     Procedure                     :: split_ks             => ks_array_split_ks
      ! Private implementations
@@ -99,20 +98,9 @@ Module ks_array_module
      Procedure, Pass( A ), Private :: diagonal_subtract    => ks_array_diagonal_subtract
      Procedure,            Private :: choleski             => ks_array_choleski
      Procedure,            Private :: tr_inv               => ks_array_tr_inv
-!!$     Procedure, Private, Pass( A ) :: pre_scale            => ks_array_pre_scale
-!!$     Procedure, Private            :: post_scale           => ks_array_post_scale
-!!$     Procedure, Private, Pass( A ) :: pre_mult_diag        => ks_array_pre_mult_diag
-!!$     Procedure, Private            :: post_mult_diag       => ks_array_post_mult_diag
-!!$     Procedure, Private            :: add                  => ks_array_add
-!!$     Procedure, Private, Pass( A ) :: pre_add_diag         => ks_array_pre_add_diag
-!!$     Procedure, Private            :: post_add_diag        => ks_array_post_add_diag
-!!$     Procedure, Private            :: subtract             => ks_array_subtract
-!!$     Procedure, Private            :: post_subtract_diag   => ks_array_post_subtract_diag
   End type ks_array
   
   Type, Public :: ks_eval_storage
-!!$     Integer                                 :: spin
-!!$     Integer   , Dimension( : ), Allocatable :: k_indices
      Type( ks_point_info )                   :: ks_point
      Real( wp ), Dimension( : ), Allocatable :: evals
   End type ks_eval_storage
@@ -1321,32 +1309,28 @@ Contains
 
   End Function ks_array_l_to_g
 
-!!$  Function ks_array_size( A, k, s, dim ) Result( n )
-!!$
-!!$    Integer :: n
-!!$
-!!$    Class( ks_array )          , Intent( In )           :: A
-!!$    Integer                    , Intent( In )           :: s
-!!$    Integer    , Dimension( : ), Intent( In )           :: k
-!!$    Integer                    , Intent( In ), Optional :: dim
-!!$
-!!$    Integer :: ks, my_ks
-!!$
-!!$    ks = A%get_ks( k, s )
-!!$    
-!!$    my_ks = A%get_my_ks_index( ks )
-!!$
-!!$    If( my_ks /= NOT_ME ) Then
-!!$       If( .Not. Present( dim ) ) Then
-!!$          n = A%my_k_points( my_ks )%data( 1 )%matrix%size()
-!!$       Else
-!!$          n = A%my_k_points( my_ks )%data( 1 )%matrix%size( dim )
-!!$       End If
-!!$    Else
-!!$       n = NOT_ME
-!!$    End If
-!!$
-!!$  End Function ks_array_size
-!!$
+  Function ks_array_size( A, k, s, dim ) Result( n )
+
+    Integer :: n
+
+    Class( ks_array )          , Intent( In )           :: A
+    Integer                    , Intent( In )           :: s
+    Integer    , Dimension( : ), Intent( In )           :: k
+    Integer                    , Intent( In ), Optional :: dim
+
+    Integer :: ks, my_ks
+
+    ks = A%get_ks( k, s )
+    
+    my_ks = A%get_my_ks_index( ks )
+
+    If( my_ks /= NOT_ME ) Then
+       n = A%my_k_points( my_ks )%data( 1 )%matrix%size( dim )
+    Else
+       n = NOT_ME
+    End If
+
+  End Function ks_array_size
+
 
 End Module ks_array_module
