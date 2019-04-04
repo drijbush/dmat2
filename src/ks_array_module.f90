@@ -41,12 +41,11 @@ Module ks_array_module
 
   Type, Public :: ks_array
      !! An array of ks matrices, operations on which are (almost always) independent and hence parallelisable
-     Type( ks_point_info ), Dimension( : ), Allocatable, Private :: all_k_point_info
+     Type( ks_point_info ), Dimension( : ), Allocatable, Private :: all_k_point_info                !! Info about all ks points held by the array
      ! this splitting allows multiple k points on this process
-     Type( k_point       ), Dimension( : ), Allocatable, Private :: my_k_points
-     Integer                                           , Private :: parent_communicator = INVALID
-     Integer                                           , Private :: iterator_value      = INVALID
-     Logical                                           , Private :: ks_split            = .False.
+     Type( k_point       ), Dimension( : ), Allocatable, Private :: my_k_points                     !! Info and data for ks points held (in part) by this process
+     Integer                                           , Private :: parent_communicator = INVALID   !! A parent communicator spanning all processes involved in the array
+     Integer                                           , Private :: iterator_value      = INVALID   !! A value for the iterator - might need to rething as retainined on assignment of ks_arrays
    Contains
      ! Public Methods
      Procedure, Public :: create                  => ks_array_create                   !! Create a ks_array
@@ -241,8 +240,6 @@ Contains
 
     A%iterator_value = INVALID
 
-    A%ks_split = .False.
-    
   End Subroutine ks_array_create
 
   Subroutine ks_array_print_info( A, name, verbosity )
@@ -383,9 +380,11 @@ Contains
     Integer :: ks, this_ks
 
     Logical :: loc_redist
+    Logical :: is_split
 
     ! If A is already split across ks points no need to do very much except copy ...
-    If( A%ks_split ) Then
+    is_split = Size( A%all_k_point_info ) /= Size( A%my_k_points )
+    If( is_split ) Then
        split_A = A
        ! .. and make sure the iterator in the new ks_array is reset
        Call split_A%iterator_reset()
@@ -526,9 +525,6 @@ Contains
     ! Make sure the iterator in the new ks_array is reset
     Call split_A%iterator_reset()
 
-    ! And finally indicate the new matrix is ks_split
-    split_A%ks_split = .True.
-
   End Subroutine ks_array_split_ks
 
   Subroutine ks_array_join_ks( A, joined_A, redistribute )
@@ -557,9 +553,11 @@ Contains
     Integer :: error
     
     Logical :: loc_redist
+    Logical :: is_split
 
     ! If A is NOT already split across ks points no need to do very much except copy ...
-    If( A%ks_split ) Then
+    is_split = Size( A%all_k_point_info ) /= Size( A%my_k_points )
+    If( .Not. is_split ) Then
        joined_A = A
        ! .. and make sure the iterator in the new ks_array is reset
        Call joined_A%iterator_reset()
@@ -636,9 +634,6 @@ Contains
     
     ! Make sure the iterator in the new ks_array is reset
     Call joined_A%iterator_reset()
-
-    ! And finally indicate the new matrix is NOT ks_split
-    joined_A%ks_split = .False.
 
   End Subroutine ks_array_join_ks
 
