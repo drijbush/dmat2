@@ -6158,7 +6158,7 @@ Contains
 
     Use numbers_module , Only : wp
     Use ks_array_module, Only : ks_array, ks_point_info, ks_array_init, ks_array_comm_to_base, ks_array_finalise, &
-         K_POINT_REAL, K_POINT_COMPLEX, ks_eval_storage
+         K_POINT_REAL, K_POINT_COMPLEX, K_POINT_NOT_EXIST, ks_eval_storage
     Use mpi            , Only : mpi_bcast, mpi_comm_world, mpi_double_complex, mpi_double_precision
 
     Integer, Parameter :: ns = 2
@@ -6260,7 +6260,8 @@ Contains
     Call A_split%iterator_init()
     Do
        info = A_split%iterator_next()
-       If( .Not. Allocated( info%k_indices ) ) Exit
+!!$       Write( *, * ) info%k_type
+       If( info%k_type == K_POINT_NOT_EXIST ) Exit
        Outer: Do s = 1, ns
           Do k = 1, nk
              If( All( info%k_indices == k_points( :, k ) .And. info%spin == s ) ) Then

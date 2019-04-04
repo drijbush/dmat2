@@ -11,6 +11,7 @@ Module ks_array_module
 
   Integer, Public, Parameter :: K_POINT_REAL = 0
   Integer, Public, Parameter :: K_POINT_COMPLEX = 1
+  Integer, Public, Parameter :: K_POINT_NOT_EXIST = Huge( K_POINT_NOT_EXIST )
 
   Integer, Private, Parameter :: INVALID = -1
   Integer, Private, Parameter :: NOT_ME  = -2
@@ -1500,6 +1501,7 @@ Contains
        ks = A%my_k_points( A%iterator_value )%info
     Else
        A%iterator_value = Ubound( A%my_k_points, Dim = 1 ) + 1
+       ks%k_type = K_POINT_NOT_EXIST
     End If
 
   End Function ks_array_iterator_next
@@ -1514,12 +1516,15 @@ Contains
     
     Class( ks_array ), Intent( InOut ) :: A
 
+    Allocate( ks )
+    
     A%iterator_value = A%iterator_value - 1
 
     If( A%iterator_value >= Lbound( A%my_k_points, Dim = 1 ) ) Then
        ks = A%my_k_points( A%iterator_value )%info
     Else
        A%iterator_value = Lbound( A%my_k_points, Dim = 1 ) - 1
+       ks%k_type = K_POINT_NOT_EXIST
     End If
 
   End Function ks_array_iterator_previous
