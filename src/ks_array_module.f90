@@ -1492,6 +1492,8 @@ Contains
     
     Class( ks_array ), Intent( InOut ) :: A
 
+    Allocate( ks )
+    
     A%iterator_value = A%iterator_value + 1
 
     If( A%iterator_value <= Ubound( A%my_k_points, Dim = 1 ) ) Then
