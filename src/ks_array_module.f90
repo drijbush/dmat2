@@ -548,7 +548,7 @@ Contains
 
     Integer :: m, n
     Integer :: me_split
-    Integer :: n_ks, this_ks
+    Integer :: n_ks, this_ks, my_ks
     Integer :: ks
     Integer :: i
     Integer :: error
@@ -581,7 +581,8 @@ Contains
        If( m /= NOT_ME ) Then
           ! This process holds data on this k point. If I am rank zero in this communicator fill in
           ! the size in the buffer
-          Call MPI_Comm_rank( A%my_k_points( i )%data( 1 )%matrix%get_comm(), me_split, error )
+          my_ks = A%get_my_ks_index( i )
+          Call MPI_Comm_rank( A%my_k_points( my_ks )%data( 1 )%matrix%get_comm(), me_split, error )
           If( me_split == 0 ) Then
              matrix_sizes( 1, i ) = m
              matrix_sizes( 2, i ) = n
@@ -608,6 +609,7 @@ Contains
     Do ks = 1, n_ks
        m = matrix_sizes( 1, ks )
        n = matrix_sizes( 2, ks )
+       Allocate( joined_A%my_k_points( ks )%data( 1:1 ) )
        Call joined_A%my_k_points( ks )%data( 1 )%matrix%create( &
             joined_A%my_k_points( ks )%info%k_type == K_POINT_COMPLEX, &
             m, n, base )
@@ -616,8 +618,13 @@ Contains
 
     If( loc_redist ) Then
        ! If required redistribute the data from the split matrix back to the unsplit one
-       Allocate( this_ks_matrix )
        Do ks = 1, n_ks
+          Allocate( this_ks_matrix )
+          m = matrix_sizes( 1, ks )
+          n = matrix_sizes( 2, ks )
+          ! Give this_ks_matrix a datatype (i.e. real or complex )
+          Call this_ks_matrix%create( joined_A%my_k_points( ks )%info%k_type == K_POINT_COMPLEX, m, n, &
+               joined_A%my_k_points( ks )%data( 1 )%matrix )
           this_ks = A%get_my_ks_index( ks )
           If( this_ks /= NOT_ME ) Then
              Allocate( split_ks_matrix )
@@ -628,6 +635,7 @@ Contains
              Deallocate( split_ks_matrix ) ! Important as an deallocated matrix indicates no data on this process in the remap routine
           End If
           joined_A%my_k_points( ks )%data( 1 )%matrix = this_ks_matrix
+          Deallocate( this_ks_matrix )
        End Do
     End If
 
