@@ -39,5 +39,6 @@ set(LIBRARY_OUTPUT_PATH ${LIB_OUTPUT_DIR})
 
 include_directories(${SOURCE_DIR_BINARY_PATH})
 add_subdirectory(src)
+enable_testing()
 add_subdirectory(tests)
 add_subdirectory(tools)
