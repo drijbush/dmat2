@@ -10,12 +10,12 @@ module test_params
   Integer :: ns, nk
   Integer :: error
 
-  Integer, parameter :: n_def = 1000
-  Integer, parameter :: m_def = 1000
-  Integer, parameter :: k_def = 1000
-  Integer, parameter :: n_block_def = 100
-  Integer, parameter :: ns_def = 100
-  integer, parameter :: nk_def = 100
+  Integer, parameter :: n_def = 101
+  Integer, parameter :: m_def = 203
+  Integer, parameter :: k_def = 129
+  Integer, parameter :: n_block_def = 11
+  Integer, parameter :: ns_def = 2
+  integer, parameter :: nk_def = 3
   
   Character( Len = * ), Parameter :: error_format = '( "--> ", a, t40, g26.20, t70, a )'
   Character( Len = * ), Parameter ::   run_format = '( a, t20, i0 )'
