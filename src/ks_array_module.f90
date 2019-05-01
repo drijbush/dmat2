@@ -373,7 +373,7 @@ Contains
 
     Integer :: m, n
     Integer :: n_ks
-    Integer :: n_procs_parent, me_parent, my_colour, k_comm, n_my_ks
+    Integer :: n_procs_parent, me_parent, my_colour, k_comm, n_my_ks, n_left
     Integer :: this_k_type, this_s
     Integer :: top_rank
     Integer :: cost
@@ -457,7 +457,8 @@ Contains
 
        ! First work out how many ks points I will hold
        n_my_ks = n_ks / n_procs_parent
-       If( n_my_ks * n_procs_parent < n_ks ) Then
+       n_left = n_ks - n_my_ks * n_procs_parent
+       If( me_parent < n_left ) Then
           n_my_ks = n_my_ks + 1
        End If
        Allocate( my_ks( 1:n_my_ks ) )
