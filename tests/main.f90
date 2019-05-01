@@ -33,7 +33,6 @@ Program test_distributed_matrix
     "ks_diag    " ]
   integer :: start_arg
   integer :: num_args
-  integer :: file_handle
   integer :: i
 
   Call mpi_init( error )
@@ -79,7 +78,9 @@ Program test_distributed_matrix
     nk = nk_def
   End If
 
-
+  ! Make sure start_arg is correctly picked up for interactive option
+  Call mpi_bcast( start_arg , 1, mpi_integer, 0, mpi_comm_world, error )
+  
   Call mpi_bcast( m , 1, mpi_integer, 0, mpi_comm_world, error )
   Call mpi_bcast( n , 1, mpi_integer, 0, mpi_comm_world, error )
   Call mpi_bcast( k , 1, mpi_integer, 0, mpi_comm_world, error )
