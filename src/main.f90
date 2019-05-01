@@ -2841,6 +2841,10 @@ Contains
              Call Random_number( rand )
              k_types( kpoint ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
           End Do
+          ! Catch single k point case when all the k points muct be of one type
+          If( nk == 1 ) Then
+             Exit
+          End If
        End Do
        Do spin = 1, ns
           Do kpoint = 1, nk
@@ -2979,6 +2983,10 @@ Contains
              Call Random_number( rand )
              k_types( kpoint ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
           End Do
+          ! Catch single k point case when all the k points muct be of one type
+          If( nk == 1 ) Then
+             Exit
+          End If
        End Do
        Do spin = 1, ns
           Do kpoint = 1, nk
@@ -3120,6 +3128,10 @@ Contains
              Call Random_number( rand )
              k_types( kpoint ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
           End Do
+          ! Catch single k point case when all the k points muct be of one type
+          If( nk == 1 ) Then
+             Exit
+          End If
        End Do
        Do spin = 1, ns
           Do kpoint = 1, nk
@@ -3261,6 +3273,10 @@ Contains
              Call Random_number( rand )
              k_types( kpoint ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
           End Do
+          ! Catch single k point case when all the k points muct be of one type
+          If( nk == 1 ) Then
+             Exit
+          End If
        End Do
        Do spin = 1, ns
           Do kpoint = 1, nk
@@ -3405,6 +3421,10 @@ Contains
              Call Random_number( rand )
              k_types( kpoint ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
           End Do
+          ! Catch single k point case when all the k points muct be of one type
+          If( nk == 1 ) Then
+             Exit
+          End If
        End Do
        Do spin = 1, ns
           Do kpoint = 1, nk
@@ -3539,6 +3559,10 @@ Contains
              Call Random_number( rand )
              k_types( kpoint ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
           End Do
+          ! Catch single k point case when all the k points muct be of one type
+          If( nk == 1 ) Then
+             Exit
+          End If
        End Do
        Do spin = 1, ns
           Do kpoint = 1, nk
@@ -3673,6 +3697,10 @@ Contains
              Call Random_number( rand )
              k_types( kpoint ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
           End Do
+          ! Catch single k point case when all the k points muct be of one type
+          If( nk == 1 ) Then
+             Exit
+          End If
        End Do
        Do spin = 1, ns
           Do kpoint = 1, nk
@@ -3811,6 +3839,10 @@ Contains
              Call Random_number( rand )
              k_types( kpoint ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
           End Do
+          ! Catch single k point case when all the k points muct be of one type
+          If( nk == 1 ) Then
+             Exit
+          End If
        End Do
        Do spin = 1, ns
           Do kpoint = 1, nk
@@ -3952,6 +3984,10 @@ Contains
              Call Random_number( rand )
              k_types( kpoint ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
           End Do
+          ! Catch single k point case when all the k points muct be of one type
+          If( nk == 1 ) Then
+             Exit
+          End If
        End Do
        Do spin = 1, ns
           Do kpoint = 1, nk
@@ -4093,6 +4129,10 @@ Contains
              Call Random_number( rand )
              k_types( kpoint ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
           End Do
+          ! Catch single k point case when all the k points muct be of one type
+          If( nk == 1 ) Then
+             Exit
+          End If
        End Do
        Do spin = 1, ns
           Do kpoint = 1, nk
@@ -4237,6 +4277,10 @@ Contains
              Call Random_number( rand )
              k_types( kpoint ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
           End Do
+          ! Catch single k point case when all the k points muct be of one type
+          If( nk == 1 ) Then
+             Exit
+          End If
        End Do
        Do spin = 1, ns
           Do kpoint = 1, nk
@@ -4371,6 +4415,10 @@ Contains
              Call Random_number( rand )
              k_types( kpoint ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
           End Do
+          ! Catch single k point case when all the k points muct be of one type
+          If( nk == 1 ) Then
+             Exit
+          End If
        End Do
        Do spin = 1, ns
           Do kpoint = 1, nk
@@ -5152,6 +5200,10 @@ Contains
              Call Random_number( rand )
              k_types( kpoint ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
           End Do
+          ! Catch single k point case when all the k points muct be of one type
+          If( nk == 1 ) Then
+             Exit
+          End If
        End Do
        Do spin = 1, ns
           Do kpoint = 1, nk
@@ -5273,6 +5325,10 @@ Contains
              Call Random_number( rand )
              k_types( kpoint ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
           End Do
+          ! Catch single k point case when all the k points muct be of one type
+          If( nk == 1 ) Then
+             Exit
+          End If
        End Do
        Do spin = 1, ns
           Do kpoint = 1, nk
@@ -5398,6 +5454,10 @@ Contains
              Call Random_number( rand )
              k_types( kpoint ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
           End Do
+          ! Catch single k point case when all the k points muct be of one type
+          If( nk == 1 ) Then
+             Exit
+          End If
        End Do
        Do spin = 1, ns
           Do kpoint = 1, nk
