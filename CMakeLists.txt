@@ -12,10 +12,10 @@ find_package(LAPACK REQUIRED)
 find_package(MPI REQUIRED)
 find_package(ScaLAPACK REQUIRED MODULE)
 include_directories(${MPI_Fortran_INCLUDE_PATH})
-
+message(STATUS ${MPI_Fortran_INCLUDE_PATH})
 if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
-  set(CMAKE_Fortran_DEBUG_FLAGS "-O -g -std=f2008 -Wall -Wextra -Wimplicit-interface -Wuse-without-only -fcheck=all -finit-real=snan" CACHE STRING "Flags used in debug compiles" FORCE)
-  set(CMAKE_Fortran_RELEASE_FLAGS "-O3 -funroll-loops" CACHE STRING "Flags used in release compiles" FORCE)
+  set(CMAKE_Fortran_FLAGS_DEBUG "-O -g -std=f2008 -Wall -Wextra -Wimplicit-interface -Wuse-without-only -fcheck=all -finit-real=snan" CACHE STRING "Flags used in debug compiles" FORCE)
+  set(CMAKE_Fortran_FLAGS_RELEASE "-O3 -funroll-loops" CACHE STRING "Flags used in release compiles" FORCE)
 endif()
 
 set(SOURCE_DIR_NAME "src")
