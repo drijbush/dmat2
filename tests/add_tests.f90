@@ -1,6 +1,6 @@
 module add_tests
 
-  use test_params
+  use test_params, Only : me, nproc, n, m, k, n_block, ns, nk, error, error_format, passed, FAILED, tol
   
   implicit none
   
@@ -539,5 +539,6 @@ contains
     Call distributed_matrix_finalise
 
   End Subroutine test_complex_add_TT
+  
 end module add_tests
 
