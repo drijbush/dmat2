@@ -5,9 +5,27 @@ Program test_distributed_matrix
   Use add_tests, Only : test_real_add_NN, test_real_add_TN, test_real_add_NT, test_real_add_TT, &
        test_real_post_add_diagonal, test_complex_post_add_diagonal, test_complex_add_NN, test_complex_add_TN, &
        test_complex_add_NT, test_complex_add_NT, test_complex_add_TT
-  Use diag_tests
-  Use multiply_tests
-  Use subtract_tests
+  Use diag_tests       , Only : test_diag_real, test_diag_complex
+  Use multiply_tests   , Only : test_real_pre_scale_real, &
+       test_real_post_scale_real, &
+       test_complex_pre_scale_real, &
+       test_complex_post_scale_real, &
+       test_real_matmul_NN, &
+       test_real_matmul_TN, &
+       test_real_matmul_NT, &
+       test_real_matmul_TT, &
+       test_complex_matmul_NN, &
+       test_complex_matmul_TN, &
+       test_complex_matmul_NT, &
+       test_complex_matmul_TT
+  Use subtract_tests, Only : test_real_subtract_NN, &
+       test_real_subtract_TN, &
+       test_real_subtract_NT, &
+       test_real_subtract_TT, &
+       test_complex_subtract_NN, &
+       test_complex_subtract_TN, &
+       test_complex_subtract_NT, &
+       test_complex_subtract_TT
   Use ks_add_tests
   Use ks_diag_tests
   Use ks_multiply_tests
