@@ -64,6 +64,10 @@ Program test_distributed_matrix
   Call mpi_comm_size( mpi_comm_world, nproc, error ) 
   Call mpi_comm_rank( mpi_comm_world,    me, error )
 
+  If( me == 0 ) Then
+     Write( *, * ) 'Running on ', nproc, ' processes'
+  End If
+
   num_args = command_argument_Count()
   Allocate( args( 1:num_args ), stat=error )
   If (error .Ne. 0) Then
