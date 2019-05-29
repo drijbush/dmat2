@@ -15,7 +15,7 @@ Module scf_step_module
 
 Contains
 
-  Subroutine scf_step( ns, k_types, k_points, H, S, ne, P )
+  Subroutine scf_step( ns, k_types, k_points, H, S, ne, split_parallel, P )
 
     Integer            ,                    Intent( In    ) :: ns
     Integer            , Dimension(    : ), Intent( In    ) :: k_types
@@ -23,6 +23,7 @@ Contains
     Type( repl_matrix ), Dimension( :, : ), Intent( In    ) :: H
     Type( repl_matrix ), Dimension( :, : ), Intent( In    ) :: S
     Integer                               , Intent( In    ) :: ne
+    Logical                               , Intent( In    ) :: split_parallel
     Type( repl_matrix ), Dimension( :, : ), Intent( InOut ) :: P
 
     Type( ks_array ) :: base
@@ -51,11 +52,14 @@ Contains
 
     ! Using the base matrix to describe the distribution create a new Hamiltonian matrix
     Call Hd%create( n, n, base )
-    ! Split this matrix so that different k points and spins are held by different processes,
-    ! so allowing dual level paralleism
-    Call Hd%split_ks( 2.0_wp, Hds )
-    ! Alternatively just take a copy so all that follows now happens in "All K-point"
-!!$    Hds = Hd
+    If( split_parallel ) Then
+       ! Split this matrix so that different k points and spins are held by different processes,
+       ! so allowing dual level paralleism
+       Call Hd%split_ks( 2.0_wp, Hds )
+    Else
+       ! Alternatively just take a copy so all that follows now happens in "All K-point"
+       Hds = Hd
+    End If
 
     ! Create  the overlap matrix with the same distribution as the Hamiltonian matrix
     Call Sds%create( n, n, Hds )
@@ -151,6 +155,8 @@ Program scf_example
   Integer :: i
   Integer :: error
 
+  Logical :: split_parallel
+
   Call MPI_Init( error )
   Call MPI_Comm_size( MPI_COMM_WORLD, nproc, error )
   Call MPI_Comm_rank( MPI_COMM_WORLD, me   , error )
@@ -159,11 +165,20 @@ Program scf_example
   If( me == 0 ) Then
      Write( *, * ) 'n, ns, nk, ne'
      Read ( *, * )  n, ns, nk, ne
+     Write( *, * ) 'Split level parallelism'
+     Read ( *, * )  split_parallel
+     Write( *, * ) 'Running on ', nproc, ' processes'
+     Write( *, * ) n , 'basis functions'
+     Write( *, * ) ns, 'spins'
+     Write( *, * ) nk, 'K-points'
+     Write( *, * ) ne, 'electrons'
+     Write( *, * ) 'Using split level parallelism ?', split_parallel
   End If
   Call MPI_Bcast( n , 1, MPI_Integer, 0, MPI_COMM_World, error )
   Call MPI_Bcast( ns, 1, MPI_Integer, 0, MPI_COMM_World, error )
   Call MPI_Bcast( nk, 1, MPI_Integer, 0, MPI_COMM_World, error )
   Call MPI_Bcast( ne, 1, MPI_Integer, 0, MPI_COMM_World, error )
+  Call MPI_Bcast( split_parallel, 1, MPI_Logical, 0, MPI_COMM_World, error )
 
   Allocate( rtmp1( 1:n, 1:n ) )
   Allocate( rtmp2( 1:n, 1:n ) )
@@ -254,7 +269,7 @@ Program scf_example
      End Do
   End Do
 
-  Call scf_step( ns, k_types, k_points, H, S, ne, P )
+  Call scf_step( ns, k_types, k_points, H, S, ne, split_parallel, P )
 
   Allocate( Qr( 1:n, 1:n ) )
   Allocate( Qc( 1:n, 1:n ) )
