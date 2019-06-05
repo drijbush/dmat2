@@ -65,7 +65,7 @@ Module ks_array_module
      Generic  , Public :: Operator( - )           => subtract_diagonal                 !! Subtract a diagonal matrix from a general one
      Generic  , Public :: Operator( - )           => diagonal_subtract                 !! Subtract a general matrix from a diagonal one
      Procedure, Public :: diag                    => ks_array_diag                     !! Diagonalise each matrix
-     Generic  , Public :: Operator( .Choleski. )  => choleski                          !! choleski decompose a matrix
+     Generic  , Public :: Operator( .Choleski. )  => choleski                          !! Choleski decompose a matrix
      Generic  , Public :: Operator( .TrInv. )     => tr_inv                            !! Invert a lower traingular set of matrices
      Procedure, Public :: extract                 => ks_array_extract                  !! Extract a patch from the matrices and return a new ks_array holding it
      Generic  , Public :: set_by_global           => set_by_global_r, set_by_global_c  !! Set patches of an element
@@ -123,7 +123,7 @@ Contains
     
     Integer, Intent( In ), Optional :: nb !! Set a default blocking factor
 
-    If( .Not. present( nb ) ) Then
+    If( .Not. Present( nb ) ) Then
        Call ks_matrix_init
     Else
        Call ks_matrix_init( nb )
@@ -529,7 +529,7 @@ Contains
 
   Subroutine ks_array_join_ks( A, joined_A, redistribute )
 
-    !! Split a ks_array A so the resulting ks_array is ks point distributed
+    !! Re-join a previously split ks_array A so that each matrix in it is distributed across all the processes
 
     Use mpi             , Only : MPI_Comm_rank, MPI_Allreduce, MPI_IN_PLACE, MPI_INTEGER, MPI_SUM
     Use ks_matrix_module, Only : ks_matrix, ks_matrix_comm_to_base, ks_matrix_remap_data
