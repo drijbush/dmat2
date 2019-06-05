@@ -220,7 +220,7 @@ Module distributed_matrix_module
      End Subroutine set_global_complex
 
      Subroutine get_global_real( A, m, n, p, q, data )
-       !! Get values from a real    array using global indexing
+       !! Get values from a real array using global indexing
        Import :: wp
        Import :: distributed_matrix
        Implicit None
@@ -438,7 +438,7 @@ Contains
 
     Use matrix_mapping_module, Only : matrix_mapping_finalise
 
-    ! Reset the blocking facto to the default
+    ! Reset the blocking factor to the default
     Call distributed_matrix_set_default_blocking( default_block_fac )
 
     Call matrix_mapping_finalise
@@ -608,7 +608,7 @@ Contains
 
     Logical :: is_invalid, is_halting
 
-    ! Need to fix if n, m smaller than blocking fac
+    ! NEED TO FIX IF N, M SMALLER THAN BLOCKING FAC
     mb = block_fac
     nb = block_fac
     mb = Min( mb, nb )
@@ -647,7 +647,7 @@ Contains
        ! And reset the halting mode
        Call ieee_set_halting_mode( ieee_invalid, is_halting )
     Else
-       ! The processor doesn't support ieee and doesn't support halting control under ieee
+       ! The processor doesn't support ieee or doesn't support halting control under ieee
        ! Simply initialise to a very big value
        A%data = Huge( A%data )
     End If
@@ -718,7 +718,7 @@ Contains
        ! And reset the halting mode
        Call ieee_set_halting_mode( ieee_invalid, is_halting )
     Else
-       ! The processor doesn't support ieee and doesn't support halting control under ieee
+       ! The processor doesn't support ieee or doesn't support halting control under ieee
        ! Simply initialise to a very big value
        A%data = Huge( Real( A%data, wp ) )
     End If
@@ -839,6 +839,7 @@ Contains
     Real( wp ), Dimension( m:, p: )    , Intent( In    ) :: data
 
     Stop "Trying to set complex matrix with real data in complex_matrix_set_global_real"
+    ! Shut the compiler up about unused vars
     Write( *, * ) A%data, m, n, p, q, data
 
   End Subroutine complex_matrix_set_global_real
@@ -932,6 +933,7 @@ Contains
 !!!!HACK TO WORK AROUND BUG IN MVAPICH2
 !!!!    Call MPI_Allreduce( MPI_IN_PLACE, data, Size( data ), handle, MPI_SUM, A%matrix_map%get_comm(), error )
     Call MPI_Sizeof( rdum, rsize, error )
+    ! Note MPI_Type_match_size does NOT create a new handle, it returns the value of an exisiting one. Hence no need to free
     Call MPI_Type_match_size( MPI_TYPECLASS_REAL, rsize, handle, error )
     Call MPI_Allreduce( MPI_IN_PLACE, data, Size( data ), handle, MPI_SUM, A%matrix_map%get_comm(), error )
        
@@ -949,6 +951,7 @@ Contains
     Complex( wp ), Dimension( m:, p: ) , Intent(   Out ) :: data
 
     Stop "Trying to get from real matrix into complex data in real_matrix_get_global_complex"
+    ! Shut the compiler up about unused vars
     data = 0.0_wp
     Write( *, * ) A%data, m, n, p, q
 
@@ -965,7 +968,8 @@ Contains
     Integer                            , Intent( In    ) :: q
     Real( wp ), Dimension( m:, p: )    , Intent(   Out ) :: data
 
-    Stop "Trying to get from real matrix into complex data in complex_matrix_get_global_real"
+    Stop "Trying to get from complex matrix into real data in complex_matrix_get_global_real"
+    ! Shut the compiler up about unused vars
     data = 0.0_wp
     Write( *, * ) A%data, m, n, p, q
 
@@ -1020,6 +1024,7 @@ Contains
 !!!!HACK TO WORK AROUND BUG IN MVAPICH2
 !!!!    Call MPI_Allreduce( MPI_IN_PLACE, data, Size( data ), handle, MPI_SUM, A%matrix_map%get_comm(), error )
     Call MPI_sizeof( cdum, csize, error )
+    ! Note MPI_Type_match_size does NOT create a new handle, it returns the value of an exisiting one. Hence no need to free
     Call MPI_type_match_size( MPI_Typeclass_complex, csize, handle, error )
     Call MPI_Allreduce( MPI_In_place, data, Size( data ), handle, MPI_Sum, A%matrix_map%get_comm(), error )
        
@@ -1339,7 +1344,7 @@ Contains
        ! Neither matrix to be used in tranposed form
        ! Perform A -> A + B
        ! First check the matrices are compatible
-       If( mA /= mb .Or. nA /= nB ) Then
+       If( mA /= mB .Or. nA /= nB ) Then
           Stop "Incompatible sizes in real_add_real" 
        End If
        ! Shape of the result
@@ -1354,7 +1359,7 @@ Contains
        ! A not transposed, B to be used in transposed form
        ! Perform A -> A + Tranpose( B )
        ! First check the matrices are compatible
-       If( mA /= nb .Or. nA /= mB ) Then
+       If( mA /= nB .Or. nA /= mB ) Then
           Stop "Incompatible sizes in real_add_real" 
        End If
        ! Shape of the result
@@ -1369,7 +1374,7 @@ Contains
        ! A tranposed, B not transposed
        ! Perform B -> B + Tranpose( A )
        ! First check the matrices are compatible
-       If( mA /= nb .Or. nA /= mB ) Then
+       If( mA /= nB .Or. nA /= mB ) Then
           Stop "Incompatible sizes in real_add_real" 
        End If
        ! Shape of the result
@@ -1385,7 +1390,7 @@ Contains
        ! THIS IS THE TRICKSY ONE
        ! Perform A -> A + B AND THEN indicate the matrix is returned in tranposed form to avoid comms
        ! First check the matrices are compatible
-       If( mA /= mb .Or. nA /= nB ) Then
+       If( mA /= mB .Or. nA /= nB ) Then
           Stop "Incompatible sizes in real_add_real" 
        End If
        ! Shape of the result
@@ -1478,7 +1483,7 @@ Contains
        ! Neither matrix to be used in tranposed form
        ! Perform A -> A + B
        ! First check the matrices are compatible
-       If( mA /= mb .Or. nA /= nB ) Then
+       If( mA /= mB .Or. nA /= nB ) Then
           Stop "Incompatible sizes in real_add_real" 
        End If
        ! Shape of the result
@@ -1493,7 +1498,7 @@ Contains
        ! A not transposed, B to be used in transposed form
        ! Perform A -> A + Tranpose( B )
        ! First check the matrices are compatible
-       If( mA /= nb .Or. nA /= mB ) Then
+       If( mA /= nB .Or. nA /= mB ) Then
           Stop "Incompatible sizes in real_add_real" 
        End If
        ! Shape of the result
@@ -1508,7 +1513,7 @@ Contains
        ! A tranposed, B not transposed
        ! Perform B -> B + Tranpose( A )
        ! First check the matrices are compatible
-       If( mA /= nb .Or. nA /= mB ) Then
+       If( mA /= nB .Or. nA /= mB ) Then
           Stop "Incompatible sizes in real_add_real" 
        End If
        ! Shape of the result
@@ -1524,7 +1529,7 @@ Contains
        ! THIS IS THE TRICKSY ONE
        ! Perform A -> A + B AND THEN indicate the matrix is returned in tranposed form to avoid comms
        ! First check the matrices are compatible
-       If( mA /= mb .Or. nA /= nB ) Then
+       If( mA /= mB .Or. nA /= nB ) Then
           Stop "Incompatible sizes in real_add_real" 
        End If
        ! Shape of the result
@@ -1721,7 +1726,7 @@ Contains
        ! Neither matrix to be used in tranposed form
        ! Perform A -> -B + A
        ! First check the matrices are compatible
-       If( mA /= mb .Or. nA /= nB ) Then
+       If( mA /= mB .Or. nA /= nB ) Then
           Stop "Incompatible sizes in real_subtract_real" 
        End If
        ! Shape of the result
@@ -1736,7 +1741,7 @@ Contains
        ! A not transposed, B to be used in transposed form
        ! Perform A -> -Tranpose( B ) + A
        ! First check the matrices are compatible
-       If( mA /= nb .Or. nA /= mB ) Then
+       If( mA /= nB .Or. nA /= mB ) Then
           Stop "Incompatible sizes in real_subtract_real" 
        End If
        ! Shape of the result
@@ -1751,7 +1756,7 @@ Contains
        ! A tranposed, B not transposed
        ! Perform B -> Tranpose( A ) - B
        ! First check the matrices are compatible
-       If( mA /= nb .Or. nA /= mB ) Then
+       If( mA /= nB .Or. nA /= mB ) Then
           Stop "Incompatible sizes in real_subtract_real" 
        End If
        ! Shape of the result
@@ -1767,7 +1772,7 @@ Contains
        ! THIS IS THE TRICKSY ONE
        ! Perform A -> -B + A AND THEN indicate the matrix is returned in tranposed form to avoid comms
        ! First check the matrices are compatible
-       If( mA /= mb .Or. nA /= nB ) Then
+       If( mA /= mB .Or. nA /= nB ) Then
           Stop "Incompatible sizes in real_subtract_real" 
        End If
        ! Shape of the result
@@ -1799,6 +1804,7 @@ Contains
     Class( complex_distributed_matrix ), Intent( In ) :: B
 
     Stop "Illegal combination of arguments in real_subtract_complex"
+    ! Silly lines to stop compiler warning about unused vars
     Deallocate( C )
     Write( *, * ) A%data, B%data
 
@@ -1814,6 +1820,7 @@ Contains
     Class(    real_distributed_matrix ), Intent( In ) :: B
 
     Stop "Illegal combination of arguments in complex_subtract_real"
+    ! Silly lines to stop compiler warning about unused vars
     Deallocate( C )
     Write( *, * ) A%data, B%data
     
@@ -1860,7 +1867,7 @@ Contains
        ! Neither matrix to be used in tranposed form
        ! Perform A -> -B + A
        ! First check the matrices are compatible
-       If( mA /= mb .Or. nA /= nB ) Then
+       If( mA /= mB .Or. nA /= nB ) Then
           Stop "Incompatible sizes in real_subtract_real" 
        End If
        ! Shape of the result
@@ -1875,7 +1882,7 @@ Contains
        ! A not transposed, B to be used in transposed form
        ! Perform A -> -Tranpose( B ) + B
        ! First check the matrices are compatible
-       If( mA /= nb .Or. nA /= mB ) Then
+       If( mA /= nB .Or. nA /= mB ) Then
           Stop "Incompatible sizes in real_subtract_real" 
        End If
        ! Shape of the result
@@ -1890,7 +1897,7 @@ Contains
        ! A tranposed, B not transposed
        ! Perform B -> Tranpose( A ) - B
        ! First check the matrices are compatible
-       If( mA /= nb .Or. nA /= mB ) Then
+       If( mA /= nB .Or. nA /= mB ) Then
           Stop "Incompatible sizes in real_subtract_real" 
        End If
        ! Shape of the result
@@ -1906,7 +1913,7 @@ Contains
        ! THIS IS THE TRICKSY ONE
        ! Perform A -> -B + A AND THEN indicate the matrix is returned in tranposed form to avoid comms
        ! First check the matrices are compatible
-       If( mA /= mb .Or. nA /= nB ) Then
+       If( mA /= mB .Or. nA /= nB ) Then
           Stop "Incompatible sizes in real_subtract_real" 
        End If
        ! Shape of the result
@@ -2179,6 +2186,7 @@ Contains
     Real( wp ), Dimension( : )         , Allocatable, Intent(   Out ) :: E
 
     Stop "Illegal combination of arguments in complex_multiply_real"
+    ! Silly lines to stop compiler warning about unused vars
     Deallocate( E )
     Write( *, * ) A%data, Q%data
 
@@ -2195,6 +2203,7 @@ Contains
     Real( wp ), Dimension( : )         , Allocatable, Intent(   Out ) :: E
 
     Stop "Illegal combination of arguments in complex_multiply_real"
+    ! Silly lines to stop compiler warning about unused vars
     Deallocate( E )
     Write( *, * ) A%data, Q%data
 
@@ -2658,6 +2667,7 @@ Contains
     Logical                            , Intent( In    ) :: is_B_dummy  !! If true the destination is NOT on this process
 
     Stop "Illegal combination of arguments in complex_remap_real"
+    ! Silly lines to stop compiler warning about unused vars
     Write( *, * ) A%data, is_A_dummy, parent_comm, B%data, is_B_dummy
     
   End Subroutine complex_remap_real
@@ -2673,6 +2683,7 @@ Contains
     Logical                            , Intent( In    ) :: is_B_dummy  !! If true the destination is NOT on this process
 
     Stop "Illegal combination of arguments in real_remap_complex"
+    ! Silly lines to stop compiler warning about unused vars
     Write( *, * ) A%data, is_A_dummy, parent_comm, B%data, is_B_dummy
     
   End Subroutine real_remap_complex
