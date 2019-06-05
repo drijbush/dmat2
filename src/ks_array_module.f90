@@ -252,14 +252,18 @@ Contains
     Character( Len = * ) , Optional, Intent( In ) :: name
     Integer              , Optional, Intent( In ) :: verbosity
 
+    Integer, Dimension( :, : ), Allocatable :: dims
+    
     Integer, Dimension( : ), Allocatable :: this_comm_ranks
     Integer, Dimension( : ), Allocatable :: packed_ranks
+    Integer, Dimension( : ), Allocatable :: k
     
-    Integer :: me, nproc
+    Integer :: me, nproc, me_ks
     Integer :: error
     Integer :: n_ks
     Integer :: n_packed_ranks
     Integer :: ks, my_ks
+    Integer :: s
     Integer :: i
 
     Logical :: in_range
@@ -268,6 +272,28 @@ Contains
     Call MPI_Comm_size( A%parent_communicator, nproc, error )
 
     n_ks = Size( A%all_k_point_info )
+
+    ! Get the size of each matrix - if the matrix is distributed in split mode
+    ! we won't neccessarily know it for each k point so gather the data from the zero
+    ! rank process resonsible at each k/spin
+    Allocate( dims( 1:2, 1:n_ks ) )
+    dims = 0
+    Do ks = 1, n_ks
+       ! Work out if I hold this k/spin point
+       my_ks = A%get_my_ks_index( ks )
+       If( my_ks /= NOT_ME ) Then
+          k = A%all_k_point_info( ks )%k_indices
+          s = A%all_k_point_info( ks )%spin
+          ! I hold this k_point. If I am the zero ranked process store the data
+          Call MPI_Comm_rank( A%my_k_points( my_ks )%communicator, me_ks, error )
+          If( me_ks == 0 ) Then
+             dims( 1, ks ) = A%size( k, s, 1 )
+             dims( 2, ks ) = A%size( k, s, 2 )
+          End If
+       End If
+    End Do
+    ! Now replicate the data
+    Call MPI_Allreduce( MPI_IN_PLACE, dims, Size( dims ), MPI_INTEGER, MPI_SUM, A%parent_communicator, error )
     
     If( me == 0 ) Then
        Write( *, * )
@@ -277,11 +303,12 @@ Contains
           Write( *, '( a )' ) 'Information on a ks_array'
        End If
        Write( *, '( a )' ) 'This ks array holds the following spins and k points'
-       Write( *, '( a, t10, a, t30, a )' ) 'Spin', 'Indices', 'Data Type'
+       Write( *, '( a, t10, a, t30, a, t50, a )' ) 'Spin', 'Indices', 'Data Type', 'Dimensions'
        Do ks = 1, n_ks
-          Write( *, '( i0, t10, "( ", i2, ", ", i2, ", ", i2, " )", t30, a )' )               &
-               A%all_k_point_info( ks )%spin, A%all_k_point_info( ks )%k_indices,             &
-               Merge( 'Real   ', 'Complex', A%all_k_point_info( ks )%k_type == K_POINT_REAL )
+          Write( *, '( i0, t10, "( ", i2, ", ", i2, ", ", i2, " )", t30, a, t45, i8, "x", i0 )' ) &
+               A%all_k_point_info( ks )%spin, A%all_k_point_info( ks )%k_indices,                 &
+               Merge( 'Real   ', 'Complex', A%all_k_point_info( ks )%k_type == K_POINT_REAL ),    &
+               dims( :, ks )
        End Do
     End If
 
