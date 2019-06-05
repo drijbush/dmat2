@@ -95,11 +95,11 @@ Contains
     ! Extract the evecs for the occupied states into a new distributed matrix
     Qds = Qds%extract( 1, n, 1, ne )
 
+    ! Report some information about the layout of the resulting evecs
+    Call Qds%print_info( 'Qds ', 9999 )
+
     ! Form the density matrix - note dealing with rectangular matrices
     Pds = Qds * .Dagger. Qds
-
-    ! Report some information about the layout of the resulting density matrix
-    Call Pds%print_info( 'Pds ', 9999 )
 
     ! Re-replicate into the result array
     Do spin = 1, ns
