@@ -930,10 +930,10 @@ Contains
     Call MPI_Type_create_f90_real( Precision( data ), Range( data ), handle, error )
     ! Replicate the data
 !!!!HACK TO WORK AROUND BUG IN MVAPICH2
-!!!!!$    Call MPI_Allreduce( MPI_IN_PLACE, data, Size( data ), handle, MPI_SUM, A%matrix_map%get_comm(), error )
+!!!!    Call MPI_Allreduce( MPI_IN_PLACE, data, Size( data ), handle, MPI_SUM, A%matrix_map%get_comm(), error )
     Call MPI_Sizeof( rdum, rsize, error )
     Call MPI_Type_match_size( MPI_TYPECLASS_REAL, rsize, handle, error )
-    Call MPI_Allreduce( MPI_IN_PLACE, data, Size( data ), MPI_DOUBLE_PRECISION, MPI_SUM, A%matrix_map%get_comm(), error )
+    Call MPI_Allreduce( MPI_IN_PLACE, data, Size( data ), handle, MPI_SUM, A%matrix_map%get_comm(), error )
        
   End Subroutine real_matrix_get_global_real
 
@@ -985,7 +985,7 @@ Contains
     Integer                            , Intent( In    ) :: q
     Complex( wp ), Dimension( m:, p: ) , Intent(   Out ) :: data
 
-    Real( wp ) :: cdum
+    Complex( wp ) :: cdum
 
     Integer :: i_glob, j_glob
     Integer :: i_loc , j_loc
@@ -1018,10 +1018,10 @@ Contains
     Call MPI_Type_create_f90_complex( Precision( data ), Range( data ), handle, error )
     ! Replicate the data
 !!!!HACK TO WORK AROUND BUG IN MVAPICH2
-!!!!!$    Call MPI_Allreduce( MPI_IN_PLACE, data, Size( data ), handle, MPI_SUM, A%matrix_map%get_comm(), error )
+!!!!    Call MPI_Allreduce( MPI_IN_PLACE, data, Size( data ), handle, MPI_SUM, A%matrix_map%get_comm(), error )
     Call MPI_sizeof( cdum, csize, error )
     Call MPI_type_match_size( MPI_Typeclass_complex, csize, handle, error )
-    Call MPI_Allreduce( MPI_In_place, data, Size( data ), MPI_double_complex, MPI_Sum, A%matrix_map%get_comm(), error )
+    Call MPI_Allreduce( MPI_In_place, data, Size( data ), handle, MPI_Sum, A%matrix_map%get_comm(), error )
        
   End Subroutine complex_matrix_get_global_complex
 
@@ -2618,219 +2618,6 @@ Contains
     End Do
     
   End Subroutine set_global_to_local
-
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-
-
-
-
-
-  
-
-!!$  Function matrix_solve_real( A, B ) Result( C )
-!!$
-!!$    ! Need to think tranposes!!!
-!!$
-!!$    Class( real_distributed_matrix ), Allocatable :: C
-!!$
-!!$    Class( real_distributed_matrix ), Intent( In ) :: A
-!!$    Class( real_distributed_matrix ), Intent( In ) :: B
-!!$
-!!$    Class( real_distributed_matrix ), Allocatable :: R
-!!$
-!!$    Integer, Dimension( : ), Allocatable :: pivots
-!!$
-!!$    Integer :: m, mb, nrhs
-!!$    Integer :: error
-!!$
-!!$    ! Otherwise A, B overwritten by pdgesv, Grrrrrr
-!!$    Allocate( R, Source = A )
-!!$    Allocate( C, Source = B )
-!!$
-!!$    Call R%matrix_map%get_data( m = m, mb = mb )
-!!$    Call C%matrix_map%get_data( n = nrhs )
-!!$    Allocate( pivots( 1:m + mb ) )
-!!$    Call pdgesv( m, nrhs, R%data, 1, 1, R%matrix_map%get_descriptor(), pivots, &
-!!$                          C%data, 1, 1, C%matrix_map%get_descriptor(), error )
-!!$    If( error /= 0 ) Then
-!!$       Deallocate( C )
-!!$    End If
-!!$    
-!!$  End Function matrix_solve_real
-!!$
-!!$  Function matrix_solve_complex( A, B ) Result( C )
-!!$
-!!$    ! Need to think tranposes!!!
-!!$
-!!$    Class( complex_distributed_matrix ), Allocatable :: C
-!!$
-!!$    Class( complex_distributed_matrix ), Intent( In ) :: A
-!!$    Class( complex_distributed_matrix ), Intent( In ) :: B
-!!$
-!!$    Class( complex_distributed_matrix ), Allocatable :: R
-!!$
-!!$    Integer, Dimension( : ), Allocatable :: pivots
-!!$
-!!$    Integer :: m, mb, nrhs
-!!$    Integer :: error
-!!$
-!!$    ! Otherwise A, B overwritten by pdgesv, Grrrrrr
-!!$    Allocate( R, Source = A )
-!!$    Allocate( C, Source = B )
-!!$
-!!$    Call R%matrix_map%get_data( m = m, mb = mb )
-!!$    Call C%matrix_map%get_data( n = nrhs )
-!!$    Allocate( pivots( 1:m + mb ) )
-!!$    Call pzgesv( m, nrhs, R%data, 1, 1, R%matrix_map%get_descriptor(), pivots, &
-!!$                          C%data, 1, 1, C%matrix_map%get_descriptor(), error )
-!!$    If( error /= 0 ) Then
-!!$       Deallocate( C )
-!!$    End If
-!!$    
-!!$  End Function matrix_solve_complex
-!!$
-!!$  Subroutine matrix_set_local_real( matrix, m, n, p, q, data )
-!!$
-!!$    ! Sets the data ( m:n, p:q ) in the local matrix
-!!$
-!!$    Class( real_distributed_matrix ), Intent( InOut ) :: matrix
-!!$    Integer                         , Intent( In    ) :: m
-!!$    Integer                         , Intent( In    ) :: n
-!!$    Integer                         , Intent( In    ) :: p
-!!$    Integer                         , Intent( In    ) :: q
-!!$    Real( wp ), Dimension( m:, p: ) , Intent( In    ) :: data
-!!$
-!!$    matrix%data( m:n, p:q ) = data( m:n, p:q )
-!!$    
-!!$  End Subroutine matrix_set_local_real
-!!$
-!!$  Subroutine matrix_set_local_complex( matrix, m, n, p, q, data )
-!!$
-!!$    ! Sets the data ( m:n, p:q ) in the local matrix
-!!$
-!!$    Class( complex_distributed_matrix ), Intent( InOut ) :: matrix
-!!$    Integer                            , Intent( In    ) :: m
-!!$    Integer                            , Intent( In    ) :: n
-!!$    Integer                            , Intent( In    ) :: p
-!!$    Integer                            , Intent( In    ) :: q
-!!$    Complex( wp ), Dimension( m:, p: ) , Intent( In    ) :: data
-!!$
-!!$    matrix%data( m:n, p:q ) = data( m:n, p:q )
-!!$    
-!!$  End Subroutine matrix_set_local_complex
-!!$
-!!$  Subroutine matrix_get_local_real( matrix, m, n, p, q, data )
-!!$
-!!$    ! Gets the data ( m:n, p:q ) in the local matrix
-!!$
-!!$    Class( real_distributed_matrix ), Intent( In    ) :: matrix
-!!$    Integer                         , Intent( In    ) :: m
-!!$    Integer                         , Intent( In    ) :: n
-!!$    Integer                         , Intent( In    ) :: p
-!!$    Integer                         , Intent( In    ) :: q
-!!$    Real( wp ), Dimension( m:, p: ) , Intent(   Out ) :: data
-!!$
-!!$    data( m:n, p:q ) = matrix%data( m:n, p:q )
-!!$       
-!!$  End Subroutine matrix_get_local_real
-!!$
-!!$  Subroutine matrix_get_local_complex( matrix, m, n, p, q, data )
-!!$
-!!$    ! Gets the data ( m:n, p:q ) in the local matrix
-!!$
-!!$    Class( complex_distributed_matrix ), Intent( In    ) :: matrix
-!!$    Integer                            , Intent( In    ) :: m
-!!$    Integer                            , Intent( In    ) :: n
-!!$    Integer                            , Intent( In    ) :: p
-!!$    Integer                            , Intent( In    ) :: q
-!!$    Complex( wp ), Dimension( m:, p: ) , Intent(   Out ) :: data
-!!$
-!!$    data( m:n, p:q ) = matrix%data( m:n, p:q )
-!!$       
-!!$  End Subroutine matrix_get_local_complex
-!!$  
-!!$
-!!$
-!!$
-!!$  Subroutine matrix_set_to_identity_real( A ) 
-!!$
-!!$    Class( real_distributed_matrix ), Intent( InOut ) :: A
-!!$
-!!$    Integer :: m
-!!$    Integer :: i_glob
-!!$    Integer :: i_loc, j_loc
-!!$    
-!!$    A%data = 0.0_wp
-!!$
-!!$    Call A%matrix_map%get_data( m = m )
-!!$    Do i_glob = 1, m
-!!$       i_loc = A%global_to_local_rows( i_glob )
-!!$       j_loc = A%global_to_local_cols( i_glob )
-!!$       If(  i_loc /= distributed_matrix_NOT_ME .And. &
-!!$            j_loc /= distributed_matrix_NOT_ME ) Then
-!!$          A%data( i_loc, j_loc ) = 1.0_wp
-!!$       End If
-!!$    End Do
-!!$
-!!$  End Subroutine matrix_set_to_identity_real
-!!$
-!!$  Subroutine matrix_set_to_identity_complex( A ) 
-!!$
-!!$    Class( complex_distributed_matrix ), Intent( InOut ) :: A
-!!$
-!!$    Integer :: m
-!!$    Integer :: i_glob
-!!$    Integer :: i_loc, j_loc
-!!$    
-!!$    A%data = 0.0_wp
-!!$
-!!$    Call A%matrix_map%get_data( m = m )
-!!$    Do i_glob = 1, m
-!!$       i_loc = A%global_to_local_rows( i_glob )
-!!$       j_loc = A%global_to_local_cols( i_glob )
-!!$       If(  i_loc /= distributed_matrix_NOT_ME .And. &
-!!$            j_loc /= distributed_matrix_NOT_ME ) Then
-!!$          A%data( i_loc, j_loc ) = 1.0_wp
-!!$       End If
-!!$    End Do
-!!$
-!!$  End Subroutine matrix_set_to_identity_complex
 
   Subroutine real_remap( A, is_A_dummy, parent_comm, B, is_B_dummy )
 
