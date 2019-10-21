@@ -241,7 +241,8 @@ Program test_distributed_matrix
         End If
         Call test_ks_array_plus
         Call test_ks_array_minus
-
+        Call test_ks_assign_real
+        
      Case("ks_add")
         ! Adds
         Call test_ks_split_add_NN
