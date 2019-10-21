@@ -922,7 +922,7 @@ Contains
   Subroutine real_matrix_get_global_real( A, m, n, p, q, data )
 
     Use mpi, Only : MPI_Type_create_f90_real, MPI_Sizeof, MPI_Type_match_size, MPI_Allreduce, MPI_In_place, MPI_Sum, &
-         MPI_Double_precision, MPI_Typeclass_real
+         MPI_Typeclass_real
     
     !! Gets the data ( m:n, p:q ) in the global A
 
@@ -1013,7 +1013,7 @@ Contains
   Subroutine complex_matrix_get_global_complex( A, m, n, p, q, data )
 
     Use mpi, Only : MPI_Type_create_f90_complex, MPI_Sizeof, MPI_Type_match_size, MPI_Allreduce, MPI_In_place, MPI_Sum, &
-         MPI_Double_complex, MPI_Typeclass_complex
+         MPI_Typeclass_complex
 
     !! Gets the data ( m:n, p:q ) in the global matrix
 
