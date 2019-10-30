@@ -1033,7 +1033,7 @@ contains
 
     Use numbers_module , Only : wp
     Use ks_array_module, Only : ks_array, ks_array_init, ks_array_comm_to_base, ks_array_finalise, &
-      K_POINT_REAL, K_POINT_COMPLEX
+         K_POINT_REAL, K_POINT_COMPLEX
     Use mpi            , Only : mpi_bcast, mpi_comm_world, mpi_double_complex, mpi_double_precision
 
 
@@ -1066,30 +1066,32 @@ contains
     A_c = Huge( 1.0_wp )
     C_c = Huge( 1.0_wp )
     If( me == 0 ) Then
-      k_types = K_POINT_REAL
-      Do While( All( k_types == K_POINT_REAL ) .Or. All( k_types == K_POINT_COMPLEX ) )
-        Do kpoint = 1, nk
-          k_points( :, kpoint ) = [ kpoint - 1, 0, 0 ]
-          Call Random_number( rand )
-          k_types( kpoint ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
-        End Do
-      End Do
-      Do spin = 1, ns
-        Do kpoint = 1, nk
-          If( k_types( kpoint ) == K_POINT_REAL ) Then
-            ! Real
-            Call Random_number( A_r( :, :, kpoint, spin ) )
-            C_r( :, :, kpoint, spin ) = 3.0_wp * A_r( :, :, kpoint, spin )
-          Else
-            ! Complex
-            Allocate( rand1( 1:m, 1:n ), rand2( 1:m, 1:n ) )
-            Call Random_number( rand1 ); Call Random_number( rand2 ) 
-            A_c( :, :, kpoint, spin ) = Cmplx( rand1, rand2, wp )
-            Deallocate( rand1, rand2 )
-            C_c( :, :, kpoint, spin ) = 3.0_wp * A_c( :, :, kpoint, spin )
-          End If
-        End Do
-      End Do
+       k_types = K_POINT_REAL
+       If( nk /= 1 ) Then
+          Do While( All( k_types == K_POINT_REAL ) .Or. All( k_types == K_POINT_COMPLEX ) )
+             Do kpoint = 1, nk
+                k_points( :, kpoint ) = [ kpoint - 1, 0, 0 ]
+                Call Random_number( rand )
+                k_types( kpoint ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
+             End Do
+          End Do
+       End If
+       Do spin = 1, ns
+          Do kpoint = 1, nk
+             If( k_types( kpoint ) == K_POINT_REAL ) Then
+                ! Real
+                Call Random_number( A_r( :, :, kpoint, spin ) )
+                C_r( :, :, kpoint, spin ) = 3.0_wp * A_r( :, :, kpoint, spin )
+             Else
+                ! Complex
+                Allocate( rand1( 1:m, 1:n ), rand2( 1:m, 1:n ) )
+                Call Random_number( rand1 ); Call Random_number( rand2 ) 
+                A_c( :, :, kpoint, spin ) = Cmplx( rand1, rand2, wp )
+                Deallocate( rand1, rand2 )
+                C_c( :, :, kpoint, spin ) = 3.0_wp * A_c( :, :, kpoint, spin )
+             End If
+          End Do
+       End Do
     End If
 
     Call mpi_bcast( k_points, Size( k_points ), mpi_integer, 0, mpi_comm_world, error )
@@ -1110,40 +1112,40 @@ contains
     Call Am_base%create( m, n, base )
     Call Am_base%split_ks( 2.0_wp, Am )
     If( verbose ) Then
-      Call Am%print_info( 'Am - the split matrix', 9999 )
+       Call Am%print_info( 'Am - the split matrix', 9999 )
     End If
 
     Do spin = 1, ns
-      Do kpoint = 1, nk
-        If( k_types( kpoint ) == K_POINT_REAL ) Then
-          Call Am%set_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, A_r( :, :, kpoint, spin ) )
-        Else
-          Call Am%set_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, A_c( :, :, kpoint, spin ) )
-        End If
-      End Do
+       Do kpoint = 1, nk
+          If( k_types( kpoint ) == K_POINT_REAL ) Then
+             Call Am%set_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, A_r( :, :, kpoint, spin ) )
+          Else
+             Call Am%set_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, A_c( :, :, kpoint, spin ) )
+          End If
+       End Do
     End Do
 
     Cm = 3.0_wp * Am
     If( verbose ) Then
-      Call Cm%print_info( 'Cm_split - the result matrix', 9999 )
+       Call Cm%print_info( 'Cm_split - the result matrix', 9999 )
     End If
 
     max_diff = -1.0_wp
     Do spin = 1, ns
-      Do kpoint = 1, nk
-        If( k_types( kpoint ) == K_POINT_REAL ) Then
-          Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, tmp_r )
-          this_diff = Maxval( Abs( C_r( :, :, kpoint, spin ) - tmp_r ) )
-        Else
-          Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, tmp_c ) 
-          this_diff = Maxval( Abs( C_c( :, :, kpoint, spin ) - tmp_c ) )
-        End If
-        max_diff = Max( this_diff, max_diff )
-      End Do
+       Do kpoint = 1, nk
+          If( k_types( kpoint ) == K_POINT_REAL ) Then
+             Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, tmp_r )
+             this_diff = Maxval( Abs( C_r( :, :, kpoint, spin ) - tmp_r ) )
+          Else
+             Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, tmp_c ) 
+             this_diff = Maxval( Abs( C_c( :, :, kpoint, spin ) - tmp_c ) )
+          End If
+          max_diff = Max( this_diff, max_diff )
+       End Do
     End Do
     If( me == 0 ) Then
-      Write( *, error_format ) 'Error in ks_split pre-scale ', max_diff, &
-        Merge( passed, FAILED, max_diff < tol )
+       Write( *, error_format ) 'Error in ks_split pre-scale ', max_diff, &
+            Merge( passed, FAILED, max_diff < tol )
     End If
 
     Call ks_array_finalise
@@ -1154,7 +1156,7 @@ contains
 
     Use numbers_module , Only : wp
     Use ks_array_module, Only : ks_array, ks_array_init, ks_array_comm_to_base, ks_array_finalise, &
-      K_POINT_REAL, K_POINT_COMPLEX
+         K_POINT_REAL, K_POINT_COMPLEX
     Use mpi            , Only : mpi_bcast, mpi_comm_world, mpi_double_complex, mpi_double_precision
 
 
@@ -1187,30 +1189,32 @@ contains
     A_c = Huge( 1.0_wp )
     C_c = Huge( 1.0_wp )
     If( me == 0 ) Then
-      k_types = K_POINT_REAL
-      Do While( All( k_types == K_POINT_REAL ) .Or. All( k_types == K_POINT_COMPLEX ) )
-        Do kpoint = 1, nk
-          k_points( :, kpoint ) = [ kpoint - 1, 0, 0 ]
-          Call Random_number( rand )
-          k_types( kpoint ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
-        End Do
-      End Do
-      Do spin = 1, ns
-        Do kpoint = 1, nk
-          If( k_types( kpoint ) == K_POINT_REAL ) Then
-            ! Real
-            Call Random_number( A_r( :, :, kpoint, spin ) )
-            C_r( :, :, kpoint, spin ) = 3.0_wp * A_r( :, :, kpoint, spin )
-          Else
-            ! Complex
-            Allocate( rand1( 1:m, 1:n ), rand2( 1:m, 1:n ) )
-            Call Random_number( rand1 ); Call Random_number( rand2 ) 
-            A_c( :, :, kpoint, spin ) = Cmplx( rand1, rand2, wp )
-            Deallocate( rand1, rand2 )
-            C_c( :, :, kpoint, spin ) = 3.0_wp * A_c( :, :, kpoint, spin )
-          End If
-        End Do
-      End Do
+       k_types = K_POINT_REAL
+       If( nk /= 1 ) Then
+          Do While( All( k_types == K_POINT_REAL ) .Or. All( k_types == K_POINT_COMPLEX ) )
+             Do kpoint = 1, nk
+                k_points( :, kpoint ) = [ kpoint - 1, 0, 0 ]
+                Call Random_number( rand )
+                k_types( kpoint ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
+             End Do
+          End Do
+       End If
+       Do spin = 1, ns
+          Do kpoint = 1, nk
+             If( k_types( kpoint ) == K_POINT_REAL ) Then
+                ! Real
+                Call Random_number( A_r( :, :, kpoint, spin ) )
+                C_r( :, :, kpoint, spin ) = 3.0_wp * A_r( :, :, kpoint, spin )
+             Else
+                ! Complex
+                Allocate( rand1( 1:m, 1:n ), rand2( 1:m, 1:n ) )
+                Call Random_number( rand1 ); Call Random_number( rand2 ) 
+                A_c( :, :, kpoint, spin ) = Cmplx( rand1, rand2, wp )
+                Deallocate( rand1, rand2 )
+                C_c( :, :, kpoint, spin ) = 3.0_wp * A_c( :, :, kpoint, spin )
+             End If
+          End Do
+       End Do
     End If
 
     Call mpi_bcast( k_points, Size( k_points ), mpi_integer, 0, mpi_comm_world, error )
@@ -1231,40 +1235,40 @@ contains
     Call Am_base%create( m, n, base )
     Call Am_base%split_ks( 2.0_wp, Am )
     If( verbose ) Then
-      Call Am%print_info( 'Am - the split matrix', 9999 )
+       Call Am%print_info( 'Am - the split matrix', 9999 )
     End If
 
     Do spin = 1, ns
-      Do kpoint = 1, nk
-        If( k_types( kpoint ) == K_POINT_REAL ) Then
-          Call Am%set_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, A_r( :, :, kpoint, spin ) )
-        Else
-          Call Am%set_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, A_c( :, :, kpoint, spin ) )
-        End If
-      End Do
+       Do kpoint = 1, nk
+          If( k_types( kpoint ) == K_POINT_REAL ) Then
+             Call Am%set_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, A_r( :, :, kpoint, spin ) )
+          Else
+             Call Am%set_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, A_c( :, :, kpoint, spin ) )
+          End If
+       End Do
     End Do
 
     Cm = Am * 3.0_wp
     If( verbose ) Then
-      Call Cm%print_info( 'Cm_split - the result matrix', 9999 )
+       Call Cm%print_info( 'Cm_split - the result matrix', 9999 )
     End If
 
     max_diff = -1.0_wp
     Do spin = 1, ns
-      Do kpoint = 1, nk
-        If( k_types( kpoint ) == K_POINT_REAL ) Then
-          Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, tmp_r )
-          this_diff = Maxval( Abs( C_r( :, :, kpoint, spin ) - tmp_r ) )
-        Else
-          Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, tmp_c ) 
-          this_diff = Maxval( Abs( C_c( :, :, kpoint, spin ) - tmp_c ) )
-        End If
-        max_diff = Max( this_diff, max_diff )
-      End Do
+       Do kpoint = 1, nk
+          If( k_types( kpoint ) == K_POINT_REAL ) Then
+             Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, tmp_r )
+             this_diff = Maxval( Abs( C_r( :, :, kpoint, spin ) - tmp_r ) )
+          Else
+             Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, tmp_c ) 
+             this_diff = Maxval( Abs( C_c( :, :, kpoint, spin ) - tmp_c ) )
+          End If
+          max_diff = Max( this_diff, max_diff )
+       End Do
     End Do
     If( me == 0 ) Then
-      Write( *, error_format ) 'Error in ks_split post-scale ', max_diff, &
-        Merge( passed, FAILED, max_diff < tol )
+       Write( *, error_format ) 'Error in ks_split post-scale ', max_diff, &
+            Merge( passed, FAILED, max_diff < tol )
     End If
 
     Call ks_array_finalise
@@ -1275,7 +1279,7 @@ contains
 
     Use numbers_module , Only : wp
     Use ks_array_module, Only : ks_array, ks_array_init, ks_array_comm_to_base, ks_array_finalise, &
-      K_POINT_REAL, K_POINT_COMPLEX
+         K_POINT_REAL, K_POINT_COMPLEX
     Use mpi            , Only : mpi_bcast, mpi_comm_world, mpi_double_complex, mpi_double_precision
 
 
@@ -1312,37 +1316,39 @@ contains
     B_c = Huge( 1.0_wp )
     C_c = Huge( 1.0_wp )
     If( me == 0 ) Then
-      k_types = K_POINT_REAL
-      Do While( All( k_types == K_POINT_REAL ) .Or. All( k_types == K_POINT_COMPLEX ) )
-        Do kpoint = 1, nk
-          k_points( :, kpoint ) = [ kpoint - 1, 0, 0 ]
-          Call Random_number( rand )
-          k_types( kpoint ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
-        End Do
-      End Do
-      Do spin = 1, ns
-        Do kpoint = 1, nk
-          If( k_types( kpoint ) == K_POINT_REAL ) Then
-            ! Real
-            Call Random_number( A_r( :, :, kpoint, spin ) )
-            Call Random_number( B_r( :, :, kpoint, spin ) )
-            C_r( :, :, kpoint, spin ) = &
-              Matmul( A_r( :, :, kpoint, spin ), B_r( :, :, kpoint, spin ) )
-          Else
-            ! Complex
-            Allocate( rand1( 1:m, 1:k ), rand2( 1:m, 1:k ) )
-            Call Random_number( rand1 ); Call Random_number( rand2 ) 
-            A_c( :, :, kpoint, spin ) = Cmplx( rand1, rand2, wp )
-            Deallocate( rand1, rand2 )
-            Allocate( rand1( 1:k, 1:n ), rand2( 1:k, 1:n ) )
-            Call Random_number( rand1 ); Call Random_number( rand2 ) 
-            B_c( :, :, kpoint, spin ) = Cmplx( rand1, rand2, wp )
-            Deallocate( rand1, rand2 )
-            C_c( :, :, kpoint, spin ) = &
-              Matmul( A_c( :, :, kpoint, spin ), B_c( :, :, kpoint, spin ) )
-          End If
-        End Do
-      End Do
+       k_types = K_POINT_REAL
+       If( nk /= 1 ) Then
+          Do While( All( k_types == K_POINT_REAL ) .Or. All( k_types == K_POINT_COMPLEX ) )
+             Do kpoint = 1, nk
+                k_points( :, kpoint ) = [ kpoint - 1, 0, 0 ]
+                Call Random_number( rand )
+                k_types( kpoint ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
+             End Do
+          End Do
+       End If
+       Do spin = 1, ns
+          Do kpoint = 1, nk
+             If( k_types( kpoint ) == K_POINT_REAL ) Then
+                ! Real
+                Call Random_number( A_r( :, :, kpoint, spin ) )
+                Call Random_number( B_r( :, :, kpoint, spin ) )
+                C_r( :, :, kpoint, spin ) = &
+                     Matmul( A_r( :, :, kpoint, spin ), B_r( :, :, kpoint, spin ) )
+             Else
+                ! Complex
+                Allocate( rand1( 1:m, 1:k ), rand2( 1:m, 1:k ) )
+                Call Random_number( rand1 ); Call Random_number( rand2 ) 
+                A_c( :, :, kpoint, spin ) = Cmplx( rand1, rand2, wp )
+                Deallocate( rand1, rand2 )
+                Allocate( rand1( 1:k, 1:n ), rand2( 1:k, 1:n ) )
+                Call Random_number( rand1 ); Call Random_number( rand2 ) 
+                B_c( :, :, kpoint, spin ) = Cmplx( rand1, rand2, wp )
+                Deallocate( rand1, rand2 )
+                C_c( :, :, kpoint, spin ) = &
+                     Matmul( A_c( :, :, kpoint, spin ), B_c( :, :, kpoint, spin ) )
+             End If
+          End Do
+       End Do
     End If
 
     Call mpi_bcast( k_points, Size( k_points ), mpi_integer, 0, mpi_comm_world, error )
@@ -1365,46 +1371,46 @@ contains
     Call Am_base%create( m, k, base )
     Call Am_base%split_ks( 2.0_wp, Am )
     If( verbose ) Then
-      Call Am%print_info( 'Am - the split matrix', 9999 )
+       Call Am%print_info( 'Am - the split matrix', 9999 )
     End If
 
     Call Bm%create( k, n, Am )
     If( verbose ) Then
-      Call Bm%print_info( 'Bm - the derived matrix', 9999 )
+       Call Bm%print_info( 'Bm - the derived matrix', 9999 )
     End If
     Do spin = 1, ns
-      Do kpoint = 1, nk
-        If( k_types( kpoint ) == K_POINT_REAL ) Then
-          Call Am%set_by_global( k_points( :, kpoint ), spin, 1, m, 1, k, A_r( :, :, kpoint, spin ) )
-          Call Bm%set_by_global( k_points( :, kpoint ), spin, 1, k, 1, n, B_r( :, :, kpoint, spin ) )
-        Else
-          Call Am%set_by_global( k_points( :, kpoint ), spin, 1, m, 1, k, A_c( :, :, kpoint, spin ) )
-          Call Bm%set_by_global( k_points( :, kpoint ), spin, 1, k, 1, n, B_c( :, :, kpoint, spin ) )
-        End If
-      End Do
+       Do kpoint = 1, nk
+          If( k_types( kpoint ) == K_POINT_REAL ) Then
+             Call Am%set_by_global( k_points( :, kpoint ), spin, 1, m, 1, k, A_r( :, :, kpoint, spin ) )
+             Call Bm%set_by_global( k_points( :, kpoint ), spin, 1, k, 1, n, B_r( :, :, kpoint, spin ) )
+          Else
+             Call Am%set_by_global( k_points( :, kpoint ), spin, 1, m, 1, k, A_c( :, :, kpoint, spin ) )
+             Call Bm%set_by_global( k_points( :, kpoint ), spin, 1, k, 1, n, B_c( :, :, kpoint, spin ) )
+          End If
+       End Do
     End Do
 
     Cm = Am * Bm
     If( verbose ) Then
-      Call Cm%print_info( 'Cm_split - the result matrix', 9999 )
+       Call Cm%print_info( 'Cm_split - the result matrix', 9999 )
     End If
 
     max_diff = -1.0_wp
     Do spin = 1, ns
-      Do kpoint = 1, nk
-        If( k_types( kpoint ) == K_POINT_REAL ) Then
-          Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, tmp_r )
-          this_diff = Maxval( Abs( C_r( :, :, kpoint, spin ) - tmp_r ) )
-        Else
-          Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, tmp_c ) 
-          this_diff = Maxval( Abs( C_c( :, :, kpoint, spin ) - tmp_c ) )
-        End If
-        max_diff = Max( this_diff, max_diff )
-      End Do
+       Do kpoint = 1, nk
+          If( k_types( kpoint ) == K_POINT_REAL ) Then
+             Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, tmp_r )
+             this_diff = Maxval( Abs( C_r( :, :, kpoint, spin ) - tmp_r ) )
+          Else
+             Call Cm%get_by_global( k_points( :, kpoint ), spin, 1, m, 1, n, tmp_c ) 
+             this_diff = Maxval( Abs( C_c( :, :, kpoint, spin ) - tmp_c ) )
+          End If
+          max_diff = Max( this_diff, max_diff )
+       End Do
     End Do
     If( me == 0 ) Then
-      Write( *, error_format ) 'Error in ks_split matmul NN ', max_diff, &
-        Merge( passed, FAILED, max_diff < tol )
+       Write( *, error_format ) 'Error in ks_split matmul NN ', max_diff, &
+            Merge( passed, FAILED, max_diff < tol )
     End If
 
     Call ks_array_finalise

@@ -245,6 +245,9 @@ Program test_distributed_matrix
         
      Case("ks_add")
         ! Adds
+        If( me == 0 ) Then
+           Write( *, title_format ) 'Split distribution adds'
+        End If
         Call test_ks_split_add_NN
         Call test_ks_split_add_TN
         Call test_ks_split_add_NT

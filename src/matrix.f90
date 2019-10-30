@@ -629,6 +629,9 @@ Contains
 
     Call source_matrix%matrix_map%get_data( nprow = nprow, myprow = myprow )
     lda = numroc( m, mb, myprow, 0, nprow )
+    ! PBLAS deesn't understand modern Fortran and complains if lda is zero
+    ! which can occur for small matrices and big blocking factors
+    lda = Max( 1, lda )
 
     Call source_matrix%matrix_map%get_data( npcol = npcol, mypcol = mypcol )
     sda = numroc( n, nb, mypcol, 0, npcol )
@@ -699,6 +702,9 @@ Contains
 
     Call source_matrix%matrix_map%get_data( nprow = nprow, myprow = myprow )
     lda = numroc( m, mb, myprow, 0, nprow )
+    ! PBLAS deesn't understand modern Fortran and complains if lda is zero
+    ! which can occur for small matrices and big blocking factors
+    lda = Max( 1, lda )
 
     Call source_matrix%matrix_map%get_data( npcol = npcol, mypcol = mypcol )
     sda = numroc( n, nb, mypcol, 0, npcol )
