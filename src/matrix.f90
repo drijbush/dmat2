@@ -2181,9 +2181,12 @@ Contains
     Real( wp ), Dimension( : ), Allocatable :: work
 
     Integer, Dimension( : ), Allocatable :: iwork
+
+    Integer, Parameter :: diag_work_size_fiddle_factor_small_matrices = 15
     
     Integer :: nwork
-    Integer :: npcol
+    Integer :: npcol, nprow
+    Integer :: mb, nb
     Integer :: m
     Integer :: info
 
@@ -2202,6 +2205,16 @@ Contains
          work, -1, iwork, 0, info )
     nwork = Nint( work( 1 ) )
     nwork = nwork * diag_work_size_fiddle_factor ! From experience ...
+    ! Unfortunately there is a bug in scalapack that means this can still might not
+    ! be enough for small matrices on large numbers of processes. What follows is a complete
+    ! hack that seems to work around this, but there is no gaurantee it works
+    ! in all cases
+    ! The overhead won't be large as this only affects small cases
+    ! Note the bug also only affects the real symmetric case - hermitian diags are OK
+    Call A%matrix_map%get_data( nprow = nprow, npcol = npcol, mb = mb, nb = nb )
+    If( m <= Min( mb, nb ) * Min( nprow, npcol ) ) Then ! i.e. some processes don't have a full block
+       nwork = nwork * diag_work_size_fiddle_factor_small_matrices
+    End If
     Deallocate( work, iwork )
     Allocate(  work( 1:nwork ) )
     ! Scalapack recipe is behind the strange numbers
