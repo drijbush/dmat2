@@ -172,7 +172,7 @@ Module distributed_matrix_module
   
   Private
 
-  Integer, Parameter, Private :: diag_work_size_fiddle_factor = 4 ! From experience Scalapack sometimes returns too small a work size
+  Integer, Parameter, Private :: diag_work_size_fiddle_factor = 1 ! From experience Scalapack sometimes returns too small a work size
   
   Integer, Parameter, Private :: default_block_fac = 96
   Integer,            Private :: block_fac = default_block_fac
@@ -2182,7 +2182,7 @@ Contains
 
     Integer, Dimension( : ), Allocatable :: iwork
 
-    Integer, Parameter :: diag_work_size_fiddle_factor_small_matrices = 15
+    Integer, Parameter :: diag_work_size_fiddle_factor_small_matrices = 60
     
     Integer :: nwork
     Integer :: npcol, nprow
