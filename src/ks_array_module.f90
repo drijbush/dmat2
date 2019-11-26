@@ -934,9 +934,6 @@ Contains
 
     !! Diagonalise each matrix
 
-!!$    Use mpi, Only : mpi_comm_rank, mpi_isend, mpi_recv, mpi_wait, mpi_bcast, &
-!!$         mpi_sizeof, mpi_type_match_size, MPI_INTEGER, MPI_ANY_SOURCE, MPI_STATUS_IGNORE, &
-!!$         MPI_TYPECLASS_REAL
     Use mpi, Only : mpi_comm_rank, mpi_wait, &
          mpi_sizeof, mpi_type_match_size, MPI_INTEGER, MPI_ANY_SOURCE, MPI_STATUS_IGNORE, &
          MPI_TYPECLASS_REAL
@@ -1280,9 +1277,6 @@ Contains
 
   Subroutine ks_array_get_global_real( A, k, s, m, n, p, q, data )
 
-!!$    Use mpi, Only : MPI_Comm_rank, MPI_Isend, MPI_INTEGER, MPI_recv, MPI_ANY_SOURCE, &
-!!$         MPI_Wait, MPI_STATUS_IGNORE, MPI_Bcast, MPI_Sizeof, MPI_Type_match_size, &
-!!$         MPI_TYPECLASS_REAL
     Use mpi, Only : MPI_Comm_rank, MPI_INTEGER, MPI_ANY_SOURCE, &
          MPI_Wait, MPI_STATUS_IGNORE, MPI_Sizeof, MPI_Type_match_size, &
          MPI_TYPECLASS_REAL
@@ -1321,8 +1315,8 @@ Contains
 
     ! Need to replicate data over parent communicator if split ks points
     
-    ! Work out who holds this set of evals and send how many there are
-    ! the root node of the communicator holding them back to the root node of the parent communicator
+    ! Work out which set of processes hold this data, and send the rank of the root node of the
+    ! communicator for that set to the root node of the parent communicator
     Call mpi_comm_rank( A%parent_communicator, me_parent, error )
     sending_data = .False.
     If( my_ks /= NOT_ME ) Then
@@ -1339,9 +1333,11 @@ Contains
     If( sending_data ) Then
        Call mpi_wait( request, MPI_STATUS_IGNORE, error )
     End If
-    ! Now on root of parent bcast back to all
+    ! Now the root of the parent knows who owns the evals it can tell all other proceses
+    ! in the parent communicator where they will be coming from, and how many there are
     Call mpi_bcast( buff_recv, 1, MPI_INTEGER, 0, A%parent_communicator, error )
     ks_root = buff_recv 
+    ! And finally bcast out the values from the root node of the communicator that owns this set of evals
     Call mpi_sizeof( rdum, rsize, error )
     Call mpi_type_match_size( MPI_TYPECLASS_REAL, rsize, handle, error )
     Call mpi_bcast( data, Size( data ), handle, ks_root, A%parent_communicator, error )    
@@ -1354,9 +1350,6 @@ Contains
 
     Use, intrinsic :: iso_fortran_env, Only : character_storage_size
 
-!!$    Use mpi, Only : MPI_Comm_rank, MPI_Isend, MPI_INTEGER, MPI_recv, MPI_ANY_SOURCE, &
-!!$         MPI_Wait, MPI_STATUS_IGNORE, MPI_Bcast, MPI_Sizeof, MPI_Type_match_size, &
-!!$         MPI_TYPECLASS_COMPLEX
     Use mpi, Only : MPI_Comm_rank, MPI_INTEGER, MPI_ANY_SOURCE, &
          MPI_Wait, MPI_STATUS_IGNORE, MPI_Sizeof, MPI_Type_match_size, &
          MPI_TYPECLASS_COMPLEX
@@ -1394,8 +1387,8 @@ Contains
 
     ! Need to replicate data over parent communicator if split ks points
     
-    ! Work out who holds this set of evals and send how many there are
-    ! the root node of the communicator holding them back to the root node of the parent communicator
+    ! Work out which set of processes hold this data, and send the rank of the root node of the
+    ! communicator for that set to the root node of the parent communicator
     Call mpi_comm_rank( A%parent_communicator, me_parent, error )
     sending_data = .False.
     If( my_ks /= NOT_ME ) Then
@@ -1412,9 +1405,11 @@ Contains
     If( sending_data ) Then
        Call mpi_wait( request, MPI_STATUS_IGNORE, error )
     End If
-    ! Now on root of parent bcast back to all
+    ! Now the root of the parent knows who owns the evals it can tell all other proceses
+    ! in the parent communicator where they will be coming from, and how many there are
     Call mpi_bcast( buff_recv, 1, MPI_INTEGER, 0, A%parent_communicator, error )
     ks_root = buff_recv
+    ! And finally bcast out the values from the root node of the communicator that owns this set of evals
     ! Get the data type handle this way due to multiple bugs in mvapich2
     csize =  storage_size( cdum ) / character_storage_size
     Call mpi_type_match_size( MPI_TYPECLASS_COMPLEX, csize, handle, error )
