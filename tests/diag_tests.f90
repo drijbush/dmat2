@@ -6,7 +6,8 @@ contains
   ! Diag tests
   Subroutine test_diag_real()
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+    Use mpi, Only : mpi_comm_world, mpi_double_precision
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, real_distributed_matrix, &
@@ -61,7 +62,8 @@ contains
 
   Subroutine test_diag_complex()
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+    Use mpi, Only : mpi_comm_world, mpi_double_complex
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, real_distributed_matrix, complex_distributed_matrix, &

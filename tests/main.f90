@@ -1,6 +1,10 @@
 Program test_distributed_matrix
 
-  Use mpi, Only : mpi_init, mpi_finalize, mpi_comm_rank, mpi_comm_size, mpi_bcast, &
+  Use, intrinsic :: iso_fortran_env, Only : output_unit
+
+!!$  Use mpi, Only : mpi_init, mpi_finalize, mpi_comm_rank, mpi_comm_size, mpi_bcast, &
+!!$       mpi_comm_world, mpi_integer, mpi_abort
+  Use mpi, Only : mpi_init, mpi_finalize, mpi_comm_rank, mpi_comm_size, &
        mpi_comm_world, mpi_integer, mpi_abort
   Use add_tests, Only : test_real_add_NN, test_real_add_TN, test_real_add_NT, test_real_add_TT, &
        test_real_post_add_diagonal, test_complex_post_add_diagonal, test_complex_add_NN, test_complex_add_TN, &
@@ -132,6 +136,7 @@ Program test_distributed_matrix
   ! Distributed matrix tests
   If( me == 0 ) Then
      Write( *, * ) 'Distributed Matrix tests:'
+     Flush( output_unit )
   End If
   ! Adds
   Do i = 1, Size( tests )
@@ -140,6 +145,7 @@ Program test_distributed_matrix
         ! Additions
         If( me == 0 ) Then
            Write( *, title_format ) 'Additions'
+           Flush( output_unit )
         End If
         Call test_real_add_NN
         Call test_real_add_TN
@@ -156,6 +162,7 @@ Program test_distributed_matrix
         ! Subtracts
         If( me == 0 ) Then
            Write( *, title_format ) 'Subtractions'
+           Flush( output_unit )
         End If
         Call test_real_subtract_NN
         Call test_real_subtract_TN
@@ -170,6 +177,7 @@ Program test_distributed_matrix
         ! Multiplies
         If( me == 0 ) Then
            Write( *, title_format ) 'Multiplies'
+           Flush( output_unit )
         End If
         Call test_real_pre_scale_real
         Call test_real_post_scale_real
@@ -188,6 +196,7 @@ Program test_distributed_matrix
         ! Diagonalisation and other misc tests
         If( me == 0 ) Then
            Write( *, title_format ) 'Diagonalisations'
+           Flush( output_unit )
         End If
         Call test_diag_real
         Call test_diag_complex
@@ -196,6 +205,7 @@ Program test_distributed_matrix
         ! Multiplies
         If( me == 0 ) Then
            Write( *, title_format ) 'Multiplies'
+           Flush( output_unit )
         End If
         Call test_ks_matrix_matmul_real_NN
         Call test_ks_matrix_matmul_real_TN
@@ -207,6 +217,7 @@ Program test_distributed_matrix
         Call test_ks_matrix_matmul_complex_TT
         If( me == 0 ) Then
            Write( *, title_format ) 'All distribution multiplies'
+           Flush( output_unit )
         End If
         Call test_ks_array_matmul_NN
         Call test_ks_array_matmul_TN
@@ -214,6 +225,7 @@ Program test_distributed_matrix
         Call test_ks_array_matmul_TT
         If( me == 0 ) Then
            Write( *, title_format ) 'Split distribution multiplies'
+           Flush( output_unit )
         End If
         Call test_ks_split_real_pre_scale
         Call test_ks_split_real_post_scale
@@ -223,6 +235,7 @@ Program test_distributed_matrix
         Call test_ks_split_matmul_TT
         If( me == 0 ) Then
            Write( *, title_format ) 'Split and re-join multiplies'
+           Flush( output_unit )
         End If
         Call test_ks_rejoin_matmul_NN
         
@@ -230,6 +243,7 @@ Program test_distributed_matrix
         ! Extract
         If( me == 0 ) Then
            Write( *, title_format ) 'Split distribution extract'
+           Flush( output_unit )
         End If
         Call test_ks_array_extract
         Call test_ks_array_extract_transpose
@@ -238,6 +252,7 @@ Program test_distributed_matrix
         ! Unary +/-
         If( me == 0 ) Then
            Write( *, title_format ) 'Split distribution unary +/-'
+           Flush( output_unit )
         End If
         Call test_ks_array_plus
         Call test_ks_array_minus
@@ -247,6 +262,7 @@ Program test_distributed_matrix
         ! Adds
         If( me == 0 ) Then
            Write( *, title_format ) 'Split distribution adds'
+           Flush( output_unit )
         End If
         Call test_ks_split_add_NN
         Call test_ks_split_add_TN
@@ -259,6 +275,7 @@ Program test_distributed_matrix
         ! Subtracts
         If( me == 0 ) Then
            Write( *, title_format ) 'Split distribution subtractions'
+           Flush( output_unit )
         End If
         Call test_ks_split_subtract_NN
         Call test_ks_split_subtract_TN
@@ -271,19 +288,23 @@ Program test_distributed_matrix
         ! Diags and other misc
         If( me == 0 ) Then
            Write( *, title_format ) 'Split distribution diags'
+           Flush( output_unit )
         End If
         Call test_ks_array_diag
         If( me == 0 ) Then
            Write( *, title_format ) 'Split distribution Choleskis'
+           Flush( output_unit )
         End If
         Call test_ks_array_choleski
         If( me == 0 ) Then
            Write( *, title_format ) 'Split distribution Triangular inverts'
+           Flush( output_unit )
         End If
         Call test_ks_array_tr_inv
         Call test_ks_array_tr_inv_with_iterator
      Case default
         Write( *,* ) "Unknown test: ", Trim( tests( i ) )
+        Flush( output_unit )
      End Select
 
   End Do

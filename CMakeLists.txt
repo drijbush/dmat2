@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.1)
 
 # Project name
-project(dmat Fortran) 
+project(dmat Fortran C) 
 
 set(CMAKE_Fortran_FORMAT FREE)
 
@@ -16,6 +16,10 @@ message(STATUS ${MPI_Fortran_INCLUDE_PATH})
 if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
   set(CMAKE_Fortran_FLAGS_DEBUG "-O -g -std=f2008 -Wall -Wextra -Wimplicit-interface -Wuse-without-only -fcheck=all -finit-real=snan" CACHE STRING "Flags used in debug compiles" FORCE)
   set(CMAKE_Fortran_FLAGS_RELEASE "-O3 -funroll-loops" CACHE STRING "Flags used in release compiles" FORCE)
+endif()
+if (CMAKE_Fortran_COMPILER_ID STREQUAL "INTEL")
+  set(CMAKE_Fortran_FLAGS_DEBUG "-O -g -stand f08 -check all" CACHE STRING "Flags used in debug compiles" FORCE)
+  set(CMAKE_Fortran_FLAGS_RELEASE "-O3" CACHE STRING "Flags used in release compiles" FORCE)
 endif()
 
 set(SOURCE_DIR_NAME "src")

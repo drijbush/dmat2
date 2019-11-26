@@ -172,7 +172,7 @@ Module distributed_matrix_module
   
   Private
 
-  Integer, Parameter, Private :: diag_work_size_fiddle_factor = 1 ! From experience Scalapack sometimes returns too small a work size
+  Integer, Parameter, Private :: diag_work_size_fiddle_factor = 4 ! From experience Scalapack sometimes returns too small a work size
   
   Integer, Parameter, Private :: default_block_fac = 96
   Integer,            Private :: block_fac = default_block_fac
@@ -927,7 +927,9 @@ Contains
 
   Subroutine real_matrix_get_global_real( A, m, n, p, q, data )
 
-    Use mpi, Only : MPI_Type_create_f90_real, MPI_Sizeof, MPI_Type_match_size, MPI_Allreduce, MPI_In_place, MPI_Sum, &
+!!$    Use mpi, Only : MPI_Type_create_f90_real, MPI_Sizeof, MPI_Type_match_size, MPI_Allreduce, MPI_In_place, MPI_Sum, &
+!!$         MPI_Typeclass_real
+    Use mpi, Only : MPI_Type_create_f90_real, MPI_Sizeof, MPI_Type_match_size, MPI_In_place, MPI_Sum, &
          MPI_Typeclass_real
     
     !! Gets the data ( m:n, p:q ) in the global A
@@ -1018,7 +1020,11 @@ Contains
 
   Subroutine complex_matrix_get_global_complex( A, m, n, p, q, data )
 
-    Use mpi, Only : MPI_Type_create_f90_complex, MPI_Sizeof, MPI_Type_match_size, MPI_Allreduce, MPI_In_place, MPI_Sum, &
+    Use, intrinsic :: iso_fortran_env, Only : character_storage_size
+
+!!$    Use mpi, Only : MPI_Type_create_f90_complex, MPI_Sizeof, MPI_Type_match_size, MPI_Allreduce, MPI_In_place, MPI_Sum, &
+!!$         MPI_Typeclass_complex
+    Use mpi, Only : MPI_Type_create_f90_complex, MPI_Sizeof, MPI_Type_match_size, MPI_In_place, MPI_Sum, &
          MPI_Typeclass_complex
 
     !! Gets the data ( m:n, p:q ) in the global matrix
@@ -1063,8 +1069,9 @@ Contains
     Call MPI_Type_create_f90_complex( Precision( data ), Range( data ), handle, error )
     ! Replicate the data
 !!!!HACK TO WORK AROUND BUG IN MVAPICH2
-!!!!    Call MPI_Allreduce( MPI_IN_PLACE, data, Size( data ), handle, MPI_SUM, A%matrix_map%get_comm(), error )
-    Call MPI_sizeof( cdum, csize, error )
+!!$    Call MPI_Allreduce( MPI_IN_PLACE, data, Size( data ), handle, MPI_SUM, A%matrix_map%get_comm(), error )
+!!$    Call MPI_sizeof( cdum, csize, error )
+    csize =  storage_size( cdum ) / character_storage_size
     ! Note MPI_Type_match_size does NOT create a new handle, it returns the value of an exisiting one. Hence no need to free
     Call MPI_type_match_size( MPI_Typeclass_complex, csize, handle, error )
     Call MPI_Allreduce( MPI_In_place, data, Size( data ), handle, MPI_Sum, A%matrix_map%get_comm(), error )
@@ -2202,7 +2209,7 @@ Contains
     ! Workspace size enquiry
     Allocate( work( 1:1 ), iwork( 1:1 ) )
     Call pdsyevd( 'V', 'U', m, tmp_A, 1, 1, A%matrix_map%get_descriptor(), E, Q%data, 1, 1, Q%matrix_map%get_descriptor(), &
-         work, -1, iwork, 0, info )
+         work, -1, iwork, Size( iwork ), info )
     nwork = Nint( work( 1 ) )
     nwork = nwork * diag_work_size_fiddle_factor ! From experience ...
     ! Unfortunately there is a bug in scalapack that means this can still might not

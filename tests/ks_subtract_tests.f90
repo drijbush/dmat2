@@ -10,7 +10,8 @@ contains
     Use numbers_module , Only : wp
     Use ks_array_module, Only : ks_array, ks_array_init, ks_array_comm_to_base, ks_array_finalise, &
          K_POINT_REAL, K_POINT_COMPLEX
-    Use mpi            , Only : mpi_bcast, mpi_comm_world, mpi_double_complex, mpi_double_precision
+!!$    Use mpi            , Only : mpi_bcast, mpi_comm_world, mpi_double_complex, mpi_double_precision
+    Use mpi            , Only : mpi_comm_world, mpi_double_complex, mpi_double_precision
 
 
     Real   ( wp ), Dimension( :, :, :, : ), Allocatable :: A_r, B_r, C_r
@@ -150,7 +151,8 @@ contains
     Use numbers_module , Only : wp
     Use ks_array_module, Only : ks_array, ks_array_init, ks_array_comm_to_base, ks_array_finalise, &
          K_POINT_REAL, K_POINT_COMPLEX
-    Use mpi            , Only : mpi_bcast, mpi_comm_world, mpi_double_complex, mpi_double_precision
+!!$    Use mpi            , Only : mpi_bcast, mpi_comm_world, mpi_double_complex, mpi_double_precision
+    Use mpi            , Only : mpi_comm_world, mpi_double_complex, mpi_double_precision
 
 
     Real   ( wp ), Dimension( :, :, :, : ), Allocatable :: A_r, B_r, C_r
@@ -293,7 +295,8 @@ contains
     Use numbers_module , Only : wp
     Use ks_array_module, Only : ks_array, ks_array_init, ks_array_comm_to_base, ks_array_finalise, &
          K_POINT_REAL, K_POINT_COMPLEX
-    Use mpi            , Only : mpi_bcast, mpi_comm_world, mpi_double_complex, mpi_double_precision
+!!$    Use mpi            , Only : mpi_bcast, mpi_comm_world, mpi_double_complex, mpi_double_precision
+    Use mpi            , Only : mpi_comm_world, mpi_double_complex, mpi_double_precision
 
 
     Real   ( wp ), Dimension( :, :, :, : ), Allocatable :: A_r, B_r, C_r
@@ -436,7 +439,8 @@ contains
     Use numbers_module , Only : wp
     Use ks_array_module, Only : ks_array, ks_array_init, ks_array_comm_to_base, ks_array_finalise, &
          K_POINT_REAL, K_POINT_COMPLEX
-    Use mpi            , Only : mpi_bcast, mpi_comm_world, mpi_double_complex, mpi_double_precision
+!!$    Use mpi            , Only : mpi_bcast, mpi_comm_world, mpi_double_complex, mpi_double_precision
+    Use mpi            , Only : mpi_comm_world, mpi_double_complex, mpi_double_precision
 
 
     Real   ( wp ), Dimension( :, :, :, : ), Allocatable :: A_r, B_r, C_r
@@ -581,7 +585,8 @@ contains
     Use numbers_module , Only : wp
     Use ks_array_module, Only : ks_array, ks_array_init, ks_array_comm_to_base, ks_array_finalise, &
          K_POINT_REAL, K_POINT_COMPLEX
-    Use mpi            , Only : mpi_bcast, mpi_comm_world, mpi_double_complex, mpi_double_precision
+!!$    Use mpi            , Only : mpi_bcast, mpi_comm_world, mpi_double_complex, mpi_double_precision
+    Use mpi            , Only : mpi_comm_world, mpi_double_complex, mpi_double_precision
 
 
     Real   ( wp ), Dimension( :, :, :, : ), Allocatable :: A_r, C_r
@@ -717,7 +722,8 @@ contains
     Use numbers_module , Only : wp
     Use ks_array_module, Only : ks_array, ks_array_init, ks_array_comm_to_base, ks_array_finalise, &
          K_POINT_REAL, K_POINT_COMPLEX
-    Use mpi            , Only : mpi_bcast, mpi_comm_world, mpi_double_complex, mpi_double_precision
+!!$    Use mpi            , Only : mpi_bcast, mpi_comm_world, mpi_double_complex, mpi_double_precision
+    Use mpi            , Only : mpi_comm_world, mpi_double_complex, mpi_double_precision
 
 
     Real   ( wp ), Dimension( :, :, :, : ), Allocatable :: A_r, C_r

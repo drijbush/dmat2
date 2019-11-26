@@ -8,7 +8,8 @@ contains
 
   Subroutine test_real_add_NN
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+    Use mpi, Only : mpi_comm_world, mpi_double_precision
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, real_distributed_matrix, &
@@ -57,7 +58,8 @@ contains
 
   Subroutine test_real_add_TN
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+    Use mpi, Only : mpi_comm_world, mpi_double_precision
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, real_distributed_matrix, &
@@ -107,7 +109,8 @@ contains
 
   Subroutine test_real_add_NT
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+    Use mpi, Only : mpi_comm_world, mpi_double_precision
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, real_distributed_matrix, &
@@ -157,7 +160,8 @@ contains
 
   Subroutine test_real_add_TT
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+    Use mpi, Only : mpi_comm_world, mpi_double_precision
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, real_distributed_matrix, &
@@ -208,7 +212,8 @@ contains
 
   Subroutine test_real_post_add_diagonal
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+    Use mpi, Only : mpi_comm_world, mpi_double_precision
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, real_distributed_matrix, &
@@ -261,7 +266,8 @@ contains
 
   Subroutine test_complex_post_add_diagonal
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision, mpi_double_complex
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision, mpi_double_complex
+    Use mpi, Only : mpi_comm_world, mpi_double_precision, mpi_double_complex
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, complex_distributed_matrix, real_distributed_matrix, &
@@ -318,7 +324,8 @@ contains
 
   Subroutine test_complex_add_NN
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+    Use mpi, Only : mpi_comm_world, mpi_double_complex
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, complex_distributed_matrix, &
@@ -372,7 +379,8 @@ contains
 
   Subroutine test_complex_add_TN
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+    Use mpi, Only : mpi_comm_world, mpi_double_complex
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, complex_distributed_matrix, &
@@ -429,7 +437,8 @@ contains
 
   Subroutine test_complex_add_NT
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+    Use mpi, Only : mpi_comm_world, mpi_double_complex
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, complex_distributed_matrix, &
@@ -486,7 +495,8 @@ contains
 
   Subroutine test_complex_add_TT
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+    Use mpi, Only : mpi_comm_world, mpi_double_complex
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, complex_distributed_matrix, &

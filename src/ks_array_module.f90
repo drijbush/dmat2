@@ -248,7 +248,8 @@ Contains
     !! Print information about an array, optionally with a title, and if the verbosity is high
     !! enough report (>99) also how it is distributed across the processes
 
-    Use mpi, Only : MPI_Comm_rank, MPI_Comm_size, MPI_Allreduce, MPI_IN_PLACE, MPI_INTEGER, MPI_SUM
+!!$    Use mpi, Only : MPI_Comm_rank, MPI_Comm_size, MPI_Allreduce, MPI_IN_PLACE, MPI_INTEGER, MPI_SUM
+    Use mpi, Only : MPI_Comm_rank, MPI_Comm_size, MPI_IN_PLACE, MPI_INTEGER, MPI_SUM
 
     Class( ks_array     ),           Intent( In ) :: A
     Character( Len = * ) , Optional, Intent( In ) :: name
@@ -560,7 +561,8 @@ Contains
 
     !! Re-join a previously split ks_array A so that each matrix in it is distributed across all the processes
 
-    Use mpi             , Only : MPI_Comm_rank, MPI_Allreduce, MPI_IN_PLACE, MPI_INTEGER, MPI_SUM
+!!$    Use mpi             , Only : MPI_Comm_rank, MPI_Allreduce, MPI_IN_PLACE, MPI_INTEGER, MPI_SUM
+    Use mpi             , Only : MPI_Comm_rank, MPI_IN_PLACE, MPI_INTEGER, MPI_SUM
     Use ks_matrix_module, Only : ks_matrix, ks_matrix_comm_to_base, ks_matrix_remap_data
     
     Class( ks_array     ), Intent( In    ) :: A                 !! The new array
@@ -631,7 +633,11 @@ Contains
 
     ! As joined_A contains all the ks points setting up the list of my ks points is easy
     Allocate( joined_A%my_k_points( 1:Size( joined_A%all_k_point_info ) ) )
-    joined_A%my_k_points( : )%info = joined_A%all_k_point_info
+    Do ks = 1, Size( joined_A%all_k_point_info )
+       joined_A%my_k_points( ks )%info%k_type = joined_A%all_k_point_info( ks )%k_type
+       joined_A%my_k_points( ks )%info%spin = joined_A%all_k_point_info( ks )%spin
+       joined_A%my_k_points( ks )%info%k_indices = joined_A%all_k_point_info( ks )%k_indices
+    End Do
 
     n_ks = Size( joined_A%all_k_point_info )
     Do ks = 1, n_ks
@@ -930,7 +936,10 @@ Contains
 
     !! Diagonalise each matrix
 
-    Use mpi, Only : mpi_comm_rank, mpi_isend, mpi_recv, mpi_wait, mpi_bcast, &
+!!$    Use mpi, Only : mpi_comm_rank, mpi_isend, mpi_recv, mpi_wait, mpi_bcast, &
+!!$         mpi_sizeof, mpi_type_match_size, MPI_INTEGER, MPI_ANY_SOURCE, MPI_STATUS_IGNORE, &
+!!$         MPI_TYPECLASS_REAL
+    Use mpi, Only : mpi_comm_rank, mpi_wait, &
          mpi_sizeof, mpi_type_match_size, MPI_INTEGER, MPI_ANY_SOURCE, MPI_STATUS_IGNORE, &
          MPI_TYPECLASS_REAL
 
@@ -1271,8 +1280,11 @@ Contains
 
   Subroutine ks_array_get_global_real( A, k, s, m, n, p, q, data )
 
-    Use mpi, Only : MPI_Comm_rank, MPI_Isend, MPI_INTEGER, MPI_recv, MPI_ANY_SOURCE, &
-         MPI_Wait, MPI_STATUS_IGNORE, MPI_Bcast, MPI_Sizeof, MPI_Type_match_size, &
+!!$    Use mpi, Only : MPI_Comm_rank, MPI_Isend, MPI_INTEGER, MPI_recv, MPI_ANY_SOURCE, &
+!!$         MPI_Wait, MPI_STATUS_IGNORE, MPI_Bcast, MPI_Sizeof, MPI_Type_match_size, &
+!!$         MPI_TYPECLASS_REAL
+    Use mpi, Only : MPI_Comm_rank, MPI_INTEGER, MPI_ANY_SOURCE, &
+         MPI_Wait, MPI_STATUS_IGNORE, MPI_Sizeof, MPI_Type_match_size, &
          MPI_TYPECLASS_REAL
 
     !! For the matrix with spin label s and k-point label k get the (m:n,p:q) patch 
@@ -1340,8 +1352,13 @@ Contains
 
     !! For the matrix with spin label s and k-point label k set the (m:n,p:q) patch 
 
-    Use mpi, Only : MPI_Comm_rank, MPI_Isend, MPI_INTEGER, MPI_recv, MPI_ANY_SOURCE, &
-         MPI_Wait, MPI_STATUS_IGNORE, MPI_Bcast, MPI_Sizeof, MPI_Type_match_size, &
+    Use, intrinsic :: iso_fortran_env, Only : character_storage_size
+
+!!$    Use mpi, Only : MPI_Comm_rank, MPI_Isend, MPI_INTEGER, MPI_recv, MPI_ANY_SOURCE, &
+!!$         MPI_Wait, MPI_STATUS_IGNORE, MPI_Bcast, MPI_Sizeof, MPI_Type_match_size, &
+!!$         MPI_TYPECLASS_COMPLEX
+    Use mpi, Only : MPI_Comm_rank, MPI_INTEGER, MPI_ANY_SOURCE, &
+         MPI_Wait, MPI_STATUS_IGNORE, MPI_Sizeof, MPI_Type_match_size, &
          MPI_TYPECLASS_COMPLEX
 
     ! Need to overload for irreps
@@ -1362,7 +1379,7 @@ Contains
     Integer :: ks, my_ks
     Integer :: request
     Integer :: ks_root
-    Integer :: rsize, handle
+    Integer :: csize, handle
     Integer :: error
 
     Logical :: sending_data
@@ -1397,9 +1414,10 @@ Contains
     End If
     ! Now on root of parent bcast back to all
     Call mpi_bcast( buff_recv, 1, MPI_INTEGER, 0, A%parent_communicator, error )
-    ks_root = buff_recv 
-    Call mpi_sizeof( cdum, rsize, error )
-    Call mpi_type_match_size( MPI_TYPECLASS_COMPLEX, rsize, handle, error )
+    ks_root = buff_recv
+    ! Get the data type handle this way due to multiple bugs in mvapich2
+    csize =  storage_size( cdum ) / character_storage_size
+    Call mpi_type_match_size( MPI_TYPECLASS_COMPLEX, csize, handle, error )
     Call mpi_bcast( data, Size( data ), handle, ks_root, A%parent_communicator, error )    
 
   End Subroutine ks_array_get_global_complex

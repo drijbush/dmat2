@@ -7,7 +7,8 @@ contains
   ! Multiply tests
   Subroutine test_real_pre_scale_real
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+    Use mpi, Only : mpi_comm_world, mpi_double_precision
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, real_distributed_matrix, &
@@ -50,7 +51,8 @@ contains
 
   Subroutine test_real_post_scale_real
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+    Use mpi, Only : mpi_comm_world, mpi_double_precision
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, real_distributed_matrix, &
@@ -93,7 +95,8 @@ contains
 
   Subroutine test_complex_pre_scale_real
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+    Use mpi, Only : mpi_comm_world, mpi_double_complex
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, complex_distributed_matrix, real_distributed_matrix, &
@@ -140,7 +143,8 @@ contains
 
   Subroutine test_complex_post_scale_real
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+    Use mpi, Only : mpi_comm_world, mpi_double_complex
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, complex_distributed_matrix, real_distributed_matrix, &
@@ -187,7 +191,8 @@ contains
 
   Subroutine test_real_matmul_NN
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+    Use mpi, Only : mpi_comm_world, mpi_double_precision
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, real_distributed_matrix, &
@@ -236,7 +241,8 @@ contains
 
   Subroutine test_real_matmul_TN
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+    Use mpi, Only : mpi_comm_world, mpi_double_precision
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, real_distributed_matrix, &
@@ -286,7 +292,8 @@ contains
 
   Subroutine test_real_matmul_NT
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+    Use mpi, Only : mpi_comm_world, mpi_double_precision
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, real_distributed_matrix, &
@@ -336,7 +343,8 @@ contains
 
   Subroutine test_real_matmul_TT
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+    Use mpi, Only : mpi_comm_world, mpi_double_precision
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, real_distributed_matrix, &
@@ -387,7 +395,8 @@ contains
 
   Subroutine test_complex_matmul_NN
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+    Use mpi, Only : mpi_comm_world, mpi_double_complex
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, complex_distributed_matrix, &
@@ -444,7 +453,8 @@ contains
 
   Subroutine test_complex_matmul_TN
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+    Use mpi, Only : mpi_comm_world, mpi_double_complex
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, complex_distributed_matrix, &
@@ -502,7 +512,8 @@ contains
 
   Subroutine test_complex_matmul_NT
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+    Use mpi, Only : mpi_comm_world, mpi_double_complex
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, complex_distributed_matrix, &
@@ -560,7 +571,8 @@ contains
 
   Subroutine test_complex_matmul_TT
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+    Use mpi, Only : mpi_comm_world, mpi_double_complex
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, complex_distributed_matrix, &

@@ -5,7 +5,8 @@ contains
   ! Subtract tests
   Subroutine test_real_subtract_NN
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+    Use mpi, Only : mpi_comm_world, mpi_double_precision
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, real_distributed_matrix, &
@@ -54,7 +55,8 @@ contains
 
   Subroutine test_real_subtract_TN
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+    Use mpi, Only : mpi_comm_world, mpi_double_precision
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, real_distributed_matrix, &
@@ -104,7 +106,8 @@ contains
 
   Subroutine test_real_subtract_NT
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+    Use mpi, Only : mpi_comm_world, mpi_double_precision
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, real_distributed_matrix, &
@@ -154,7 +157,8 @@ contains
 
   Subroutine test_real_subtract_TT
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_precision
+    Use mpi, Only : mpi_comm_world, mpi_double_precision
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, real_distributed_matrix, &
@@ -205,7 +209,8 @@ contains
 
   Subroutine test_complex_subtract_NN
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+    Use mpi, Only : mpi_comm_world, mpi_double_complex
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, complex_distributed_matrix, &
@@ -259,7 +264,8 @@ contains
 
   Subroutine test_complex_subtract_TN
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+    Use mpi, Only : mpi_comm_world, mpi_double_complex
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, complex_distributed_matrix, &
@@ -316,7 +322,8 @@ contains
 
   Subroutine test_complex_subtract_NT
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+    Use mpi, Only : mpi_comm_world, mpi_double_complex
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, complex_distributed_matrix, &
@@ -373,7 +380,8 @@ contains
 
   Subroutine test_complex_subtract_TT
 
-    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+!!$    Use mpi, Only : mpi_bcast, mpi_comm_world, mpi_double_complex
+    Use mpi, Only : mpi_comm_world, mpi_double_complex
 
     Use numbers_module           , Only : wp
     Use distributed_matrix_module, Only : distributed_matrix, complex_distributed_matrix, &
