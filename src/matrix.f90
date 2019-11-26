@@ -927,8 +927,6 @@ Contains
 
   Subroutine real_matrix_get_global_real( A, m, n, p, q, data )
 
-!!$    Use mpi, Only : MPI_Type_create_f90_real, MPI_Sizeof, MPI_Type_match_size, MPI_Allreduce, MPI_In_place, MPI_Sum, &
-!!$         MPI_Typeclass_real
     Use mpi, Only : MPI_Type_create_f90_real, MPI_Sizeof, MPI_Type_match_size, MPI_In_place, MPI_Sum, &
          MPI_Typeclass_real
     
@@ -1022,8 +1020,6 @@ Contains
 
     Use, intrinsic :: iso_fortran_env, Only : character_storage_size
 
-!!$    Use mpi, Only : MPI_Type_create_f90_complex, MPI_Sizeof, MPI_Type_match_size, MPI_Allreduce, MPI_In_place, MPI_Sum, &
-!!$         MPI_Typeclass_complex
     Use mpi, Only : MPI_Type_create_f90_complex, MPI_Sizeof, MPI_Type_match_size, MPI_In_place, MPI_Sum, &
          MPI_Typeclass_complex
 

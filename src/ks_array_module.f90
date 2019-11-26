@@ -248,7 +248,6 @@ Contains
     !! Print information about an array, optionally with a title, and if the verbosity is high
     !! enough report (>99) also how it is distributed across the processes
 
-!!$    Use mpi, Only : MPI_Comm_rank, MPI_Comm_size, MPI_Allreduce, MPI_IN_PLACE, MPI_INTEGER, MPI_SUM
     Use mpi, Only : MPI_Comm_rank, MPI_Comm_size, MPI_IN_PLACE, MPI_INTEGER, MPI_SUM
 
     Class( ks_array     ),           Intent( In ) :: A
@@ -561,7 +560,6 @@ Contains
 
     !! Re-join a previously split ks_array A so that each matrix in it is distributed across all the processes
 
-!!$    Use mpi             , Only : MPI_Comm_rank, MPI_Allreduce, MPI_IN_PLACE, MPI_INTEGER, MPI_SUM
     Use mpi             , Only : MPI_Comm_rank, MPI_IN_PLACE, MPI_INTEGER, MPI_SUM
     Use ks_matrix_module, Only : ks_matrix, ks_matrix_comm_to_base, ks_matrix_remap_data
     
@@ -981,8 +979,9 @@ Contains
     Do ks = 1, Size( A%all_k_point_info )
        E( ks )%ks_point = A%all_k_point_info( ks )
        my_ks = A%get_my_ks_index( ks )
-       ! Work out who holds this set of evals and send how many there are
-       ! the root node of the communicator holding them back to the root node of the parent communicator
+       ! Work out which set of processes hold this set of evals, and send the rank of the root node of the
+       ! communicator for that set to the root node of the parent communicator, along with the number
+       ! of evals at this ks point
        sending_data = .False.
        If( my_ks /= NOT_ME ) Then
           Call mpi_comm_rank( A%my_k_points( my_ks )%communicator, me, error )
@@ -999,7 +998,8 @@ Contains
        If( sending_data ) Then
           Call mpi_wait( request, MPI_STATUS_IGNORE, error )
        End If
-       ! Now on root of parent bcast back to all
+       ! Now the root of the parent knows who owns the evals it can tell all other proceses
+       ! in the parent communicator where they will be coming from, and how many there are
        Call mpi_bcast( buff_recv, 2, MPI_INTEGER, 0, A%parent_communicator, error )
        ks_root = buff_recv( 1 )
        nb      = buff_recv( 2 )
@@ -1007,7 +1007,7 @@ Contains
        If( .Not. Allocated( E( ks )%evals ) ) Then
           Allocate( E( ks )%evals( 1:nb ) )
        End If
-       ! And finally bcast out the values from the root node for this set of evals
+       ! And finally bcast out the values from the root node of the communicator that owns this set of evals
        Call mpi_sizeof( rdum, rsize, error )
        Call mpi_type_match_size( MPI_TYPECLASS_REAL, rsize, handle, error )
        Call mpi_bcast( E( ks )%evals, Size( E( ks )%evals ), handle, ks_root, A%parent_communicator, error )
