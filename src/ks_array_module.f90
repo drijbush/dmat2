@@ -69,7 +69,8 @@ Module ks_array_module
      Procedure, Public :: diag                    => ks_array_diag                     !! Diagonalise each matrix
      Generic  , Public :: Operator( .Choleski. )  => choleski                          !! Choleski decompose a matrix
      Generic  , Public :: Operator( .TrInv. )     => tr_inv                            !! Invert a lower traingular set of matrices
-     Procedure, Public :: extract                 => ks_array_extract                  !! Extract a patch from the matrices and return a new ks_array holding it
+     Generic  , Public :: extract                 => ks_array_extract                  !! Extract a patch from the matrices and return a new ks_array holding it. Each patch the same shape.
+     Generic  , Public :: extract                 => ks_array_extract_vary             !! Extract a patch from the matrices and return a new ks_array holding it. Each patch may differ in shape.
      Generic  , Public :: set_by_global           => set_by_global_r, set_by_global_c  !! Set patches of an element
      Generic  , Public :: get_by_global           => get_by_global_r, get_by_global_c  !! Get patches of an element
      Procedure, Public :: global_to_local         => ks_array_g_to_l                   !! Get the global -> local  mapping arrays
@@ -105,6 +106,8 @@ Module ks_array_module
      Procedure, Pass( A ), Private :: diagonal_subtract    => ks_array_diagonal_subtract
      Procedure,            Private :: choleski             => ks_array_choleski
      Procedure,            Private :: tr_inv               => ks_array_tr_inv
+     Procedure,            Private :: ks_array_extract
+     Procedure,            Private :: ks_array_extract_vary
   End type ks_array
   
   Type, Public :: ks_eval_storage
@@ -257,7 +260,7 @@ Contains
 
     Integer :: n_all_ks, n_my_ks
     Integer :: m, n
-    Integer :: ks
+    Integer :: my_ks
     
     ! Set up the all k point data structure
     n_all_ks = Size( source%all_k_point_info )
@@ -267,18 +270,23 @@ Contains
     ! Now my k points
     n_my_ks = Size( source%my_k_points )
     Allocate( A%my_k_points( 1:n_my_ks ) )
-    Do ks = 1, n_my_ks
-       A%my_k_points( ks )%info = source%my_k_points( ks )%info
-       Allocate( A%my_k_points( ks )%data( 1:1 ) )
-       A%my_k_points( ks )%data( 1 )%label = 1
-       m = shapes( 1, A%get_all_ks_index( ks ) )
-       n = shapes( 2, A%get_all_ks_index( ks ) )
+    ! First set up the info structure so can safely transform between
+    ! "all" and "my" indices
+    Do my_ks = 1, n_my_ks
+       A%my_k_points( my_ks )%info = source%my_k_points( my_ks )%info
+    End Do
+    ! Now set up the data
+    Do my_ks = 1, n_my_ks
+       Allocate( A%my_k_points( my_ks )%data( 1:1 ) )
+       A%my_k_points( my_ks )%data( 1 )%label = 1
+       m = shapes( 1, A%get_all_ks_index( my_ks ) )
+       n = shapes( 2, A%get_all_ks_index( my_ks ) )
        If( m /= NO_DATA .And. n /= NO_DATA ) Then
-          Call A%my_k_points( ks )%data( 1 )%matrix%create( &
-               A%my_k_points( ks )%info%k_type == K_POINT_COMPLEX, &
-               m, n, source%my_k_points( ks )%data( 1 )%matrix )
+          Call A%my_k_points( my_ks )%data( 1 )%matrix%create( &
+               A%my_k_points( my_ks )%info%k_type == K_POINT_COMPLEX, &
+               m, n, source%my_k_points( my_ks )%data( 1 )%matrix )
        End If
-       A%my_k_points( ks )%communicator = source%my_k_points( ks )%communicator 
+       A%my_k_points( my_ks )%communicator = source%my_k_points( my_ks )%communicator 
     End Do
 
     A%parent_communicator = source%parent_communicator
@@ -1183,6 +1191,43 @@ Contains
     End Do
 
   End Function ks_array_extract
+
+  Function ks_array_extract_vary( A, shapes ) Result( C )
+
+    !! Extract a patch from each of the matrices and return a new matrix
+    !! Each patch may be a different shape
+    
+    Type( ks_array ) :: C
+
+    Class( ks_array )            , Intent( In ) :: A
+    Integer, Dimension( :, :, : ), Intent( In ) :: shapes
+
+    Integer :: r1 
+    Integer :: r2
+    Integer :: c1 
+    Integer :: c2 
+
+    Integer :: ks
+    Integer :: my_ks, my_irrep
+
+    Call C%create( NO_DATA, NO_DATA, A )
+    
+    Do my_ks = 1, Size( A%my_k_points )
+       ks = A%get_all_ks_index( my_ks )
+       r1 = shapes( 1, 1, ks )
+       r2 = shapes( 2, 1, ks )
+       c1 = shapes( 1, 2, ks )
+       c2 = shapes( 2, 2, ks )
+       ! Irreps will need more thought - work currenly as burnt into as 1
+       Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
+          Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
+                     Cks => C%my_k_points( my_ks )%data( my_irrep )%matrix )
+            Cks = Aks%extract( r1, r2, c1, c2 )
+          End Associate
+       End Do
+    End Do
+
+  End Function ks_array_extract_vary
 
   Pure Function get_all_ks_index( A, my_ks ) Result( ks )
 
