@@ -49,7 +49,8 @@ Module ks_array_module
      Integer                                           , Private :: iterator_value      = INVALID   !! A value for the iterator - might need to rething as retainined on assignment of ks_arrays
    Contains
      ! Public Methods
-     Procedure, Public :: create                  => ks_array_create                   !! Create a ks_array
+     Generic  , Public :: create                  => ks_array_create                   !! Create a ks_array, all elements the same shape
+     Generic  , Public :: create                  => ks_array_create_vary              !! Create a ks_array, elements may vary in shape
      Procedure, Public :: split_ks                => ks_array_split_ks                 !! Split the distribution so k point //ism can be used
      Procedure, Public :: join_ks                 => ks_array_join_ks                  !! Rejoin a split_ks array into all k point mode
      Generic  , Public :: Assignment( = )         => set_real_scalar                   !! Set each element to a real constant scalar
@@ -80,6 +81,8 @@ Module ks_array_module
      Procedure, Public :: iterator_next           => ks_array_iterator_next            !! Move to the next matrix in the ks_array
      Procedure, Public :: iterator_previous       => ks_array_iterator_previous        !! Move to the previous matrix in the ks_array
      ! Private implementations
+     Procedure,            Private :: ks_array_create
+     Procedure,            Private :: ks_array_create_vary
      Procedure,            Private :: get_all_ks_index
      Procedure,            Private :: get_my_ks_index
      Procedure,            Private :: get_ks
@@ -242,6 +245,47 @@ Contains
     A%iterator_value = INVALID
 
   End Subroutine ks_array_create
+
+  Subroutine ks_array_create_vary( A, shapes, source )
+
+    !! Create a KS array where the shape of the arrays varies at
+    !! each ks point
+    
+    Class( ks_array ),                    Intent(   Out ) :: A
+    Integer          , Dimension( :, : ), Intent( In    ) :: shapes
+    Type ( ks_array ),                    Intent( In    ) :: source
+
+    Integer :: n_all_ks, n_my_ks
+    Integer :: m, n
+    Integer :: ks
+    
+    ! Set up the all k point data structure
+    n_all_ks = Size( source%all_k_point_info )
+    Allocate( A%all_k_point_info( 1:n_all_ks ) )
+    A%all_k_point_info = source%all_k_point_info
+
+    ! Now my k points
+    n_my_ks = Size( source%my_k_points )
+    Allocate( A%my_k_points( 1:n_my_ks ) )
+    Do ks = 1, n_my_ks
+       A%my_k_points( ks )%info = source%my_k_points( ks )%info
+       Allocate( A%my_k_points( ks )%data( 1:1 ) )
+       A%my_k_points( ks )%data( 1 )%label = 1
+       m = shapes( 1, A%get_all_ks_index( ks ) )
+       n = shapes( 2, A%get_all_ks_index( ks ) )
+       If( m /= NO_DATA .And. n /= NO_DATA ) Then
+          Call A%my_k_points( ks )%data( 1 )%matrix%create( &
+               A%my_k_points( ks )%info%k_type == K_POINT_COMPLEX, &
+               m, n, source%my_k_points( ks )%data( 1 )%matrix )
+       End If
+       A%my_k_points( ks )%communicator = source%my_k_points( ks )%communicator 
+    End Do
+
+    A%parent_communicator = source%parent_communicator
+
+    A%iterator_value = INVALID
+
+  End Subroutine ks_array_create_vary
 
   Subroutine ks_array_print_info( A, name, verbosity )
 
