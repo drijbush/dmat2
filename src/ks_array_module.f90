@@ -81,6 +81,7 @@ Module ks_array_module
      Procedure, Public :: iterator_reset          => ks_array_iterator_reset           !! Reset an iterator
      Procedure, Public :: iterator_next           => ks_array_iterator_next            !! Move to the next matrix in the ks_array
      Procedure, Public :: iterator_previous       => ks_array_iterator_previous        !! Move to the previous matrix in the ks_array
+     Procedure, Public :: get_ks_point_info       => ks_array_get_ks_point_info        !! Get what ks points this array holds data about
      ! Private implementations
      Procedure,            Private :: ks_array_create
      Procedure,            Private :: ks_array_create_vary
@@ -108,6 +109,7 @@ Module ks_array_module
      Procedure,            Private :: tr_inv               => ks_array_tr_inv
      Procedure,            Private :: ks_array_extract
      Procedure,            Private :: ks_array_extract_vary
+     Procedure,            Private :: ks_array_get_ks_point_info
   End type ks_array
   
   Type, Public :: ks_eval_storage
@@ -253,10 +255,10 @@ Contains
 
     !! Create a KS array where the shape of the arrays varies at
     !! each ks point
-    
-    Class( ks_array ),                    Intent(   Out ) :: A
-    Integer          , Dimension( :, : ), Intent( In    ) :: shapes
-    Type ( ks_array ),                    Intent( In    ) :: source
+     
+    Class( ks_array )     ,                    Intent(   Out ) :: A
+    Integer               , Dimension( :, : ), Intent( In    ) :: shapes
+    Type ( ks_array )     ,                    Intent( In    ) :: source
 
     Integer :: n_all_ks, n_my_ks
     Integer :: m, n
@@ -1229,69 +1231,6 @@ Contains
 
   End Function ks_array_extract_vary
 
-  Pure Function get_all_ks_index( A, my_ks ) Result( ks )
-
-    !! Given a local index into my list of ks points return the index in the full list
-    
-    Integer :: ks
-
-    Class( ks_array ), Intent( In ) :: A
-    Integer          , Intent( In ) :: my_ks
-
-    Do ks = 1, Size( A%all_k_point_info )
-       If( A%all_k_point_info( ks )%spin == A%my_k_points( my_ks )%info%spin ) Then
-          If( All( A%all_k_point_info( ks )%k_indices == A%my_k_points( my_ks )%info%k_indices ) ) Then
-             Exit
-          End If
-       End If
-    End Do
-    
-  End Function get_all_ks_index
-
-  Pure Function get_my_ks_index( A, ks ) Result( my_ks )
-
-    !! Given an index into the full list of ks points return an index into my local list
-
-    Integer :: my_ks
-
-    Class( ks_array ), Intent( In ) :: A
-    Integer          , Intent( In ) :: ks
-
-    Integer :: k
-    
-    my_ks = NOT_ME
-
-    Do k = 1, Size( A%my_k_points )
-       If( A%all_k_point_info( ks )%spin == A%my_k_points( k )%info%spin ) Then
-          If( All( A%all_k_point_info( ks )%k_indices == A%my_k_points( k )%info%k_indices ) ) Then
-             my_ks = k
-             Exit
-          End If
-       End If
-    End Do
-
-  End Function get_my_ks_index
-
-  Pure Function get_ks( A, k, s ) Result( ks )
-
-    !! Given the label for a k point and spin return the index in the full ks point list
-
-    Integer :: ks
-
-    Class( ks_array )        , Intent( In ) :: A
-    Integer, Dimension( 1:3 ), Intent( In ) :: k
-    Integer                  , Intent( In ) :: s
-
-    Do ks = 1, Size( A%all_k_point_info )
-       If( A%all_k_point_info( ks )%spin == s ) Then
-          If( All( A%all_k_point_info( ks )%k_indices == k ) ) Then
-             Exit
-          End If
-       End If
-    End Do
-    
-  End Function get_ks
-
   Subroutine ks_array_set_real_scalar( A, data )
 
     !! Set all elements of members of a ks_array to a real constant value, typicaly zero
@@ -1645,5 +1584,78 @@ Contains
     End If
 
   End Function ks_array_iterator_previous
+
+  Pure Function ks_array_get_ks_point_info( A ) Result( info )
+
+    Type( ks_point_info ), Dimension( : ), Allocatable :: info
+    
+    Class( ks_array ), Intent( In ) :: A
+
+    info = A%all_k_point_info
+    
+  End Function ks_array_get_ks_point_info
+
+  Pure Function get_all_ks_index( A, my_ks ) Result( ks )
+
+    !! Given a local index into my list of ks points return the index in the full list
+    
+    Integer :: ks
+
+    Class( ks_array ), Intent( In ) :: A
+    Integer          , Intent( In ) :: my_ks
+
+    Do ks = 1, Size( A%all_k_point_info )
+       If( A%all_k_point_info( ks )%spin == A%my_k_points( my_ks )%info%spin ) Then
+          If( All( A%all_k_point_info( ks )%k_indices == A%my_k_points( my_ks )%info%k_indices ) ) Then
+             Exit
+          End If
+       End If
+    End Do
+    
+  End Function get_all_ks_index
+
+  Pure Function get_my_ks_index( A, ks ) Result( my_ks )
+
+    !! Given an index into the full list of ks points return an index into my local list
+
+    Integer :: my_ks
+
+    Class( ks_array ), Intent( In ) :: A
+    Integer          , Intent( In ) :: ks
+
+    Integer :: k
+    
+    my_ks = NOT_ME
+
+    Do k = 1, Size( A%my_k_points )
+       If( A%all_k_point_info( ks )%spin == A%my_k_points( k )%info%spin ) Then
+          If( All( A%all_k_point_info( ks )%k_indices == A%my_k_points( k )%info%k_indices ) ) Then
+             my_ks = k
+             Exit
+          End If
+       End If
+    End Do
+
+  End Function get_my_ks_index
+
+  Pure Function get_ks( A, k, s ) Result( ks )
+
+    !! Given the label for a k point and spin return the index in the full ks point list
+
+    Integer :: ks
+
+    Class( ks_array )        , Intent( In ) :: A
+    Integer, Dimension( 1:3 ), Intent( In ) :: k
+    Integer                  , Intent( In ) :: s
+
+    Do ks = 1, Size( A%all_k_point_info )
+       If( A%all_k_point_info( ks )%spin == s ) Then
+          If( All( A%all_k_point_info( ks )%k_indices == k ) ) Then
+             Exit
+          End If
+       End If
+    End Do
+    
+  End Function get_ks
 
 End Module ks_array_module
