@@ -247,6 +247,7 @@ Program test_distributed_matrix
         End If
         Call test_ks_array_extract
         Call test_ks_array_extract_transpose
+        Call test_ks_array_extract_vary
         
      Case("ks_unary")
         ! Unary +/-
