@@ -4,8 +4,9 @@ Module distributed_matrix_module
   !  Once compilers become more mature submodule would be a good way to keep this one under control
   !  once for real, one for complex
 
-  Use numbers_module       , Only : wp
-  Use matrix_mapping_module, Only : matrix_mapping 
+  Use numbers_module                    , Only : wp
+  Use matrix_mapping_module             , Only : matrix_mapping 
+  Use replicated_result_container_module, Only : replicated_result_container
   
   Implicit None
 
@@ -329,6 +330,36 @@ Module distributed_matrix_module
        Class( complex_distributed_matrix ), Intent( In ) :: A
        Class(         distributed_matrix ), Intent( In ) :: B
      End Function complex_binary_op
+
+     Function double_dot( A, B ) Result( C )
+       !! A binary operation between two base class objects
+       Import :: distributed_matrix
+       Import :: replicated_result_container
+       Implicit None
+       Type( replicated_result_container )               :: C
+       Class( distributed_matrix )        , Intent( In ) :: A
+       Class( distributed_matrix )        , Intent( In ) :: B
+     End Function double_dot
+     Function real_double_dot( A, B ) Result( C )
+       !! A binary operation between a real matrix and the base class
+       Import ::      distributed_matrix
+       Import :: real_distributed_matrix
+       Import :: replicated_result_container
+       Implicit None
+       Type( replicated_result_container )               :: C
+       Class( real_distributed_matrix )   , Intent( In ) :: A
+       Class(      distributed_matrix )   , Intent( In ) :: B
+     End Function real_double_dot
+     Function complex_double_dot( A, B ) Result( C )
+       !! A binary operation between a complex matrix and the base class
+       Import ::         distributed_matrix
+       Import :: complex_distributed_matrix
+       Import :: replicated_result_container
+       Implicit None
+       Type( replicated_result_container )               :: C
+       Class( complex_distributed_matrix ), Intent( In ) :: A
+       Class(         distributed_matrix ), Intent( In ) :: B
+     End Function complex_double_dot
 
      Subroutine diag_op( A, Q, E )
        !! Diagonalising a base class matrix with vectors returned as base class
