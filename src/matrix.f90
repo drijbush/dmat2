@@ -41,6 +41,7 @@ Module distributed_matrix_module
      Generic  , Public :: Operator( - )          => subtract                   !! Subtract two matrices 
      Generic  , Public :: Operator( - )          => subtract_diagonal          !! Subtract a diagonal matrix from a generla matrix
      Generic  , Public :: Operator( - )          => diagonal_subtract          !! Subtract a general matrix from a diagonal matrix
+     Generic  , Public :: Operator( .ddot. )     => double_dot                 !! Multiply two matrices together
      Generic  , Public :: Operator( .Dagger.   ) => matrix_dagger              !! Apply the dagger operator to the matrix
      Generic  , Public :: Operator( .Choleski. ) => choleski                   !! choleski decompose a matrix
      Generic  , Public :: Operator( .Trinv.    ) => tr_inv                     !! invert a traingular matrix
@@ -54,34 +55,37 @@ Module distributed_matrix_module
      Procedure( extract_op ), Deferred, Public :: extract                    !! Extract a patch of one matrix into another matrix
      ! Private implementations
      Procedure,                                             Private :: matrix_dagger           !! Apply the dagger operator to the matrix
-     Procedure(  set_global_real    ), Deferred,            Private :: set_global_real         !! Set values with a real    array using global indexing
-     Procedure(  set_global_complex ), Deferred,            Private :: set_global_complex      !! Set values with a complex array using global indexing
-     Procedure(  get_global_real    ), Deferred,            Private :: get_global_real         !! Get values from a real    array using global indexing
-     Procedure(  get_global_complex ), Deferred,            Private :: get_global_complex      !! Get values from a complex array using global indexing
-     Procedure(         real_assign ), Deferred,            Private :: set_real_scalar
-     Procedure(           binary_op ), Deferred,            Private :: multiply
-     Procedure(      real_binary_op ), Deferred, Pass( B ), Private :: real_multiply
-     Procedure(   complex_binary_op ), Deferred, Pass( B ), Private :: complex_multiply
-     Procedure(        pre_rscal_op ), Deferred, Pass( A ), Private :: rscal_multiply
-     Procedure(       post_rscal_op ), Deferred,            Private :: multiply_rscal
-     Procedure(            unary_op ), Deferred,            Private :: plus
-     Procedure(           binary_op ), Deferred,            Private :: add
-     Procedure(    post_diagonal_op ), Deferred,            Private :: add_diagonal
-     Procedure(     pre_diagonal_op ), Deferred, Pass( A ), Private :: diagonal_add
-     Procedure(      real_binary_op ), Deferred, Pass( B ), Private :: real_add
-     Procedure(   complex_binary_op ), Deferred, Pass( B ), Private :: complex_add
-     Procedure(            unary_op ), Deferred,            Private :: minus
-     Procedure(           binary_op ), Deferred,            Private :: subtract
-     Procedure(      real_binary_op ), Deferred, Pass( B ), Private :: real_subtract
-     Procedure(   complex_binary_op ), Deferred, Pass( B ), Private :: complex_subtract
-     Procedure(    post_diagonal_op ), Deferred,            Private :: subtract_diagonal
-     Procedure(     pre_diagonal_op ), Deferred, Pass( A ), Private :: diagonal_subtract
-     Procedure(        real_diag_op ), Deferred, Pass( Q ), Private :: real_diag
-     Procedure(     complex_diag_op ), Deferred, Pass( Q ), Private :: complex_diag
-     Procedure(            unary_op ), Deferred,            Private :: choleski
-     Procedure(            unary_op ), Deferred,            Private :: tr_inv
-     Procedure(       real_remap_op ), Deferred, Pass( B ), Private :: real_remap
-     Procedure(    complex_remap_op ), Deferred, Pass( B ), Private :: complex_remap
+     Procedure(    set_global_real    ), Deferred,            Private :: set_global_real         !! Set values with a real    array using global indexing
+     Procedure(    set_global_complex ), Deferred,            Private :: set_global_complex      !! Set values with a complex array using global indexing
+     Procedure(    get_global_real    ), Deferred,            Private :: get_global_real         !! Get values from a real    array using global indexing
+     Procedure(    get_global_complex ), Deferred,            Private :: get_global_complex      !! Get values from a complex array using global indexing
+     Procedure(           real_assign ), Deferred,            Private :: set_real_scalar
+     Procedure(             binary_op ), Deferred,            Private :: multiply
+     Procedure(        real_binary_op ), Deferred, Pass( B ), Private :: real_multiply
+     Procedure(     complex_binary_op ), Deferred, Pass( B ), Private :: complex_multiply
+     Procedure(         double_dot_op ), Deferred,            Private :: double_dot
+     Procedure(    real_double_dot_op ), Deferred, Pass( B ), Private :: real_double_dot
+     Procedure( complex_double_dot_op ), Deferred, Pass( B ), Private :: complex_double_dot
+     Procedure(          pre_rscal_op ), Deferred, Pass( A ), Private :: rscal_multiply
+     Procedure(         post_rscal_op ), Deferred,            Private :: multiply_rscal
+     Procedure(              unary_op ), Deferred,            Private :: plus
+     Procedure(             binary_op ), Deferred,            Private :: add
+     Procedure(      post_diagonal_op ), Deferred,            Private :: add_diagonal
+     Procedure(       pre_diagonal_op ), Deferred, Pass( A ), Private :: diagonal_add
+     Procedure(        real_binary_op ), Deferred, Pass( B ), Private :: real_add
+     Procedure(     complex_binary_op ), Deferred, Pass( B ), Private :: complex_add
+     Procedure(              unary_op ), Deferred,            Private :: minus
+     Procedure(             binary_op ), Deferred,            Private :: subtract
+     Procedure(        real_binary_op ), Deferred, Pass( B ), Private :: real_subtract
+     Procedure(     complex_binary_op ), Deferred, Pass( B ), Private :: complex_subtract
+     Procedure(      post_diagonal_op ), Deferred,            Private :: subtract_diagonal
+     Procedure(       pre_diagonal_op ), Deferred, Pass( A ), Private :: diagonal_subtract
+     Procedure(          real_diag_op ), Deferred, Pass( Q ), Private :: real_diag
+     Procedure(       complex_diag_op ), Deferred, Pass( Q ), Private :: complex_diag
+     Procedure(              unary_op ), Deferred,            Private :: choleski
+     Procedure(              unary_op ), Deferred,            Private :: tr_inv
+     Procedure(         real_remap_op ), Deferred, Pass( B ), Private :: real_remap
+     Procedure(      complex_remap_op ), Deferred, Pass( B ), Private :: complex_remap
   End type distributed_matrix
 
   Type, Extends( distributed_matrix ), Public :: real_distributed_matrix
@@ -103,6 +107,9 @@ Module distributed_matrix_module
      Procedure,            Private :: multiply           => real_multiply
      Procedure, Pass( B ), Private :: real_multiply      => real_multiply_real
      Procedure, Pass( B ), Private :: complex_multiply   => complex_multiply_real
+     Procedure,            Private :: double_dot         => real_double_dot
+     Procedure, Pass( B ), Private :: real_double_dot    => real_double_dot_real
+     Procedure, Pass( B ), Private :: complex_double_dot => complex_double_dot_real
      Procedure, Pass( A ), Private :: rscal_multiply     => rscal_multiply_real
      Procedure,            Private :: multiply_rscal     => real_multiply_rscal
      Procedure,            Private :: plus               => plus_real
@@ -144,6 +151,9 @@ Module distributed_matrix_module
      Procedure,            Private :: multiply           => complex_multiply
      Procedure, Pass( B ), Private :: real_multiply      => real_multiply_complex
      Procedure, Pass( B ), Private :: complex_multiply   => complex_multiply_complex
+     Procedure,            Private :: double_dot         => complex_double_dot
+     Procedure, Pass( B ), Private :: real_double_dot    => real_double_dot_complex
+     Procedure, Pass( B ), Private :: complex_double_dot => complex_double_dot_complex
      Procedure, Pass( A ), Private :: rscal_multiply     => rscal_multiply_complex
      Procedure,            Private :: multiply_rscal     => complex_multiply_rscal
      Procedure,            Private :: plus               => plus_complex
@@ -331,7 +341,7 @@ Module distributed_matrix_module
        Class(         distributed_matrix ), Intent( In ) :: B
      End Function complex_binary_op
 
-     Function double_dot( A, B ) Result( C )
+     Function double_dot_op( A, B ) Result( C )
        !! A binary operation between two base class objects
        Import :: distributed_matrix
        Import :: replicated_result_container
@@ -339,8 +349,8 @@ Module distributed_matrix_module
        Type( replicated_result_container )               :: C
        Class( distributed_matrix )        , Intent( In ) :: A
        Class( distributed_matrix )        , Intent( In ) :: B
-     End Function double_dot
-     Function real_double_dot( A, B ) Result( C )
+     End Function double_dot_op
+     Function real_double_dot_op( A, B ) Result( C )
        !! A binary operation between a real matrix and the base class
        Import ::      distributed_matrix
        Import :: real_distributed_matrix
@@ -349,8 +359,8 @@ Module distributed_matrix_module
        Type( replicated_result_container )               :: C
        Class( real_distributed_matrix )   , Intent( In ) :: A
        Class(      distributed_matrix )   , Intent( In ) :: B
-     End Function real_double_dot
-     Function complex_double_dot( A, B ) Result( C )
+     End Function real_double_dot_op
+     Function complex_double_dot_op( A, B ) Result( C )
        !! A binary operation between a complex matrix and the base class
        Import ::         distributed_matrix
        Import :: complex_distributed_matrix
@@ -359,7 +369,7 @@ Module distributed_matrix_module
        Type( replicated_result_container )               :: C
        Class( complex_distributed_matrix ), Intent( In ) :: A
        Class(         distributed_matrix ), Intent( In ) :: B
-     End Function complex_double_dot
+     End Function complex_double_dot_op
 
      Subroutine diag_op( A, Q, E )
        !! Diagonalising a base class matrix with vectors returned as base class
@@ -1000,7 +1010,7 @@ Contains
        End Do
     End If
     ! Generate a portable MPI data type handle from the variable to be communicated
-    Call MPI_Type_create_f90_real( Precision( data ), Range( data ), handle, error )
+!!$    Call MPI_Type_create_f90_real( Precision( data ), Range( data ), handle, error )
     ! Replicate the data
 !!!!HACK TO WORK AROUND BUG IN MVAPICH2
 !!!!    Call MPI_Allreduce( MPI_IN_PLACE, data, Size( data ), handle, MPI_SUM, A%matrix_map%get_comm(), error )
@@ -1093,7 +1103,7 @@ Contains
        End Do
     End If
     ! Generate a portable MPI data type handle from the variable to be communicated
-    Call MPI_Type_create_f90_complex( Precision( data ), Range( data ), handle, error )
+!!$    Call MPI_Type_create_f90_complex( Precision( data ), Range( data ), handle, error )
     ! Replicate the data
 !!!!HACK TO WORK AROUND BUG IN MVAPICH2
 !!$    Call MPI_Allreduce( MPI_IN_PLACE, data, Size( data ), handle, MPI_SUM, A%matrix_map%get_comm(), error )
@@ -2989,6 +2999,125 @@ Contains
     Call mapping%free()
 
   End Subroutine complex_remap_complex
+
+  Function real_double_dot( A, B ) Result( C )
+
+    !! Calculates the double dot product of a real matrix with something yet to be determined
+    
+    Type( replicated_result_container ) :: C
+
+    Class( real_distributed_matrix ), Intent( In ) :: A
+    Class(      distributed_matrix ), Intent( In ) :: B
+
+    C = B%real_double_dot( A )
+
+  End Function real_double_dot
+
+  Function complex_double_dot( A, B ) Result( C )
+
+    !! Calculates the double dot product of a complex matrix with something yet to be determined
+    
+    Type( replicated_result_container ) :: C
+
+    Class( complex_distributed_matrix ), Intent( In ) :: A
+    Class(         distributed_matrix ), Intent( In ) :: B
+
+    C = B%complex_double_dot( A )
+
+  End Function complex_double_dot
+
+  Function real_double_dot_real( A, B ) Result( C )
+
+    !! Calculates the double dot product of the real matrices A and B, i.e.
+    !! C = Sum_ij A_ij * B_ij
+
+    Use mpi, Only : MPI_Type_create_f90_real, MPI_Sizeof, MPI_Type_match_size, MPI_In_place, MPI_Sum, &
+         MPI_Typeclass_real
+
+    Type( replicated_result_container ) :: C
+
+    Class( real_distributed_matrix ), Intent( In ) :: A
+    Class( real_distributed_matrix ), Intent( In ) :: B
+
+    Real( wp ) :: ddot
+    Real( wp ) :: rdum
+
+    Integer :: rsize,  handle
+    Integer :: error
+
+    ! Local sum
+    ddot = Sum( A%data * B%data )
+
+    ! And add over the processes
+     Call MPI_Sizeof( rdum, rsize, error )
+    ! Note MPI_Type_match_size does NOT create a new handle, it returns the value of an exisiting one. Hence no need to free
+    Call MPI_Type_match_size( MPI_TYPECLASS_REAL, rsize, handle, error )
+    Call MPI_Allreduce( MPI_IN_PLACE, ddot, 1, handle, MPI_SUM, A%matrix_map%get_comm(), error )
+
+    C = ddot
+   
+  End Function real_double_dot_real
+  
+  Function real_double_dot_complex( A, B ) Result( C )
+
+    !! Double dot a real matrix with a complex matrix - ILLEGAL
+
+    Type( replicated_result_container ) :: C
+
+    Class(    real_distributed_matrix ), Intent( In ) :: A
+    Class( complex_distributed_matrix ), Intent( In ) :: B
+
+    Stop "Illegal combination of arguments in real_double_dot_complex"
+    C = 2.0_wp
+    Write( *, * ) A%data, B%data
+
+  End Function real_double_dot_complex
+
+  Function complex_double_dot_real( A, B ) Result( C )
+
+    !! Double dot a real matrix with a complex matrix - ILLEGAL
+
+    Type( replicated_result_container ) :: C
+
+    Class( complex_distributed_matrix ), Intent( In ) :: A
+    Class(    real_distributed_matrix ), Intent( In ) :: B
+
+    Stop "Illegal combination of arguments in complex_double_dot_real"
+    C = 2.0_wp
+    Write( *, * ) A%data, B%data
+
+  End Function complex_double_dot_real
+
+  Function complex_double_dot_complex( A, B ) Result( C )
+
+    !! Calculates the double dot product of the complex matrices A and B, i.e.
+    !! C = Sum_ij Conjg( A_ij ) * B_ij
+
+     Use, intrinsic :: iso_fortran_env, Only : character_storage_size
+
+     Use mpi, Only : MPI_Type_create_f90_complex, MPI_Sizeof, MPI_Type_match_size, MPI_In_place, MPI_Sum, &
+         MPI_Typeclass_complex
+
+    Type( replicated_result_container ) :: C
+
+    Class( complex_distributed_matrix ), Intent( In ) :: A
+    Class( complex_distributed_matrix ), Intent( In ) :: B
+
+    Complex( wp ) :: cdum
+    Complex( wp ) :: ddot
+
+    Integer :: csize, handle
+    Integer :: error
+
+    ! Local sum
+    C = Sum( Conjg( A%data ) * B%data )
+
+    csize =  storage_size( cdum ) / character_storage_size
+    ! Note MPI_Type_match_size does NOT create a new handle, it returns the value of an exisiting one. Hence no need to free
+    Call MPI_type_match_size( MPI_Typeclass_complex, csize, handle, error )
+    Call MPI_Allreduce( MPI_In_place, ddot, 1, handle, MPI_Sum, A%matrix_map%get_comm(), error )    
+    
+  End Function complex_double_dot_complex
   
 End Module distributed_matrix_module
  

@@ -3,8 +3,9 @@ Module ks_matrix_module
   !! Wrapper module for distributed matrix classes so we can implement an opaque array - 
   !! At this level we only consider 1 k/spin point 
 
-  Use numbers_module           , Only : wp
-  Use distributed_matrix_module, Only : distributed_matrix
+  Use numbers_module                    , Only : wp
+  Use distributed_matrix_module         , Only : distributed_matrix
+  Use replicated_result_container_module, Only : replicated_result_container
 
   Implicit None
 
@@ -28,6 +29,7 @@ Module ks_matrix_module
      Generic  , Public :: Operator( - )          => subtract_diagonal                    !! Subtract a diagonal matrix from a ks_matrix 
      Generic  , Public :: Operator( - )          => diagonal_subtract                    !! Subtract a ks_matrix from a diagonal matrix
      Procedure, Public :: diag                   => ks_matrix_diag                       !! Diagonalise a ks_matrix
+     Generic  , Public :: Operator( .ddot. )     => ddot                                 !! Double dot product of two matrices
      Generic  , Public :: Operator( .Choleski. ) => choleski                             !! Choleski factor ks_matrix
      Generic  , Public :: Operator( .TrInv.    ) => tr_inv                               !! Invert a lower triangular ks_matrix
      Procedure, Public :: extract                => ks_matrix_extract                    !! Extract a patch of one matrix into another
@@ -51,6 +53,7 @@ Module ks_matrix_module
      Procedure,            Private :: subtract             => ks_matrix_subtract
      Procedure,            Private :: subtract_diagonal    => ks_matrix_subtract_diagonal
      Procedure, Pass( A ), Private :: diagonal_subtract    => ks_matrix_diagonal_subtract
+     Procedure,            Private :: ddot                 => ks_matrix_ddot
      Procedure,            Private :: choleski             => ks_matrix_choleski
      Procedure,            Private :: tr_inv               => ks_matrix_tr_inv
      Procedure,            Private :: set_global_real      => ks_matrix_set_global_real
@@ -241,6 +244,19 @@ Contains
     C%matrix = A%matrix * B%matrix
 
   End Function ks_matrix_mult
+
+  Function ks_matrix_ddot( A, B ) Result( C )
+
+    !! Double dot two matrices together
+
+    Type( replicated_result_container ) :: C
+
+    Class( ks_matrix ), Intent( In ) :: A
+    Type ( ks_matrix ), Intent( In ) :: B
+
+    C = A%matrix .ddot. B%matrix
+
+  End Function ks_matrix_ddot
 
   Function ks_matrix_add( A, B ) Result( C )
 
