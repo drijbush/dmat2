@@ -43,27 +43,34 @@ Module replicated_result_container_module
      Procedure, Pass( A ), Private :: get_complex
   End type replicated_result_container
 
+!!$  Interface Assignment( = )
+!!$     Module Procedure :: store_real
+!!$     Module Procedure :: store_complex
+!!$     Module Procedure :: get_real
+!!$     Module Procedure :: get_complex     
+!!$  End Interface Assignment( = )
+  
   Private
 
   Abstract Interface
      
-     Subroutine store_real_data( A, data )
+     Elemental Subroutine store_real_data( A, data )
        Import :: wp
        Import :: replicated_result
        Implicit None
-       Class( replicated_result ), Intent(   Out ) :: A
+       Class( replicated_result ), Intent( InOut ) :: A
        Real( wp )                , Intent( In    ) :: data
      End Subroutine store_real_data
      
-     Subroutine store_complex_data( A, data )
+     Elemental Subroutine store_complex_data( A, data )
        Import :: wp
        Import :: replicated_result
        Implicit None
-       Class( replicated_result ), Intent(   Out ) :: A
+       Class( replicated_result ), Intent( InOut ) :: A
        Complex( wp )             , Intent( In    ) :: data
      End Subroutine store_complex_data
      
-     Subroutine get_real_data( data, A )
+     Elemental Subroutine get_real_data( data, A )
        Import :: wp
        Import :: replicated_result
        Implicit None
@@ -71,7 +78,7 @@ Module replicated_result_container_module
        Class( replicated_result ), Intent( In    ) :: A
      End Subroutine get_real_data
      
-     Subroutine get_complex_data( data, A )
+     Elemental Subroutine get_complex_data( data, A )
        Import :: wp
        Import :: replicated_result
        Implicit None
@@ -83,83 +90,85 @@ Module replicated_result_container_module
 
 Contains
 
-  Subroutine store_real( A, data )
+  Elemental Subroutine store_real( A, data )
 
-    Class( replicated_result_container ), Intent(   Out ) :: A
+    Class( replicated_result_container ), Intent( InOut ) :: A
     Real( wp )                          , Intent( In    ) :: data
 
+    If( Allocated( A%data ) ) Deallocate( A%data )
     Allocate( real_replicated_result :: A%data )
 
     A%data = data
     
   End Subroutine store_real
   
-  Subroutine store_complex( A, data )
+  Elemental Subroutine store_complex( A, data )
 
-    Class( replicated_result_container ), Intent(   Out ) :: A
+    Class( replicated_result_container ), Intent( InOut ) :: A
     Complex( wp )                       , Intent( In    ) :: data
 
+    If( Allocated( A%data ) ) Deallocate( A%data )
     Allocate( complex_replicated_result :: A%data )
     
     A%data = data
 
   End Subroutine store_complex
   
-  Subroutine store_real_data_into_real( A, data )
+  Elemental Subroutine store_real_data_into_real( A, data )
 
-    Class( real_replicated_result ), Intent(   Out ) :: A
+    Class( real_replicated_result ), Intent( InOut ) :: A
     Real( wp )                     , Intent( In    ) :: data
 
     A%data = data
     
   End Subroutine store_real_data_into_real
   
-  Subroutine store_complex_data_into_real( A, data )
+  Elemental Subroutine store_complex_data_into_real( A, data )
 
-    Class( real_replicated_result ), Intent(   Out ) :: A
+    Class( real_replicated_result ), Intent( InOut ) :: A
     Complex( wp )                  , Intent( In    ) :: data
 
     A%data = Real( data, Kind( A%data ) )
     
   End Subroutine store_complex_data_into_real
   
-  Subroutine store_real_data_into_complex( A, data )
+  Elemental Subroutine store_real_data_into_complex( A, data )
 
-    Class( complex_replicated_result ), Intent(   Out ) :: A
+    Class( complex_replicated_result ), Intent( InOut ) :: A
     Real( wp )                        , Intent( In    ) :: data
 
     A%data = data
     
   End Subroutine store_real_data_into_complex
   
-  Subroutine store_complex_data_into_complex( A, data )
+  Elemental Subroutine store_complex_data_into_complex( A, data )
 
-    Class( complex_replicated_result ), Intent(   Out ) :: A
+    Class( complex_replicated_result ), Intent( InOut ) :: A
     Complex( wp )                     , Intent( In    ) :: data
 
     A%data = data
     
   End Subroutine store_complex_data_into_complex
   
-  Subroutine get_real( data, A )
+  Elemental Subroutine get_real( data, A )
 
-    Real( wp )                          , Intent(   Out ) :: data
+    Real( wp )                          , Intent( InOut ) :: data
     Class( replicated_result_container ), Intent( In    ) :: A
 
     data = A%data
     
   End Subroutine get_real
   
-  Subroutine get_complex( data, A )
+  Elemental Subroutine get_complex( data, A )
 
-    Complex( wp )                       , Intent(   Out ) :: data
+    Complex( wp )                       , Intent( InOut ) :: data
     Class( replicated_result_container ), Intent( In    ) :: A
 
     data = A%data
     
   End Subroutine get_complex
   
-  Subroutine get_real_data_from_real( data, A )
+  Elemental Subroutine get_real_data_from_real( data, A )
 
     Real( wp )                     , Intent(   Out ) :: data
     Class( real_replicated_result ), Intent( In    ) :: A
@@ -168,7 +177,7 @@ Contains
     
   End Subroutine get_real_data_from_real
   
-  Subroutine get_real_data_from_complex( data, A )
+  Elemental Subroutine get_real_data_from_complex( data, A )
 
     Real( wp )                        , Intent(   Out ) :: data
     Class( complex_replicated_result ), Intent( In    ) :: A
@@ -177,7 +186,7 @@ Contains
     
   End Subroutine get_real_data_from_complex
     
-  Subroutine get_complex_data_from_real( data, A )
+  Elemental Subroutine get_complex_data_from_real( data, A )
 
     Complex( wp )                  , Intent(   Out ) :: data
     Class( real_replicated_result ), Intent( In    ) :: A
@@ -186,7 +195,7 @@ Contains
     
   End Subroutine get_complex_data_from_real
   
-  Subroutine get_complex_data_from_complex( data, A )
+  Elemental Subroutine get_complex_data_from_complex( data, A )
 
     Complex( wp )                     , Intent(   Out ) :: data
     Class( complex_replicated_result ), Intent( In    ) :: A
