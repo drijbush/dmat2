@@ -4,8 +4,9 @@ Module ks_array_module
   !-------------------------
   ! Currently assume 1 - i.e. nosymada
   
-  Use numbers_module  , Only : wp
-  Use ks_matrix_module, Only : ks_matrix
+  Use numbers_module                    , Only : wp
+  Use ks_matrix_module                  , Only : ks_matrix
+  Use replicated_result_container_module, Only : replicated_result_container
 
   Implicit None
 
@@ -67,6 +68,7 @@ Module ks_array_module
      Generic  , Public :: Operator( - )           => subtract_diagonal                 !! Subtract a diagonal matrix from a general one
      Generic  , Public :: Operator( - )           => diagonal_subtract                 !! Subtract a general matrix from a diagonal one
      Procedure, Public :: diag                    => ks_array_diag                     !! Diagonalise each matrix
+     Generic  , Public :: Operator( .ddot. )      => ddot                              !! Double dot product of each matrix
      Generic  , Public :: Operator( .Choleski. )  => choleski                          !! Choleski decompose a matrix
      Generic  , Public :: Operator( .TrInv. )     => tr_inv                            !! Invert a lower traingular set of matrices
      Generic  , Public :: extract                 => ks_array_extract                  !! Extract a patch from the matrices and return a new ks_array holding it. Each patch the same shape.
@@ -105,6 +107,7 @@ Module ks_array_module
      Procedure,            Private :: subtract             => ks_array_subtract
      Procedure,            Private :: subtract_diagonal    => ks_array_subtract_diagonal
      Procedure, Pass( A ), Private :: diagonal_subtract    => ks_array_diagonal_subtract
+     Procedure,            Private :: ddot                 => ks_array_ddot
      Procedure,            Private :: choleski             => ks_array_choleski
      Procedure,            Private :: tr_inv               => ks_array_tr_inv
      Procedure,            Private :: ks_array_extract
@@ -781,6 +784,32 @@ Contains
     End Do
 
   End Function ks_array_mult
+
+  Function ks_array_ddot( A, B ) Result( C )
+
+    !! Double dot the arays together element by element (i.e. matrix by matrix )
+
+    !! NOT FINISHED!
+
+    Type( replicated_result_container ) :: C
+
+    Class( ks_array ), Intent( In ) :: A
+    Type ( ks_array ), Intent( In ) :: B
+
+    Integer :: my_ks, my_irrep
+
+    Do my_ks = 1, Size( A%my_k_points )
+       ! Irreps will need more thought - work currenly as burnt into as 1
+       Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
+          Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
+                     Bks => B%my_k_points( my_ks )%data( my_irrep )%matrix )
+
+            C = Aks .ddot. Bks
+          End Associate
+       End Do
+    End Do
+
+  End Function ks_array_ddot
 
   Function ks_array_rscal_mult( s, A ) Result( C )
 
