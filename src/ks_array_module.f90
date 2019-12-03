@@ -803,7 +803,6 @@ Contains
        Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
           Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
                      Bks => B%my_k_points( my_ks )%data( my_irrep )%matrix )
-
             C = Aks .ddot. Bks
           End Associate
        End Do
