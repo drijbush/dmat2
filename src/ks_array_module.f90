@@ -25,6 +25,12 @@ Module ks_array_module
      Integer, Dimension( : ), Allocatable, Public :: k_indices
   End type ks_point_info
 
+  Type, Public :: ks_point_replicated_result
+     !! A type to hold the replicated data result from an operation
+     Type( ks_point_info               ), Public  :: info
+     Type( replicated_result_container ), Private :: data
+  End type ks_point_replicated_result
+
   Type, Private :: k_point_matrices
      !! A wrapper for data at a k point - will eventually be used to create arrays when we deal with irreps
      ! External label - e.g. irrep number
@@ -789,25 +795,70 @@ Contains
 
     !! Double dot the arays together element by element (i.e. matrix by matrix )
 
+    Use, intrinsic :: iso_fortran_env, Only : character_storage_size
+
+    Use mpi, Only : MPI_Comm_rank, MPI_STATUS_IGNORE, MPI_SUM, MPI_IN_PLACE, MPI_Type_match_size, &
+         MPI_TYPECLASS_COMPLEX
+
     !! NOT FINISHED!
 
-    Type( replicated_result_container ) :: C
+    Type( ks_point_replicated_result ), Dimension( : ), Allocatable :: C
 
     Class( ks_array ), Intent( In ) :: A
     Type ( ks_array ), Intent( In ) :: B
 
-    Integer :: my_ks, my_irrep
+    Complex( wp ), Dimension( : ), Allocatable :: tmp
 
+    Complex( wp ) :: cdum
+
+    Integer :: ks, my_ks, my_irrep
+    Integer :: me
+    Integer :: csize, handle
+    Integer :: error
+
+    ! Set up the result
+    Allocate( C( 1:Size( A%all_k_point_info ) ) )
+    Do ks = 1, Size( A%all_k_point_info )
+       C( ks )%info = A%all_k_point_info( ks )
+       C( ks )%data = 0.0_wp
+    End Do
+
+    ! Calculate theose results that can be done locallly
     Do my_ks = 1, Size( A%my_k_points )
        ! Irreps will need more thought - work currenly as burnt into as 1
+       ks = A%get_all_ks_index( my_ks )
        Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
           Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
                      Bks => B%my_k_points( my_ks )%data( my_irrep )%matrix )
-            C = Aks .ddot. Bks
+            C( ks )%data = Aks .ddot. Bks
           End Associate
        End Do
     End Do
 
+    ! Now replicate the result across all ks pints being careful to preserve the type
+    ! ( compex or real ) of the result
+    Allocate( tmp( 1:Size( C%data ) ) )
+    tmp = C%data
+    Do ks = 1, Size( A%all_k_point_info )
+       my_ks = A%get_my_ks_index( ks )
+       If( my_ks /= NOT_ME ) Then
+          call mpi_comm_rank( A%my_k_points( my_ks )%communicator, me, error )
+          If( me /= 0 ) Then
+             tmp( ks ) = 0.0_wp
+          End If
+       End If
+    End Do
+    csize =  storage_size( cdum ) / character_storage_size
+    Call mpi_type_match_size( MPI_TYPECLASS_COMPLEX, csize, handle, error )
+    Call mpi_allreduce( MPI_IN_PLACE, tmp, Size( tmp ), handle, MPI_SUM, A%parent_communicator, error )
+    Do ks = 1, Size( A%all_k_point_info )
+       If( A%all_k_point_info( ks )%k_type == K_POINT_REAL ) Then
+          C( ks )%data = Real( tmp( ks ), wp )
+       Else
+          C( ks )%data = tmp( ks )
+       End If
+    End Do
+    
   End Function ks_array_ddot
 
   Function ks_array_rscal_mult( s, A ) Result( C )
