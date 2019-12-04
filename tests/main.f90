@@ -239,6 +239,12 @@ Program test_distributed_matrix
         End If
         Call test_ks_rejoin_matmul_NN
         
+        If( me == 0 ) Then
+           Write( *, title_format ) 'Split double dot products'
+           Flush( output_unit )
+        End If
+        Call test_ks_split_double_dot
+        
      Case("ks_extract")
         ! Extract
         If( me == 0 ) Then

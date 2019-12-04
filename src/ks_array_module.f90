@@ -29,6 +29,10 @@ Module ks_array_module
      !! A type to hold the replicated data result from an operation
      Type( ks_point_info               ), Public  :: info
      Type( replicated_result_container ), Private :: data
+   Contains
+     Generic, Public :: Assignment( = ) => ks_result_to_real, ks_result_to_complex
+     Procedure, Pass( A ), Private :: ks_result_to_real
+     Procedure, Pass( A ), Private :: ks_result_to_complex
   End type ks_point_replicated_result
 
   Type, Private :: k_point_matrices
@@ -1737,4 +1741,22 @@ Contains
     
   End Function get_ks
 
+  Subroutine ks_result_to_real( data, A )
+
+    Real ( wp )                        , Intent(   Out ) :: data
+    Class( ks_point_replicated_result ), Intent( In    ) :: A
+
+    data = A%data
+    
+  End Subroutine ks_result_to_real
+  
+  Subroutine ks_result_to_complex( data, A )
+
+    Complex( wp )                        , Intent(   Out ) :: data
+    Class  ( ks_point_replicated_result ), Intent( In    ) :: A
+
+    data = A%data
+    
+  End Subroutine ks_result_to_complex
+  
 End Module ks_array_module

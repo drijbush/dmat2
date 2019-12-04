@@ -1832,4 +1832,138 @@ contains
 
   End Subroutine test_ks_split_matmul_TT
 
+  Subroutine test_ks_split_double_dot
+
+    Use numbers_module , Only : wp
+    Use ks_array_module, Only : ks_array, ks_array_init, ks_array_comm_to_base, ks_array_finalise, &
+         K_POINT_REAL, K_POINT_COMPLEX, ks_point_replicated_result
+!!$    Use mpi            , Only : mpi_bcast, mpi_comm_world, mpi_double_complex, mpi_double_precision
+    Use mpi            , Only : mpi_comm_world, mpi_double_complex, mpi_double_precision
+
+
+    Real   ( wp ), Dimension( :, :, :, : ), Allocatable :: A_r, B_r
+    Complex( wp ), Dimension( :, :, :, : ), Allocatable :: A_c, B_c
+
+    Real( wp ), Dimension( :, : ), Allocatable :: rand1, rand2
+
+    Real( wp ) :: max_diff, this_diff
+    Real( wp ) :: rand
+
+    Type( ks_array ) :: base
+    Type( ks_array ) :: Am, Bm
+    Type( ks_array ) :: Am_base
+
+    Type( ks_point_replicated_result ), Dimension( : ), Allocatable :: result
+    Complex( wp ) :: r_c
+    Real( wp ) :: r_r
+
+    Integer, Dimension( 1:3, 1:nk ) :: k_points
+    Integer, Dimension(      1:nk ) :: k_types
+
+    Integer :: kpoint, spin
+    Integer :: ks
+    
+    Allocate( result( 1:nk * ns ) )
+
+    Allocate( A_r( 1:m, 1:k, 1:nk, 1:ns ) )
+    Allocate( B_r( 1:m, 1:k, 1:nk, 1:ns ) )
+    Allocate( A_c( 1:m, 1:k, 1:nk, 1:ns ) )
+    Allocate( B_c( 1:m, 1:k, 1:nk, 1:ns ) )
+    A_r = Huge( 1.0_wp )
+    B_r = Huge( 1.0_wp )
+    A_c = Huge( 1.0_wp )
+    B_c = Huge( 1.0_wp )
+    If( me == 0 ) Then
+       k_types = K_POINT_REAL
+       If( nk /= 1 ) Then
+          Do While( All( k_types == K_POINT_REAL ) .Or. All( k_types == K_POINT_COMPLEX ) )
+             Do kpoint = 1, nk
+                k_points( :, kpoint ) = [ kpoint - 1, 0, 0 ]
+                Call Random_number( rand )
+                k_types( kpoint ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
+             End Do
+          End Do
+       End If
+       Do spin = 1, ns
+          Do kpoint = 1, nk
+             If( k_types( kpoint ) == K_POINT_REAL ) Then
+                ! Real
+                Call Random_number( A_r( :, :, kpoint, spin ) )
+                Call Random_number( B_r( :, :, kpoint, spin ) )
+             Else
+                ! Complex
+                Allocate( rand1( 1:m, 1:k ), rand2( 1:m, 1:k ) )
+                Call Random_number( rand1 ); Call Random_number( rand2 ) 
+                A_c( :, :, kpoint, spin ) = Cmplx( rand1, rand2, wp )
+                Deallocate( rand1, rand2 )
+                Allocate( rand1( 1:m, 1:k ), rand2( 1:m, 1:k ) )
+                Call Random_number( rand1 ); Call Random_number( rand2 ) 
+                B_c( :, :, kpoint, spin ) = Cmplx( rand1, rand2, wp )
+                Deallocate( rand1, rand2 )
+             End If
+          End Do
+       End Do
+    End If
+
+    Call mpi_bcast( k_points, Size( k_points ), mpi_integer, 0, mpi_comm_world, error )
+    Call mpi_bcast( k_types , Size( k_types  ), mpi_integer, 0, mpi_comm_world, error )
+
+    Call mpi_bcast( A_r, Size( A_r ), mpi_double_precision, 0, mpi_comm_world, error )
+    Call mpi_bcast( B_r, Size( B_r ), mpi_double_precision, 0, mpi_comm_world, error )
+
+    Call mpi_bcast( A_c, Size( A_c ), mpi_double_complex  , 0, mpi_comm_world, error )
+    Call mpi_bcast( B_c, Size( B_c ), mpi_double_complex  , 0, mpi_comm_world, error )
+
+    Call ks_array_init( n_block )
+    Call ks_array_comm_to_base( MPI_COMM_WORLD, ns, k_types, k_points, base )
+
+    Call Am_base%create( m, k, base )
+    Call Am_base%split_ks( 2.0_wp, Am )
+    If( verbose ) Then
+       Call Am%print_info( 'Am - the split matrix', 9999 )
+    End If
+
+    Call Bm%create( m, k, Am )
+    If( verbose ) Then
+       Call Bm%print_info( 'Bm - the derived matrix', 9999 )
+    End If
+    Do spin = 1, ns
+       Do kpoint = 1, nk
+          If( k_types( kpoint ) == K_POINT_REAL ) Then
+             Call Am%set_by_global( k_points( :, kpoint ), spin, 1, m, 1, k, A_r( :, :, kpoint, spin ) )
+             Call Bm%set_by_global( k_points( :, kpoint ), spin, 1, m, 1, k, B_r( :, :, kpoint, spin ) )
+          Else
+             Call Am%set_by_global( k_points( :, kpoint ), spin, 1, m, 1, k, A_c( :, :, kpoint, spin ) )
+             Call Bm%set_by_global( k_points( :, kpoint ), spin, 1, m, 1, k, B_c( :, :, kpoint, spin ) )
+          End If
+       End Do
+    End Do
+
+    result = Am .ddot. Bm
+
+    max_diff = -1.0_wp
+    ks = 0
+    Do spin = 1, ns
+       Do kpoint = 1, nk
+          ks = ks + 1
+          If( result( ks )%info%k_type == K_POINT_REAL ) Then
+             r_r = result( ks )
+             this_diff = Abs( Sum( A_r( :, :, kpoint, spin ) * B_r( :, :, kpoint, spin ) ) - r_r )
+          Else
+             r_c = result( ks )
+             this_diff = Abs( Sum( Conjg( A_c( :, :, kpoint, spin ) ) * B_c( :, :, kpoint, spin ) ) - r_c )
+          End If
+          max_diff = Max( this_diff, max_diff )
+       End Do
+    End Do
+    If( me == 0 ) Then
+       Write( *, error_format ) 'Error in ks_split ddot ', max_diff, &
+            Merge( passed, FAILED, max_diff < tol )
+    End If
+
+    Call ks_array_finalise
+
+  End Subroutine test_ks_split_double_dot
+
+
 end module ks_multiply_tests
