@@ -2,6 +2,10 @@ module ks_multiply_tests
   use test_params
   use mpi
   implicit none
+  Interface kahan_sum
+     Procedure :: kahan_sum_real
+     Procedure :: kahan_sum_complex
+  End Interface kahan_sum
 contains
   Subroutine test_ks_matrix_matmul_real_NN
 
@@ -1951,10 +1955,10 @@ contains
           ks = ks + 1
           If( result( ks )%info%k_type == K_POINT_REAL ) Then
              r_r = result( ks )
-             this_diff = Abs( Sum( A_r( :, :, kpoint, spin ) * B_r( :, :, kpoint, spin ) ) - r_r )
+             this_diff = Abs( Kahan_sum( A_r( :, :, kpoint, spin ) * B_r( :, :, kpoint, spin ) ) - r_r )
           Else
              r_c = result( ks )
-             this_diff = Abs( Sum( Conjg( A_c( :, :, kpoint, spin ) ) * B_c( :, :, kpoint, spin ) ) - r_c )
+             this_diff = Abs( Kahan_sum( Conjg( A_c( :, :, kpoint, spin ) ) * B_c( :, :, kpoint, spin ) ) - r_c )
           End If
           max_diff = Max( this_diff, max_diff )
        End Do
@@ -1968,5 +1972,52 @@ contains
 
   End Subroutine test_ks_split_double_dot
 
+  Pure Function kahan_sum_real( a ) Result( r )
+
+    Real( wp ) :: r
+
+    Real( wp ), Dimension( :, : ), Intent( In ) :: a
+
+    Real( wp ) :: tmp, t, y, c
+
+    Integer :: i, j
+
+    r = 0.0_wp
+    c = 0.0_wp
+    Do j = 1, Size( a, Dim = 2 )
+       Do i = 1, Size( a, Dim = 1 )
+          tmp = a( i, j )
+          y = tmp - c
+          t = r + y
+          c = ( t - r ) - y
+          r = t
+       End Do
+    End Do
+    
+  End Function kahan_sum_real
+  
+  Pure Function kahan_sum_complex( a ) Result( r )
+
+    Complex( wp ) :: r
+
+    Complex( wp ), Dimension( :, : ), Intent( In ) :: a
+
+    Complex( wp ) :: tmp, t, y, c
+
+    Integer :: i, j
+
+    r = 0.0_wp
+    c = 0.0_wp
+    Do j = 1, Size( a, Dim = 2 )
+       Do i = 1, Size( a, Dim = 1 )
+          tmp = a( i, j )
+          y = tmp - c
+          t = r + y
+          c = ( t - r ) - y
+          r = t
+       End Do
+    End Do
+    
+  End Function kahan_sum_complex
 
 end module ks_multiply_tests

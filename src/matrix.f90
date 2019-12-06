@@ -448,6 +448,11 @@ Module distributed_matrix_module
      End Function extract_op
 
   End Interface
+
+  Interface kahan_sum
+     Procedure :: kahan_sum_real
+     Procedure :: kahan_sum_complex
+  End Interface kahan_sum
   
 Contains
 
@@ -3045,8 +3050,8 @@ Contains
     Integer :: rsize,  handle
     Integer :: error
 
-    ! Local sum
-    ddot = Sum( A%data * B%data )
+    ! Local sum - use Kahan summation as this is quite prone to round off
+    ddot = Kahan_sum( A%data * B%data )
 
     ! And add over the processes
      Call MPI_Sizeof( rdum, rsize, error )
@@ -3109,8 +3114,8 @@ Contains
     Integer :: csize, handle
     Integer :: error
 
-    ! Local sum
-    ddot = Sum( Conjg( A%data ) * B%data )
+    ! Local sum - use Kahan summation as this is quite prone to round off
+    ddot = Kahan_sum( Conjg( A%data ) * B%data )
 
     csize =  storage_size( cdum ) / character_storage_size
     ! Note MPI_Type_match_size does NOT create a new handle, it returns the value of an exisiting one. Hence no need to free
@@ -3120,6 +3125,58 @@ Contains
     C = ddot
     
   End Function complex_double_dot_complex
+
+  Pure Function kahan_sum_real( a ) Result( r )
+
+    ! Kahan sum the elements of a real 2d array
+
+    Real( wp ) :: r
+
+    Real( wp ), Dimension( :, : ), Intent( In ) :: a
+
+    Real( wp ) :: tmp, t, y, c
+
+    Integer :: i, j
+
+    r = 0.0_wp
+    c = 0.0_wp
+    Do j = 1, Size( a, Dim = 2 )
+       Do i = 1, Size( a, Dim = 1 )
+          tmp = a( i, j )
+          y = tmp - c
+          t = r + y
+          c = ( t - r ) - y
+          r = t
+       End Do
+    End Do
+    
+  End Function kahan_sum_real
+  
+  Pure Function kahan_sum_complex( a ) Result( r )
+
+    ! Kahan sum the elements of a complex 2d array
+
+    Complex( wp ) :: r
+
+    Complex( wp ), Dimension( :, : ), Intent( In ) :: a
+
+    Complex( wp ) :: tmp, t, y, c
+
+    Integer :: i, j
+
+    r = 0.0_wp
+    c = 0.0_wp
+    Do j = 1, Size( a, Dim = 2 )
+       Do i = 1, Size( a, Dim = 1 )
+          tmp = a( i, j )
+          y = tmp - c
+          t = r + y
+          c = ( t - r ) - y
+          r = t
+       End Do
+    End Do
+    
+  End Function kahan_sum_complex
   
 End Module distributed_matrix_module
  
