@@ -3110,12 +3110,14 @@ Contains
     Integer :: error
 
     ! Local sum
-    C = Sum( Conjg( A%data ) * B%data )
+    ddot = Sum( Conjg( A%data ) * B%data )
 
     csize =  storage_size( cdum ) / character_storage_size
     ! Note MPI_Type_match_size does NOT create a new handle, it returns the value of an exisiting one. Hence no need to free
     Call MPI_type_match_size( MPI_Typeclass_complex, csize, handle, error )
-    Call MPI_Allreduce( MPI_In_place, ddot, 1, handle, MPI_Sum, A%matrix_map%get_comm(), error )    
+    Call MPI_Allreduce( MPI_In_place, ddot, 1, handle, MPI_Sum, A%matrix_map%get_comm(), error )
+
+    C = ddot
     
   End Function complex_double_dot_complex
   

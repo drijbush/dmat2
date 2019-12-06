@@ -852,6 +852,7 @@ Contains
           End If
        End If
     End Do
+    
     csize =  storage_size( cdum ) / character_storage_size
     Call mpi_type_match_size( MPI_TYPECLASS_COMPLEX, csize, handle, error )
     Call mpi_allreduce( MPI_IN_PLACE, tmp, Size( tmp ), handle, MPI_SUM, A%parent_communicator, error )

@@ -1890,14 +1890,17 @@ contains
                 ! Real
                 Call Random_number( A_r( :, :, kpoint, spin ) )
                 Call Random_number( B_r( :, :, kpoint, spin ) )
+                A_r = A_r - 0.5_wp; B_r = B_r - 0.5_wp
              Else
                 ! Complex
                 Allocate( rand1( 1:m, 1:k ), rand2( 1:m, 1:k ) )
                 Call Random_number( rand1 ); Call Random_number( rand2 ) 
+                rand1 = rand1 - 0.5_wp; rand2 = rand2 - 0.5_wp; 
                 A_c( :, :, kpoint, spin ) = Cmplx( rand1, rand2, wp )
                 Deallocate( rand1, rand2 )
                 Allocate( rand1( 1:m, 1:k ), rand2( 1:m, 1:k ) )
                 Call Random_number( rand1 ); Call Random_number( rand2 ) 
+                rand1 = rand1 - 0.5_wp; rand2 = rand2 - 0.5_wp; 
                 B_c( :, :, kpoint, spin ) = Cmplx( rand1, rand2, wp )
                 Deallocate( rand1, rand2 )
              End If
