@@ -3036,6 +3036,11 @@ Contains
     !! Calculates the double dot product of the real matrices A and B, i.e.
     !! C = Sum_ij A_ij * B_ij
 
+
+    ! NEED TO IMPLEMENT
+    ! 1) Daggers!!!
+    ! 2) Error checking - matrices need  to be the same shape
+    
     Use mpi, Only : MPI_Type_create_f90_real, MPI_Sizeof, MPI_Type_match_size, MPI_In_place, MPI_Sum, &
          MPI_Typeclass_real
 
@@ -3103,6 +3108,10 @@ Contains
      Use mpi, Only : MPI_Type_create_f90_complex, MPI_Sizeof, MPI_Type_match_size, MPI_In_place, MPI_Sum, &
          MPI_Typeclass_complex
 
+    ! NEED TO IMPLEMENT
+    ! 1) Daggers!!!
+    ! 2) Error checking - matrices need  to be the same shape
+    
     Type( replicated_result_container ) :: C
 
     Class( complex_distributed_matrix ), Intent( In ) :: A
