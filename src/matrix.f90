@@ -3036,27 +3036,75 @@ Contains
     !! Calculates the double dot product of the real matrices A and B, i.e.
     !! C = Sum_ij A_ij * B_ij
 
+    ! The above formula means that if neither or both of A and B are daggered all
+    ! the calculation can be done locally. However if one but not the other is
+    ! daggered we need to do some communication
 
-    ! NEED TO IMPLEMENT
-    ! 1) Daggers!!!
-    ! 2) Error checking - matrices need  to be the same shape
-    
     Use mpi, Only : MPI_Type_create_f90_real, MPI_Sizeof, MPI_Type_match_size, MPI_In_place, MPI_Sum, &
          MPI_Typeclass_real
+    Use Scalapack_interfaces, Only : pdgeadd
 
     Type( replicated_result_container ) :: C
 
     Class( real_distributed_matrix ), Intent( In ) :: A
     Class( real_distributed_matrix ), Intent( In ) :: B
 
+    Type( real_distributed_matrix ) :: T1, T2, T1T
+
     Real( wp ) :: ddot
     Real( wp ) :: rdum
 
+    Integer :: mA , nA
+    Integer :: mB , nB
+    Integer :: mT1T, nT1T
     Integer :: rsize,  handle
     Integer :: error
 
-    ! Local sum - use Kahan summation as this is quite prone to round off
-    ddot = Kahan_sum( A%data * B%data )
+    ! Get the shapes of the input matrices
+    Call A%matrix_map%get_data( m = mA, n = nA )
+    Call B%matrix_map%get_data( m = mB, n = nB )
+
+    Same_daggers_condition: If( A%daggered .Eqv. B%daggered ) Then
+
+       ! Check the shapes are legal
+       If( mA /= mB .Or. nA /= nB ) Then
+          Stop "Incompatible sizes in real_double_dot_real"
+       End If
+
+       ! Equivalent transposes - All operations are local
+       ! Use Kahan summation as this is quite prone to round off
+       ddot = Kahan_sum( A%data * B%data )
+
+    Else
+
+       ! Check the shapes are legal
+       If( mA /= nB .Or. nA /= mB ) Then
+          Stop "Incompatible sizes in real_double_dot_real"
+       End If
+
+       !  Inequivalent transposes - we need to do comms to transpose one of the matrices
+       If( A%daggered ) Then
+          T1  = A
+          T2  = B
+       Else
+          T1  = B
+          T2  = A
+       End If
+       ! T1 now holds the matrix to be transposed
+       ! Thus T2 holds a matrix of the right shape for the transposed data. Use
+       ! this to set up the matrix that will hold the transposed data
+       T1T = T2
+       Call T1T%matrix_map%get_data( m = mT1T, n = nT1T )
+
+       ! Do the tranpose
+       Call pdgeadd ( 'T', mT1T, nT1T, 1.0_wp, T1%data, 1, 1, T1%matrix_map%get_descriptor(), &
+            0.0_wp, T1T%data, 1, 1, T1T%matrix_map%get_descriptor() )
+
+       ! Now can do local compuation
+       ddot = Kahan_sum( T1T%data * T2%data )
+
+    End If Same_daggers_condition
+
 
     ! And add over the processes
      Call MPI_Sizeof( rdum, rsize, error )
@@ -3067,6 +3115,96 @@ Contains
     C = ddot
    
   End Function real_double_dot_real
+  
+  Function complex_double_dot_complex( A, B ) Result( C )
+
+    !! Calculates the double dot product of the complex matrices A and B, i.e.
+    !! C = Sum_ij Conjg( A_ij ) * B_ij
+
+    ! The above formula means that if neither or both of A and B are daggered all
+    ! the calculation can be done locally. However if one but not the other is
+    ! daggered we need to do some communication
+
+    Use, intrinsic :: iso_fortran_env, Only : character_storage_size
+    Use mpi, Only : MPI_Type_create_f90_complex, MPI_Sizeof, MPI_Type_match_size, MPI_In_place, MPI_Sum, &
+         MPI_Typeclass_complex
+    Use Scalapack_interfaces, Only : pzgeadd
+
+    Type( replicated_result_container ) :: C
+
+    Class( complex_distributed_matrix ), Intent( In ) :: A
+    Class( complex_distributed_matrix ), Intent( In ) :: B
+
+    Type( complex_distributed_matrix ) :: T1, T2, T1T
+
+    Complex( wp ) :: ddot
+    Complex( wp ) :: cdum
+
+    Integer :: mA , nA
+    Integer :: mB , nB
+    Integer :: mT1T, nT1T
+    Integer :: csize,  handle
+    Integer :: error
+
+    ! Get the shapes of the input matrices
+    Call A%matrix_map%get_data( m = mA, n = nA )
+    Call B%matrix_map%get_data( m = mB, n = nB )
+
+    Same_daggers_condition: If( A%daggered .Eqv. B%daggered ) Then
+
+       ! Check the shapes are legal
+       If( mA /= mB .Or. nA /= nB ) Then
+          Stop "Incompatible sizes in complex_double_dot_complex"
+       End If
+
+       ! Equivalent daggers - All operations are local
+       ! Use Kahan summation as this is quite prone to round off
+       ddot = Kahan_sum( Conjg( A%data ) * B%data )
+
+    Else
+
+       ! Check the shapes are legal
+       If( mA /= nB .Or. nA /= mB ) Then
+          Stop "Incompatible sizes in complex_double_dot_complex"
+       End If
+
+       !  Inequivalent daggers - we need to do comms to dagger one of the matrices
+       If( A%daggered ) Then
+          T1  = A
+          T2  = B
+       Else
+          T1  = B
+          T2  = A
+       End If
+       ! T1 now holds the matrix to be daggered
+       ! Thus T2 holds a matrix of the right shape for the daggered data. Use
+       ! this to set up the matrix that will hold the daggered data
+       T1T = T2
+       Call T1T%matrix_map%get_data( m = mT1T, n = nT1T )
+
+       ! Do the dagger
+       Call pzgeadd ( 'C', mT1T, nT1T, ( 1.0_wp, 0.0_wp ), T1%data, 1, 1, T1%matrix_map%get_descriptor(), &
+            ( 0.0_wp, 0.0_wp ), T1T%data, 1, 1, T1T%matrix_map%get_descriptor() )
+
+       ! Now can do local compuation
+       ! In the complex case have to be careful we do the complex conjugation correctly
+       If( A%daggered ) Then
+          ddot = Kahan_sum( Conjg( T1T%data ) * T2%data )
+       Else
+          ddot = Kahan_sum( T1T%data * Conjg( T2%data ) )
+       End If
+
+    End If Same_daggers_condition
+
+    ! And add over the processes
+    csize =  storage_size( cdum ) / character_storage_size
+    ! Note MPI_Type_match_size does NOT create a new handle, it returns the value of an exisiting one. Hence no need to free
+    Call MPI_Type_match_size( MPI_TYPECLASS_COMPLEX, csize, handle, error )
+    Call MPI_Allreduce( MPI_IN_PLACE, ddot, 1, handle, MPI_SUM, A%matrix_map%get_comm(), error )
+
+    C = ddot
+   
+  End Function complex_double_dot_complex
   
   Function real_double_dot_complex( A, B ) Result( C )
 
@@ -3098,43 +3236,43 @@ Contains
 
   End Function complex_double_dot_real
 
-  Function complex_double_dot_complex( A, B ) Result( C )
-
-    !! Calculates the double dot product of the complex matrices A and B, i.e.
-    !! C = Sum_ij Conjg( A_ij ) * B_ij
-
-     Use, intrinsic :: iso_fortran_env, Only : character_storage_size
-
-     Use mpi, Only : MPI_Type_create_f90_complex, MPI_Sizeof, MPI_Type_match_size, MPI_In_place, MPI_Sum, &
-         MPI_Typeclass_complex
-
-    ! NEED TO IMPLEMENT
-    ! 1) Daggers!!!
-    ! 2) Error checking - matrices need  to be the same shape
-    
-    Type( replicated_result_container ) :: C
-
-    Class( complex_distributed_matrix ), Intent( In ) :: A
-    Class( complex_distributed_matrix ), Intent( In ) :: B
-
-    Complex( wp ) :: cdum
-    Complex( wp ) :: ddot
-
-    Integer :: csize, handle
-    Integer :: error
-
-    ! Local sum - use Kahan summation as this is quite prone to round off
-    ddot = Kahan_sum( Conjg( A%data ) * B%data )
-
-    csize =  storage_size( cdum ) / character_storage_size
-    ! Note MPI_Type_match_size does NOT create a new handle, it returns the value of an exisiting one. Hence no need to free
-    Call MPI_type_match_size( MPI_Typeclass_complex, csize, handle, error )
-    Call MPI_Allreduce( MPI_In_place, ddot, 1, handle, MPI_Sum, A%matrix_map%get_comm(), error )
-
-    C = ddot
-    
-  End Function complex_double_dot_complex
-
+!!$  Function complex_double_dot_complex( A, B ) Result( C )
+!!$
+!!$    !! Calculates the double dot product of the complex matrices A and B, i.e.
+!!$    !! C = Sum_ij Conjg( A_ij ) * B_ij
+!!$
+!!$     Use, intrinsic :: iso_fortran_env, Only : character_storage_size
+!!$
+!!$     Use mpi, Only : MPI_Type_create_f90_complex, MPI_Sizeof, MPI_Type_match_size, MPI_In_place, MPI_Sum, &
+!!$         MPI_Typeclass_complex
+!!$
+!!$    ! NEED TO IMPLEMENT
+!!$    ! 1) Daggers!!!
+!!$    ! 2) Error checking - matrices need  to be the same shape
+!!$    
+!!$    Type( replicated_result_container ) :: C
+!!$
+!!$    Class( complex_distributed_matrix ), Intent( In ) :: A
+!!$    Class( complex_distributed_matrix ), Intent( In ) :: B
+!!$
+!!$    Complex( wp ) :: cdum
+!!$    Complex( wp ) :: ddot
+!!$
+!!$    Integer :: csize, handle
+!!$    Integer :: error
+!!$
+!!$    ! Local sum - use Kahan summation as this is quite prone to round off
+!!$    ddot = Kahan_sum( Conjg( A%data ) * B%data )
+!!$
+!!$    csize =  storage_size( cdum ) / character_storage_size
+!!$    ! Note MPI_Type_match_size does NOT create a new handle, it returns the value of an exisiting one. Hence no need to free
+!!$    Call MPI_type_match_size( MPI_Typeclass_complex, csize, handle, error )
+!!$    Call MPI_Allreduce( MPI_In_place, ddot, 1, handle, MPI_Sum, A%matrix_map%get_comm(), error )
+!!$
+!!$    C = ddot
+!!$    
+!!$  End Function complex_double_dot_complex
+!!$
   Pure Function kahan_sum_real( a ) Result( r )
 
     ! Kahan sum the elements of a real 2d array
