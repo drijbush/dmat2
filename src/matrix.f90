@@ -1015,13 +1015,11 @@ Contains
        End Do
     End If
     ! Generate a portable MPI data type handle from the variable to be communicated
-!!$    Call MPI_Type_create_f90_real( Precision( data ), Range( data ), handle, error )
-    ! Replicate the data
-!!!!HACK TO WORK AROUND BUG IN MVAPICH2
-!!!!    Call MPI_Allreduce( MPI_IN_PLACE, data, Size( data ), handle, MPI_SUM, A%matrix_map%get_comm(), error )
+!!!!HACK TO WORK AROUND MULTIPLES BUGS IN MVAPICH2
     Call MPI_Sizeof( rdum, rsize, error )
     ! Note MPI_Type_match_size does NOT create a new handle, it returns the value of an exisiting one. Hence no need to free
     Call MPI_Type_match_size( MPI_TYPECLASS_REAL, rsize, handle, error )
+    ! Replicate the data
     Call MPI_Allreduce( MPI_IN_PLACE, data, Size( data ), handle, MPI_SUM, A%matrix_map%get_comm(), error )
        
   End Subroutine real_matrix_get_global_real
@@ -1108,14 +1106,11 @@ Contains
        End Do
     End If
     ! Generate a portable MPI data type handle from the variable to be communicated
-!!$    Call MPI_Type_create_f90_complex( Precision( data ), Range( data ), handle, error )
-    ! Replicate the data
-!!!!HACK TO WORK AROUND BUG IN MVAPICH2
-!!$    Call MPI_Allreduce( MPI_IN_PLACE, data, Size( data ), handle, MPI_SUM, A%matrix_map%get_comm(), error )
-!!$    Call MPI_sizeof( cdum, csize, error )
+!!!!HACK TO WORK AROUND MULTIPLE BUGS IN MVAPICH2
     csize =  storage_size( cdum ) / character_storage_size
     ! Note MPI_Type_match_size does NOT create a new handle, it returns the value of an exisiting one. Hence no need to free
     Call MPI_type_match_size( MPI_Typeclass_complex, csize, handle, error )
+    ! Replicate the data
     Call MPI_Allreduce( MPI_In_place, data, Size( data ), handle, MPI_Sum, A%matrix_map%get_comm(), error )
        
   End Subroutine complex_matrix_get_global_complex
@@ -3236,43 +3231,6 @@ Contains
 
   End Function complex_double_dot_real
 
-!!$  Function complex_double_dot_complex( A, B ) Result( C )
-!!$
-!!$    !! Calculates the double dot product of the complex matrices A and B, i.e.
-!!$    !! C = Sum_ij Conjg( A_ij ) * B_ij
-!!$
-!!$     Use, intrinsic :: iso_fortran_env, Only : character_storage_size
-!!$
-!!$     Use mpi, Only : MPI_Type_create_f90_complex, MPI_Sizeof, MPI_Type_match_size, MPI_In_place, MPI_Sum, &
-!!$         MPI_Typeclass_complex
-!!$
-!!$    ! NEED TO IMPLEMENT
-!!$    ! 1) Daggers!!!
-!!$    ! 2) Error checking - matrices need  to be the same shape
-!!$    
-!!$    Type( replicated_result_container ) :: C
-!!$
-!!$    Class( complex_distributed_matrix ), Intent( In ) :: A
-!!$    Class( complex_distributed_matrix ), Intent( In ) :: B
-!!$
-!!$    Complex( wp ) :: cdum
-!!$    Complex( wp ) :: ddot
-!!$
-!!$    Integer :: csize, handle
-!!$    Integer :: error
-!!$
-!!$    ! Local sum - use Kahan summation as this is quite prone to round off
-!!$    ddot = Kahan_sum( Conjg( A%data ) * B%data )
-!!$
-!!$    csize =  storage_size( cdum ) / character_storage_size
-!!$    ! Note MPI_Type_match_size does NOT create a new handle, it returns the value of an exisiting one. Hence no need to free
-!!$    Call MPI_type_match_size( MPI_Typeclass_complex, csize, handle, error )
-!!$    Call MPI_Allreduce( MPI_In_place, ddot, 1, handle, MPI_Sum, A%matrix_map%get_comm(), error )
-!!$
-!!$    C = ddot
-!!$    
-!!$  End Function complex_double_dot_complex
-!!$
   Pure Function kahan_sum_real( a ) Result( r )
 
     ! Kahan sum the elements of a real 2d array

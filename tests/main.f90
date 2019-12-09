@@ -244,6 +244,7 @@ Program test_distributed_matrix
            Flush( output_unit )
         End If
         Call test_ks_split_double_dot
+        Call test_ks_split_double_dot_T
         
      Case("ks_extract")
         ! Extract
