@@ -54,7 +54,7 @@ Module distributed_matrix_module
      Procedure( diag_op    ), Deferred, Public :: diag                       !! Diagonalise the (assumed Hermitian) matrix
      Procedure( extract_op ), Deferred, Public :: extract                    !! Extract a patch of one matrix into another matrix
      ! Private implementations
-     Procedure,                                             Private :: matrix_dagger           !! Apply the dagger operator to the matrix
+     Procedure,                                               Private :: matrix_dagger           !! Apply the dagger operator to the matrix
      Procedure(    set_global_real    ), Deferred,            Private :: set_global_real         !! Set values with a real    array using global indexing
      Procedure(    set_global_complex ), Deferred,            Private :: set_global_complex      !! Set values with a complex array using global indexing
      Procedure(    get_global_real    ), Deferred,            Private :: get_global_real         !! Get values from a real    array using global indexing
@@ -234,29 +234,31 @@ Module distributed_matrix_module
        Complex( wp ), Dimension( m:, p: ), Intent( In    ) :: data
      End Subroutine set_global_complex
 
-     Subroutine get_global_real( A, m, n, p, q, data )
+     Subroutine get_global_real( A, m, n, p, q, data, do_comms )
        !! Get values from a real array using global indexing
        Import :: wp
        Import :: distributed_matrix
        Implicit None
-       Class( distributed_matrix )    , Intent( In    ) :: A
-       Integer                        , Intent( In    ) :: m
-       Integer                        , Intent( In    ) :: n
-       Integer                        , Intent( In    ) :: p
-       Integer                        , Intent( In    ) :: q
-       Real( wp ), Dimension( m:, p: ), Intent(   Out ) :: data
+       Class( distributed_matrix )    , Intent( In    )           :: A
+       Integer                        , Intent( In    )           :: m
+       Integer                        , Intent( In    )           :: n
+       Integer                        , Intent( In    )           :: p
+       Integer                        , Intent( In    )           :: q
+       Real( wp ), Dimension( m:, p: ), Intent(   Out )           :: data
+       Logical                        , Intent( In    ), Optional :: do_comms
      End Subroutine get_global_real
-     Subroutine get_global_complex( A, m, n, p, q, data )
+     Subroutine get_global_complex( A, m, n, p, q, data, do_comms )
        !! Get values from a complex array using global indexing
        Import :: wp
        Import :: distributed_matrix
        Implicit None
-       Class( distributed_matrix )       , Intent( In    ) :: A
-       Integer                           , Intent( In    ) :: m
-       Integer                           , Intent( In    ) :: n
-       Integer                           , Intent( In    ) :: p
-       Integer                           , Intent( In    ) :: q
-       Complex( wp ), Dimension( m:, p: ), Intent(   Out ) :: data
+       Class( distributed_matrix )       , Intent( In    )           :: A
+       Integer                           , Intent( In    )           :: m
+       Integer                           , Intent( In    )           :: n
+       Integer                           , Intent( In    )           :: p
+       Integer                           , Intent( In    )           :: q
+       Complex( wp ), Dimension( m:, p: ), Intent(   Out )           :: data
+       Logical                           , Intent( In    ), Optional :: do_comms
      End Subroutine get_global_complex
 
      Subroutine real_assign( A, data )
@@ -971,19 +973,20 @@ Contains
        
   End Subroutine complex_matrix_set_global_complex
 
-  Subroutine real_matrix_get_global_real( A, m, n, p, q, data )
+  Subroutine real_matrix_get_global_real( A, m, n, p, q, data, do_comms )
 
     Use mpi, Only : MPI_Type_create_f90_real, MPI_Sizeof, MPI_Type_match_size, MPI_In_place, MPI_Sum, &
          MPI_Typeclass_real
     
     !! Gets the data ( m:n, p:q ) in the global A
 
-    Class( real_distributed_matrix ), Intent( In    ) :: A
-    Integer                         , Intent( In    ) :: m
-    Integer                         , Intent( In    ) :: n
-    Integer                         , Intent( In    ) :: p
-    Integer                         , Intent( In    ) :: q
-    Real( wp ), Dimension( m:, p: ) , Intent(   Out ) :: data
+    Class( real_distributed_matrix ), Intent( In    )           :: A
+    Integer                         , Intent( In    )           :: m
+    Integer                         , Intent( In    )           :: n
+    Integer                         , Intent( In    )           :: p
+    Integer                         , Intent( In    )           :: q
+    Real( wp ), Dimension( m:, p: ) , Intent(   Out )           :: data
+    Logical                         , Intent( In    ), Optional :: do_comms
     
     Real( wp ) :: rdum
 
@@ -991,6 +994,14 @@ Contains
     Integer :: i_loc , j_loc
     Integer :: handle
     Integer :: rsize, error
+
+    Logical :: local_do_comms
+
+    If( .Not. Present( do_comms  ) ) Then
+       local_do_comms = .True.
+    Else
+       local_do_comms = do_comms
+    End If
     
     data = 0.0_wp
     If( .Not. A%daggered ) Then
@@ -1014,53 +1025,62 @@ Contains
           End Do
        End Do
     End If
-    ! Generate a portable MPI data type handle from the variable to be communicated
+
+    If( local_do_comms ) Then
+       ! Generate a portable MPI data type handle from the variable to be communicated
 !!!!HACK TO WORK AROUND MULTIPLES BUGS IN MVAPICH2
-    Call MPI_Sizeof( rdum, rsize, error )
-    ! Note MPI_Type_match_size does NOT create a new handle, it returns the value of an exisiting one. Hence no need to free
-    Call MPI_Type_match_size( MPI_TYPECLASS_REAL, rsize, handle, error )
-    ! Replicate the data
-    Call MPI_Allreduce( MPI_IN_PLACE, data, Size( data ), handle, MPI_SUM, A%matrix_map%get_comm(), error )
+       Call MPI_Sizeof( rdum, rsize, error )
+       ! Note MPI_Type_match_size does NOT create a new handle, it returns the value of an exisiting one. Hence no need to free
+       Call MPI_Type_match_size( MPI_TYPECLASS_REAL, rsize, handle, error )
+       ! Replicate the data
+       Call MPI_Allreduce( MPI_IN_PLACE, data, Size( data ), handle, MPI_SUM, A%matrix_map%get_comm(), error )
+    End If
        
   End Subroutine real_matrix_get_global_real
 
-  Subroutine real_matrix_get_global_complex( A, m, n, p, q, data )
+  Subroutine real_matrix_get_global_complex( A, m, n, p, q, data, do_comms )
 
     !! Gets the data ( m:n, p:q ) in the global A
 
-    Class( real_distributed_matrix )   , Intent( In    ) :: A
-    Integer                            , Intent( In    ) :: m
-    Integer                            , Intent( In    ) :: n
-    Integer                            , Intent( In    ) :: p
-    Integer                            , Intent( In    ) :: q
-    Complex( wp ), Dimension( m:, p: ) , Intent(   Out ) :: data
+    Class( real_distributed_matrix )   , Intent( In    )           :: A
+    Integer                            , Intent( In    )           :: m
+    Integer                            , Intent( In    )           :: n
+    Integer                            , Intent( In    )           :: p
+    Integer                            , Intent( In    )           :: q
+    Complex( wp ), Dimension( m:, p: ) , Intent(   Out )           :: data
+    Logical                            , Intent( In    ), Optional :: do_comms
 
     Stop "Trying to get from real matrix into complex data in real_matrix_get_global_complex"
     ! Shut the compiler up about unused vars
-    data = 0.0_wp
-    Write( *, * ) A%data, m, n, p, q
+    If( .Not. Present( do_comms  ) ) Then
+       data = 0.0_wp
+       Write( *, * ) A%data, m, n, p, q
+    End If
 
   End Subroutine real_matrix_get_global_complex
 
-  Subroutine complex_matrix_get_global_real( A, m, n, p, q, data )
+  Subroutine complex_matrix_get_global_real( A, m, n, p, q, data, do_comms )
     
     !! Gets the data ( m:n, p:q ) in the global A
 
-    Class( complex_distributed_matrix ), Intent( In    ) :: A
-    Integer                            , Intent( In    ) :: m
-    Integer                            , Intent( In    ) :: n
-    Integer                            , Intent( In    ) :: p
-    Integer                            , Intent( In    ) :: q
-    Real( wp ), Dimension( m:, p: )    , Intent(   Out ) :: data
+    Class( complex_distributed_matrix ), Intent( In    )           :: A
+    Integer                            , Intent( In    )           :: m
+    Integer                            , Intent( In    )           :: n
+    Integer                            , Intent( In    )           :: p
+    Integer                            , Intent( In    )           :: q
+    Real( wp ), Dimension( m:, p: )    , Intent(   Out )           :: data
+    Logical                            , Intent( In    ), Optional :: do_comms
 
     Stop "Trying to get from complex matrix into real data in complex_matrix_get_global_real"
     ! Shut the compiler up about unused vars
-    data = 0.0_wp
-    Write( *, * ) A%data, m, n, p, q
+    If( .Not. Present( do_comms  ) ) Then
+       data = 0.0_wp
+       Write( *, * ) A%data, m, n, p, q
+    End If
 
   End Subroutine complex_matrix_get_global_real
 
-  Subroutine complex_matrix_get_global_complex( A, m, n, p, q, data )
+  Subroutine complex_matrix_get_global_complex( A, m, n, p, q, data, do_comms )
 
     Use, intrinsic :: iso_fortran_env, Only : character_storage_size
 
@@ -1069,12 +1089,13 @@ Contains
 
     !! Gets the data ( m:n, p:q ) in the global matrix
 
-    Class( complex_distributed_matrix ), Intent( In    ) :: A
-    Integer                            , Intent( In    ) :: m
-    Integer                            , Intent( In    ) :: n
-    Integer                            , Intent( In    ) :: p
-    Integer                            , Intent( In    ) :: q
-    Complex( wp ), Dimension( m:, p: ) , Intent(   Out ) :: data
+    Class( complex_distributed_matrix ), Intent( In    )           :: A
+    Integer                            , Intent( In    )           :: m
+    Integer                            , Intent( In    )           :: n
+    Integer                            , Intent( In    )           :: p
+    Integer                            , Intent( In    )           :: q
+    Complex( wp ), Dimension( m:, p: ) , Intent(   Out )           :: data
+    Logical                            , Intent( In    ), Optional :: do_comms
 
     Complex( wp ) :: cdum
 
@@ -1082,6 +1103,14 @@ Contains
     Integer :: i_loc , j_loc
     Integer :: csize, handle
     Integer :: error
+    
+    Logical :: local_do_comms
+
+    If( .Not. Present( do_comms  ) ) Then
+       local_do_comms = .True.
+    Else
+       local_do_comms = do_comms
+    End If
     
     data = 0.0_wp
     If( .Not. A%daggered ) Then
@@ -1105,13 +1134,16 @@ Contains
           End Do
        End Do
     End If
-    ! Generate a portable MPI data type handle from the variable to be communicated
+
+    If( local_do_comms ) Then
+       ! Generate a portable MPI data type handle from the variable to be communicated
 !!!!HACK TO WORK AROUND MULTIPLE BUGS IN MVAPICH2
-    csize =  storage_size( cdum ) / character_storage_size
-    ! Note MPI_Type_match_size does NOT create a new handle, it returns the value of an exisiting one. Hence no need to free
-    Call MPI_type_match_size( MPI_Typeclass_complex, csize, handle, error )
-    ! Replicate the data
-    Call MPI_Allreduce( MPI_In_place, data, Size( data ), handle, MPI_Sum, A%matrix_map%get_comm(), error )
+       csize =  storage_size( cdum ) / character_storage_size
+       ! Note MPI_Type_match_size does NOT create a new handle, it returns the value of an exisiting one. Hence no need to free
+       Call MPI_type_match_size( MPI_Typeclass_complex, csize, handle, error )
+       ! Replicate the data
+       Call MPI_Allreduce( MPI_In_place, data, Size( data ), handle, MPI_Sum, A%matrix_map%get_comm(), error )
+    End If
        
   End Subroutine complex_matrix_get_global_complex
 
