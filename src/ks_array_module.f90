@@ -10,10 +10,14 @@ Module ks_array_module
 
   Implicit None
 
-  Integer, Public, Parameter :: K_POINT_REAL = 0
-  Integer, Public, Parameter :: K_POINT_COMPLEX = 1
+  Integer, Public, Parameter :: K_POINT_REAL      = 0
+  Integer, Public, Parameter :: K_POINT_COMPLEX   = 1
   Integer, Public, Parameter :: K_POINT_NOT_EXIST = Huge( K_POINT_NOT_EXIST )
 
+  Integer, Public, Parameter :: KS_ARRAY_COMMS_GET_ON_ALL      = 10
+  Integer, Public, Parameter :: KS_ARRAY_COMMS_GET_ON_KS_GROUP = 2065
+  Integer, Public, Parameter :: KS_ARRAY_NO_COMMS              = 323
+  
   Integer, Private, Parameter :: INVALID = -1
   Integer, Private, Parameter :: NOT_ME  = -2
   Integer, Private, Parameter :: NO_DATA = -3
@@ -1387,7 +1391,7 @@ Contains
 
   End Subroutine ks_array_set_global_complex  
 
-  Subroutine ks_array_get_global_real( A, k, s, m, n, p, q, data )
+  Subroutine ks_array_get_global_real( A, k, s, m, n, p, q, data, comms_level )
 
     Use mpi, Only : MPI_Comm_rank, MPI_INTEGER, MPI_ANY_SOURCE, &
          MPI_Wait, MPI_STATUS_IGNORE, MPI_Sizeof, MPI_Type_match_size, &
@@ -1396,14 +1400,15 @@ Contains
     !! For the matrix with spin label s and k-point label k get the (m:n,p:q) patch 
     ! Need to overload for irreps
 
-    Class( ks_array )              , Intent( In    ) :: A
-    Integer    , Dimension( : )    , Intent( In    ) :: k
-    Integer                        , Intent( In    ) :: s
-    Integer                        , Intent( In    ) :: m
-    Integer                        , Intent( In    ) :: n
-    Integer                        , Intent( In    ) :: p
-    Integer                        , Intent( In    ) :: q
-    Real( wp ), Dimension( m:, p: ), Intent(   Out ) :: data
+    Class( ks_array )              , Intent( In    )           :: A
+    Integer    , Dimension( : )    , Intent( In    )           :: k
+    Integer                        , Intent( In    )           :: s
+    Integer                        , Intent( In    )           :: m
+    Integer                        , Intent( In    )           :: n
+    Integer                        , Intent( In    )           :: p
+    Integer                        , Intent( In    )           :: q
+    Real( wp ), Dimension( m:, p: ), Intent(   Out )           :: data
+    Integer                        , Intent( In    ), Optional :: comms_level
 
     Real( wp ) :: rdum
 
@@ -1413,16 +1418,27 @@ Contains
     Integer :: request
     Integer :: ks_root
     Integer :: rsize, handle
+    Integer :: local_comms_level
     Integer :: error
 
+    Logical :: do_ks_comms
     Logical :: sending_data
+
+    If( .Not. Present( comms_level ) ) Then
+       local_comms_level = KS_ARRAY_COMMS_GET_ON_ALL
+    Else
+       local_comms_level = comms_level
+    End If
+
+    do_ks_comms = local_comms_level == KS_ARRAY_COMMS_GET_ON_ALL .Or. &
+                  local_comms_level == KS_ARRAY_COMMS_GET_ON_KS_GROUP        
     
     ks = A%get_ks( k, s )
     
     my_ks = A%get_my_ks_index( ks )
 
     If( my_ks /= NOT_ME ) Then
-       Call A%my_k_points( my_ks )%data( 1 )%matrix%get_by_global( m, n, p, q, data )
+       Call A%my_k_points( my_ks )%data( 1 )%matrix%get_by_global( m, n, p, q, data, do_ks_comms )
     End If
 
     ! Need to replicate data over parent communicator if split ks points
@@ -1456,7 +1472,7 @@ Contains
 
   End Subroutine ks_array_get_global_real
 
-  Subroutine ks_array_get_global_complex( A, k, s, m, n, p, q, data )
+  Subroutine ks_array_get_global_complex( A, k, s, m, n, p, q, data, comms_level )
 
     !! For the matrix with spin label s and k-point label k set the (m:n,p:q) patch 
 
@@ -1468,14 +1484,15 @@ Contains
 
     ! Need to overload for irreps
 
-    Class( ks_array )                 , Intent( In    ) :: A
-    Integer    , Dimension( : )       , Intent( In    ) :: k
-    Integer                           , Intent( In    ) :: s
-    Integer                           , Intent( In    ) :: m
-    Integer                           , Intent( In    ) :: n
-    Integer                           , Intent( In    ) :: p
-    Integer                           , Intent( In    ) :: q
-    Complex( wp ), Dimension( m:, p: ), Intent(   Out ) :: data
+    Class( ks_array )                 , Intent( In    )           :: A
+    Integer    , Dimension( : )       , Intent( In    )           :: k
+    Integer                           , Intent( In    )           :: s
+    Integer                           , Intent( In    )           :: m
+    Integer                           , Intent( In    )           :: n
+    Integer                           , Intent( In    )           :: p
+    Integer                           , Intent( In    )           :: q
+    Complex( wp ), Dimension( m:, p: ), Intent(   Out )           :: data
+    Integer                           , Intent( In    ), Optional :: comms_level
 
     Complex( wp ) :: cdum
 
@@ -1485,16 +1502,27 @@ Contains
     Integer :: request
     Integer :: ks_root
     Integer :: csize, handle
+    Integer :: local_comms_level
     Integer :: error
 
+    Logical :: do_ks_comms
     Logical :: sending_data
     
+     If( .Not. Present( comms_level ) ) Then
+       local_comms_level = KS_ARRAY_COMMS_GET_ON_ALL
+    Else
+       local_comms_level = comms_level
+    End If
+
+    do_ks_comms = local_comms_level == KS_ARRAY_COMMS_GET_ON_ALL .Or. &
+                  local_comms_level == KS_ARRAY_COMMS_GET_ON_KS_GROUP       
+
     ks = A%get_ks( k, s )
     
     my_ks = A%get_my_ks_index( ks )
 
     If( my_ks /= NOT_ME ) Then
-       Call A%my_k_points( my_ks )%data( 1 )%matrix%get_by_global( m, n, p, q, data )
+       Call A%my_k_points( my_ks )%data( 1 )%matrix%get_by_global( m, n, p, q, data, do_ks_comms )
     End If
 
     ! Need to replicate data over parent communicator if split ks points

@@ -468,33 +468,43 @@ Contains
 
   End Subroutine ks_matrix_set_global_complex
 
-  Subroutine ks_matrix_get_global_real( A, m, n, p, q, data )
+  Subroutine ks_matrix_get_global_real( A, m, n, p, q, data, do_ks_comms )
 
     !! Get the (m:n,p:q) patch of the matrix using global indices
    
-    Class( ks_matrix )             , Intent( In    ) :: A
-    Integer                        , Intent( In    ) :: m
-    Integer                        , Intent( In    ) :: n
-    Integer                        , Intent( In    ) :: p
-    Integer                        , Intent( In    ) :: q
-    Real( wp ), Dimension( m:, p: ), Intent(   Out ) :: data
+    Class( ks_matrix )             , Intent( In    )           :: A
+    Integer                        , Intent( In    )           :: m
+    Integer                        , Intent( In    )           :: n
+    Integer                        , Intent( In    )           :: p
+    Integer                        , Intent( In    )           :: q
+    Real( wp ), Dimension( m:, p: ), Intent(   Out )           :: data
+    Logical                        , Intent( In    ), Optional :: do_ks_comms
 
-    Call A%matrix%get_by_global( m, n, p, q, data )
-
+    If( .Not. Present( do_ks_comms ) ) Then
+       Call A%matrix%get_by_global( m, n, p, q, data )
+    Else
+       Call A%matrix%get_by_global( m, n, p, q, data, do_ks_comms )
+    End If
+    
   End Subroutine ks_matrix_get_global_real
 
-  Subroutine ks_matrix_get_global_complex( A, m, n, p, q, data )
+  Subroutine ks_matrix_get_global_complex( A, m, n, p, q, data, do_ks_comms )
     
     !! Get the (m:n,p:q) patch of the matrix using global indices
 
-    Class( ks_matrix )                , Intent( In    ) :: A
-    Integer                           , Intent( In    ) :: m
-    Integer                           , Intent( In    ) :: n
-    Integer                           , Intent( In    ) :: p
-    Integer                           , Intent( In    ) :: q
-    Complex( wp ), Dimension( m:, p: ), Intent(   Out ) :: data
+    Class( ks_matrix )                , Intent( In    )           :: A
+    Integer                           , Intent( In    )           :: m
+    Integer                           , Intent( In    )           :: n
+    Integer                           , Intent( In    )           :: p
+    Integer                           , Intent( In    )           :: q
+    Complex( wp ), Dimension( m:, p: ), Intent(   Out )           :: data
+    Logical                           , Intent( In    ), Optional :: do_ks_comms
 
-    Call A%matrix%get_by_global( m, n, p, q, data )
+    If( .Not. Present( do_ks_comms ) ) Then
+       Call A%matrix%get_by_global( m, n, p, q, data )
+    Else
+       Call A%matrix%get_by_global( m, n, p, q, data, do_ks_comms )
+    End If
 
   End Subroutine ks_matrix_get_global_complex
 
