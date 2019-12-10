@@ -1,5 +1,10 @@
 Module replicated_result_container_module
 
+  !! Implements a simple container which complex or real numbers can be stored in
+  !! Presently only Scalars are catered for
+  !! The primary us in dmat2 is to form array of relicated inputs or outputs to
+  !! routines where a mix of real and complex values in the arrays are required
+  
   Use numbers_module, Only : wp
 
   Implicit None
@@ -43,13 +48,6 @@ Module replicated_result_container_module
      Procedure, Pass( A ), Private :: get_complex
   End type replicated_result_container
 
-!!$  Interface Assignment( = )
-!!$     Module Procedure :: store_real
-!!$     Module Procedure :: store_complex
-!!$     Module Procedure :: get_real
-!!$     Module Procedure :: get_complex     
-!!$  End Interface Assignment( = )
-  
   Private
 
   Abstract Interface
