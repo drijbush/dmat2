@@ -1393,9 +1393,7 @@ Contains
 
   Subroutine ks_array_get_global_real( A, k, s, m, n, p, q, data, comms_level )
 
-    Use mpi, Only : MPI_Comm_rank, MPI_INTEGER, MPI_ANY_SOURCE, &
-         MPI_Wait, MPI_STATUS_IGNORE, MPI_Sizeof, MPI_Type_match_size, &
-         MPI_TYPECLASS_REAL
+    Use mpi, Only : MPI_Sizeof, MPI_Type_match_size, MPI_TYPECLASS_REAL, MPI_IN_PLACE, MPI_SUM
 
     !! For the matrix with spin label s and k-point label k get the (m:n,p:q) patch 
     ! Need to overload for irreps
@@ -1410,19 +1408,12 @@ Contains
     Real( wp ), Dimension( m:, p: ), Intent(   Out )           :: data
     Integer                        , Intent( In    ), Optional :: comms_level
 
-    Real( wp ) :: rdum
-
-    Integer :: me_parent, me
-    Integer :: buff_send, buff_recv
     Integer :: ks, my_ks
-    Integer :: request
-    Integer :: ks_root
     Integer :: rsize, handle
     Integer :: local_comms_level
     Integer :: error
 
     Logical :: do_ks_comms
-    Logical :: sending_data
 
     If( .Not. Present( comms_level ) ) Then
        local_comms_level = KS_ARRAY_COMMS_GET_ON_ALL
@@ -1430,8 +1421,11 @@ Contains
        local_comms_level = comms_level
     End If
 
-    do_ks_comms = local_comms_level == KS_ARRAY_COMMS_GET_ON_ALL .Or. &
-                  local_comms_level == KS_ARRAY_COMMS_GET_ON_KS_GROUP        
+    ! If going to replicate the data across all processes holding
+    ! the KS_array do NOT replicate across the processes holding this
+    ! ks point - it makes subsequent replication across the
+    ! global group much easier (i.e. simply a global sum)
+    do_ks_comms = local_comms_level == KS_ARRAY_COMMS_GET_ON_KS_GROUP        
     
     ks = A%get_ks( k, s )
     
@@ -1439,36 +1433,16 @@ Contains
 
     If( my_ks /= NOT_ME ) Then
        Call A%my_k_points( my_ks )%data( 1 )%matrix%get_by_global( m, n, p, q, data, do_ks_comms )
+    Else
+       data = 0.0_wp
     End If
 
-    ! Need to replicate data over parent communicator if split ks points
-    
-    ! Work out which set of processes hold this data, and send the rank of the root node of the
-    ! communicator for that set to the root node of the parent communicator
-    Call mpi_comm_rank( A%parent_communicator, me_parent, error )
-    sending_data = .False.
-    If( my_ks /= NOT_ME ) Then
-       Call mpi_comm_rank( A%my_k_points( my_ks )%communicator, me, error )
-       sending_data = me == 0
-       If( sending_data ) then
-          buff_send = me_parent
-          Call mpi_isend( buff_send, 1, MPI_INTEGER, 0, ks, A%parent_communicator, request, error )
-       End If
+    ! Need to replicate data over parent communicator
+    If( local_comms_level == KS_ARRAY_COMMS_GET_ON_ALL ) Then
+       Call mpi_sizeof( 1.234_wp, rsize, error )
+       Call mpi_type_match_size( MPI_TYPECLASS_REAL, rsize, handle, error )
+       Call mpi_allreduce( MPI_IN_PLACE, data, Size( data ), handle, MPI_SUM, A%parent_communicator, error )
     End If
-    If( me_parent == 0 ) Then
-       Call mpi_recv( buff_recv, 1, MPI_INTEGER, MPI_ANY_SOURCE, ks, A%parent_communicator, MPI_STATUS_IGNORE, error )
-    End If
-    If( sending_data ) Then
-       Call mpi_wait( request, MPI_STATUS_IGNORE, error )
-    End If
-    ! Now the root of the parent knows who owns the evals it can tell all other proceses
-    ! in the parent communicator where they will be coming from, and how many there are
-    Call mpi_bcast( buff_recv, 1, MPI_INTEGER, 0, A%parent_communicator, error )
-    ks_root = buff_recv 
-    ! And finally bcast out the values from the root node of the communicator that owns this set of evals
-    Call mpi_sizeof( rdum, rsize, error )
-    Call mpi_type_match_size( MPI_TYPECLASS_REAL, rsize, handle, error )
-    Call mpi_bcast( data, Size( data ), handle, ks_root, A%parent_communicator, error )    
 
   End Subroutine ks_array_get_global_real
 
@@ -1478,9 +1452,7 @@ Contains
 
     Use, intrinsic :: iso_fortran_env, Only : character_storage_size
 
-    Use mpi, Only : MPI_Comm_rank, MPI_INTEGER, MPI_ANY_SOURCE, &
-         MPI_Wait, MPI_STATUS_IGNORE, MPI_Sizeof, MPI_Type_match_size, &
-         MPI_TYPECLASS_COMPLEX
+    Use mpi, Only : MPI_Sizeof, MPI_Type_match_size, MPI_TYPECLASS_COMPLEX, MPI_IN_PLACE, MPI_SUM
 
     ! Need to overload for irreps
 
@@ -1494,28 +1466,24 @@ Contains
     Complex( wp ), Dimension( m:, p: ), Intent(   Out )           :: data
     Integer                           , Intent( In    ), Optional :: comms_level
 
-    Complex( wp ) :: cdum
-
-    Integer :: me_parent, me
-    Integer :: buff_send, buff_recv
     Integer :: ks, my_ks
-    Integer :: request
-    Integer :: ks_root
     Integer :: csize, handle
     Integer :: local_comms_level
     Integer :: error
 
     Logical :: do_ks_comms
-    Logical :: sending_data
     
-     If( .Not. Present( comms_level ) ) Then
+    If( .Not. Present( comms_level ) ) Then
        local_comms_level = KS_ARRAY_COMMS_GET_ON_ALL
     Else
        local_comms_level = comms_level
     End If
 
-    do_ks_comms = local_comms_level == KS_ARRAY_COMMS_GET_ON_ALL .Or. &
-                  local_comms_level == KS_ARRAY_COMMS_GET_ON_KS_GROUP       
+    ! If going to replicate the data across all processes holding
+    ! the KS_array do NOT replicate across the processes holding this
+    ! ks point - it makes subsequent replication across the
+    ! global group much easier (i.e. simply a global sum)
+    do_ks_comms = local_comms_level == KS_ARRAY_COMMS_GET_ON_KS_GROUP       
 
     ks = A%get_ks( k, s )
     
@@ -1523,37 +1491,17 @@ Contains
 
     If( my_ks /= NOT_ME ) Then
        Call A%my_k_points( my_ks )%data( 1 )%matrix%get_by_global( m, n, p, q, data, do_ks_comms )
+    Else
+       data = 0.0_wp
     End If
 
     ! Need to replicate data over parent communicator if split ks points
-    
-    ! Work out which set of processes hold this data, and send the rank of the root node of the
-    ! communicator for that set to the root node of the parent communicator
-    Call mpi_comm_rank( A%parent_communicator, me_parent, error )
-    sending_data = .False.
-    If( my_ks /= NOT_ME ) Then
-       Call mpi_comm_rank( A%my_k_points( my_ks )%communicator, me, error )
-       sending_data = me == 0
-       If( sending_data ) then
-          buff_send = me_parent
-          Call mpi_isend( buff_send, 1, MPI_INTEGER, 0, ks, A%parent_communicator, request, error )
-       End If
+    ! Need to replicate data over parent communicator
+    If( local_comms_level == KS_ARRAY_COMMS_GET_ON_ALL ) Then
+       Call mpi_sizeof( ( 1.234_wp, 0.0_wp ), csize, error )
+       Call mpi_type_match_size( MPI_TYPECLASS_COMPLEX, csize, handle, error )
+       Call mpi_allreduce( MPI_IN_PLACE, data, Size( data ), handle, MPI_SUM, A%parent_communicator, error )
     End If
-    If( me_parent == 0 ) Then
-       Call mpi_recv( buff_recv, 1, MPI_INTEGER, MPI_ANY_SOURCE, ks, A%parent_communicator, MPI_STATUS_IGNORE, error )
-    End If
-    If( sending_data ) Then
-       Call mpi_wait( request, MPI_STATUS_IGNORE, error )
-    End If
-    ! Now the root of the parent knows who owns the evals it can tell all other proceses
-    ! in the parent communicator where they will be coming from, and how many there are
-    Call mpi_bcast( buff_recv, 1, MPI_INTEGER, 0, A%parent_communicator, error )
-    ks_root = buff_recv
-    ! And finally bcast out the values from the root node of the communicator that owns this set of evals
-    ! Get the data type handle this way due to multiple bugs in mvapich2
-    csize =  storage_size( cdum ) / character_storage_size
-    Call mpi_type_match_size( MPI_TYPECLASS_COMPLEX, csize, handle, error )
-    Call mpi_bcast( data, Size( data ), handle, ks_root, A%parent_communicator, error )    
 
   End Subroutine ks_array_get_global_complex
 
