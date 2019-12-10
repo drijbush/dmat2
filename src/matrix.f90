@@ -2763,6 +2763,61 @@ Contains
 
   End Function complex_double_dot_real
 
+  ! Tranpose routines that ALWAYS communicate data as required
+
+  Function real_dagger_force_comms( A ) Result( AT )
+
+    !! Transpose a real matrix and always move the data (c.f dagger which simply sets the daggered flag)
+
+    Use Scalapack_interfaces, Only : pdgeadd
+
+    Type( real_distributed_matrix ) :: AT    
+
+    Class( real_distributed_matrix ), Intent( In ) :: A
+
+    Integer :: mA , nA
+    Integer :: mAT, nAT
+
+    Call A%matrix_map%get_data( m = mA, n = nA )
+
+    mAT = nA
+    nAT = mA
+
+    Call AT%create( mAT, nAT, A )
+    AT%daggered = .Not. A%daggered
+
+    Call pdgeadd ( 'T', mAT, nAT, 1.0_wp,  A%data, 1, 1,  A%matrix_map%get_descriptor(), &
+                                  0.0_wp, AT%data, 1, 1, AT%matrix_map%get_descriptor() )
+
+
+  End Function real_dagger_force_comms
+
+  Function complex_dagger_force_comms( A ) Result( AT )
+
+    !! Hermitian Conjugate a complex matrix and always move the data (c.f dagger which simply sets the daggered flag)
+
+    Use Scalapack_interfaces, Only : pzgeadd
+
+    Type( complex_distributed_matrix ) :: AT    
+
+    Class( complex_distributed_matrix ), Intent( In ) :: A
+
+    Integer :: mA , nA
+    Integer :: mAT, nAT
+
+    Call A%matrix_map%get_data( m = mA, n = nA )
+
+    mAT = nA
+    nAT = mA
+
+    Call AT%create( mAT, nAT, A )
+    AT%daggered = .Not. A%daggered
+
+    Call pzgeadd ( 'T', mAT, nAT, ( 1.0_wp, 0.0_wp ),  A%data, 1, 1,  A%matrix_map%get_descriptor(), &
+                                  ( 0.0_wp, 0.0_wp ), AT%data, 1, 1, AT%matrix_map%get_descriptor() )
+
+  End Function complex_dagger_force_comms
+
   ! Unary plus/minus routines
   
   Function plus_real( A ) Result( C )
