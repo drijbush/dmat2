@@ -823,6 +823,7 @@ Contains
     Integer :: me
     Integer :: csize, handle
     Integer :: error
+    Integer :: i
 
     ! Set up the result
     Allocate( C( 1:Size( A%all_k_point_info ) ) )
@@ -846,7 +847,9 @@ Contains
     ! Now replicate the result across all ks points being careful to preserve the type
     ! ( compex or real ) of the result
     Allocate( tmp( 1:Size( C%data ) ) )
-    tmp = C%data
+    Do i = 1, Size( tmp )
+       tmp( i ) = C( i )%data
+    End Do
     Do ks = 1, Size( A%all_k_point_info )
        my_ks = A%get_my_ks_index( ks )
        If( my_ks /= NOT_ME ) Then

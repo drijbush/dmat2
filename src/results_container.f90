@@ -19,23 +19,23 @@ Module replicated_result_container_module
      Procedure(   get_complex_data ), Pass( A ), Deferred, Private :: get_complex_data
   End type replicated_result
 
-  Type, Private, Extends( replicated_result ) :: real_replicated_result
+  Type, Private, Extends( replicated_result ) :: real_scalar_replciated_result
      Real( wp ), Private :: data
    Contains
      Procedure, Pass( A ), Private :: store_real_data    => store_real_data_into_real
      Procedure, Pass( A ), Private :: store_complex_data => store_complex_data_into_real
      Procedure, Pass( A ), Private :: get_real_data      => get_real_data_from_real
      Procedure, Pass( A ), Private :: get_complex_data   => get_complex_data_from_real
-  End type real_replicated_result
+  End type real_scalar_replciated_result
 
-  Type, Private, Extends( replicated_result ) :: complex_replicated_result
+  Type, Private, Extends( replicated_result ) :: complex_scalar_replciated_result
      Complex( wp ), Private :: data
    Contains
      Procedure, Pass( A ), Private :: store_real_data    => store_real_data_into_complex
      Procedure, Pass( A ), Private :: store_complex_data => store_complex_data_into_complex
      Procedure, Pass( A ), Private :: get_real_data      => get_real_data_from_complex
      Procedure, Pass( A ), Private :: get_complex_data   => get_complex_data_from_complex
-  End type complex_replicated_result
+  End type complex_scalar_replciated_result
 
   Type, Public :: replicated_result_container
      Class( replicated_result ), Allocatable, Private :: data
@@ -52,7 +52,7 @@ Module replicated_result_container_module
 
   Abstract Interface
      
-     Elemental Subroutine store_real_data( A, data )
+     Subroutine store_real_data( A, data )
        Import :: wp
        Import :: replicated_result
        Implicit None
@@ -60,7 +60,7 @@ Module replicated_result_container_module
        Real( wp )                , Intent( In    ) :: data
      End Subroutine store_real_data
      
-     Elemental Subroutine store_complex_data( A, data )
+     Subroutine store_complex_data( A, data )
        Import :: wp
        Import :: replicated_result
        Implicit None
@@ -68,7 +68,7 @@ Module replicated_result_container_module
        Complex( wp )             , Intent( In    ) :: data
      End Subroutine store_complex_data
      
-     Elemental Subroutine get_real_data( data, A )
+     Subroutine get_real_data( data, A )
        Import :: wp
        Import :: replicated_result
        Implicit None
@@ -76,7 +76,7 @@ Module replicated_result_container_module
        Class( replicated_result ), Intent( In    ) :: A
      End Subroutine get_real_data
      
-     Elemental Subroutine get_complex_data( data, A )
+     Subroutine get_complex_data( data, A )
        Import :: wp
        Import :: replicated_result
        Implicit None
@@ -90,25 +90,25 @@ Contains
 
   ! Top level store routines
   
-  Elemental Subroutine store_real( A, data )
+  Subroutine store_real( A, data )
 
     Class( replicated_result_container ), Intent( InOut ) :: A
     Real( wp )                          , Intent( In    ) :: data
 
     If( Allocated( A%data ) ) Deallocate( A%data )
-    Allocate( real_replicated_result :: A%data )
+    Allocate( real_scalar_replciated_result :: A%data )
 
     A%data = data
     
   End Subroutine store_real
   
-  Elemental Subroutine store_complex( A, data )
+  Subroutine store_complex( A, data )
 
     Class( replicated_result_container ), Intent( InOut ) :: A
     Complex( wp )                       , Intent( In    ) :: data
 
     If( Allocated( A%data ) ) Deallocate( A%data )
-    Allocate( complex_replicated_result :: A%data )
+    Allocate( complex_scalar_replciated_result :: A%data )
     
     A%data = data
 
@@ -116,19 +116,19 @@ Contains
 
   ! Storing into a real scalar
   
-  Elemental Subroutine store_real_data_into_real( A, data )
+  Subroutine store_real_data_into_real( A, data )
 
-    Class( real_replicated_result ), Intent( InOut ) :: A
-    Real( wp )                     , Intent( In    ) :: data
+    Class( real_scalar_replciated_result ), Intent( InOut ) :: A
+    Real( wp )                            , Intent( In    ) :: data
 
     A%data = data
     
   End Subroutine store_real_data_into_real
   
-  Elemental Subroutine store_complex_data_into_real( A, data )
+  Subroutine store_complex_data_into_real( A, data )
 
-    Class( real_replicated_result ), Intent( InOut ) :: A
-    Complex( wp )                  , Intent( In    ) :: data
+    Class( real_scalar_replciated_result ), Intent( InOut ) :: A
+    Complex( wp )                         , Intent( In    ) :: data
 
     A%data = Real( data, Kind( A%data ) )
     
@@ -136,19 +136,19 @@ Contains
   
   ! Storing into a complex scalar
 
-  Elemental Subroutine store_real_data_into_complex( A, data )
+  Subroutine store_real_data_into_complex( A, data )
 
-    Class( complex_replicated_result ), Intent( InOut ) :: A
-    Real( wp )                        , Intent( In    ) :: data
+    Class( complex_scalar_replciated_result ), Intent( InOut ) :: A
+    Real( wp )                               , Intent( In    ) :: data
 
     A%data = data
     
   End Subroutine store_real_data_into_complex
   
-  Elemental Subroutine store_complex_data_into_complex( A, data )
+  Subroutine store_complex_data_into_complex( A, data )
 
-    Class( complex_replicated_result ), Intent( InOut ) :: A
-    Complex( wp )                     , Intent( In    ) :: data
+    Class( complex_scalar_replciated_result ), Intent( InOut ) :: A
+    Complex( wp )                            , Intent( In    ) :: data
 
     A%data = data
     
@@ -156,7 +156,7 @@ Contains
 
   ! Top level get routines
   
-  Elemental Subroutine get_real( data, A )
+  Subroutine get_real( data, A )
 
     Real( wp )                          , Intent( InOut ) :: data
     Class( replicated_result_container ), Intent( In    ) :: A
@@ -165,7 +165,7 @@ Contains
     
   End Subroutine get_real
   
-  Elemental Subroutine get_complex( data, A )
+  Subroutine get_complex( data, A )
 
     Complex( wp )                       , Intent( InOut ) :: data
     Class( replicated_result_container ), Intent( In    ) :: A
@@ -176,19 +176,19 @@ Contains
   
   ! Getting into a real scalar
   
-  Elemental Subroutine get_real_data_from_real( data, A )
+  Subroutine get_real_data_from_real( data, A )
 
-    Real( wp )                     , Intent(   Out ) :: data
-    Class( real_replicated_result ), Intent( In    ) :: A
+    Real( wp )                            , Intent(   Out ) :: data
+    Class( real_scalar_replciated_result ), Intent( In    ) :: A
 
     data = A%data
     
   End Subroutine get_real_data_from_real
   
-  Elemental Subroutine get_real_data_from_complex( data, A )
+  Subroutine get_real_data_from_complex( data, A )
 
-    Real( wp )                        , Intent(   Out ) :: data
-    Class( complex_replicated_result ), Intent( In    ) :: A
+    Real( wp )                               , Intent(   Out ) :: data
+    Class( complex_scalar_replciated_result ), Intent( In    ) :: A
 
     data = Real( A%data, Kind( data ) )
     
@@ -196,19 +196,19 @@ Contains
 
   ! Getting into a complex scalar
   
-  Elemental Subroutine get_complex_data_from_real( data, A )
+  Subroutine get_complex_data_from_real( data, A )
 
-    Complex( wp )                  , Intent(   Out ) :: data
-    Class( real_replicated_result ), Intent( In    ) :: A
+    Complex( wp )                         , Intent(   Out ) :: data
+    Class( real_scalar_replciated_result ), Intent( In    ) :: A
 
     data = A%data
     
   End Subroutine get_complex_data_from_real
   
-  Elemental Subroutine get_complex_data_from_complex( data, A )
+  Subroutine get_complex_data_from_complex( data, A )
 
-    Complex( wp )                     , Intent(   Out ) :: data
-    Class( complex_replicated_result ), Intent( In    ) :: A
+    Complex( wp )                            , Intent(   Out ) :: data
+    Class( complex_scalar_replciated_result ), Intent( In    ) :: A
 
     data = A%data
     
