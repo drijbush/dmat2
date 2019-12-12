@@ -43,6 +43,7 @@ Module distributed_matrix_module
      Generic  , Public :: Operator( - )          => diagonal_subtract          !! Subtract a general matrix from a diagonal matrix
      Generic  , Public :: Operator( .ddot. )     => double_dot                 !! Multiply two matrices together
      Generic  , Public :: Operator( .Dagger.   ) => matrix_dagger              !! Apply the dagger operator to the matrix
+     Generic  , Public :: Operator( .DaggerForceComms. ) => matrix_dagger_force_comms !! Apply the dagger operator to the matrix and do the communications
      Generic  , Public :: Operator( .Choleski. ) => choleski                   !! choleski decompose a matrix
      Generic  , Public :: Operator( .Trinv.    ) => tr_inv                     !! invert a traingular matrix
      Generic  , Public :: set_by_global          => set_global_real, set_global_complex !! Set a matrix using global indexing
@@ -55,6 +56,7 @@ Module distributed_matrix_module
      Procedure( extract_op ), Deferred, Public :: extract                    !! Extract a patch of one matrix into another matrix
      ! Private implementations
      Procedure,                                               Private :: matrix_dagger           !! Apply the dagger operator to the matrix
+     Procedure(    matrix_dagger      ), Deferred,            Private :: matrix_dagger_force_comms           !! Apply the dagger operator to the matrix
      Procedure(    set_global_real    ), Deferred,            Private :: set_global_real         !! Set values with a real    array using global indexing
      Procedure(    set_global_complex ), Deferred,            Private :: set_global_complex      !! Set values with a complex array using global indexing
      Procedure(    get_global_real    ), Deferred,            Private :: get_global_real         !! Get values from a real    array using global indexing
@@ -99,6 +101,7 @@ Module distributed_matrix_module
      Procedure, Public :: diag          => real_diag                       !! Diagonalise the (assumed symmetric) matrix
      Procedure, Public :: extract       => extract_real
      ! Private implementations
+     Procedure,            Private :: matrix_dagger_force_comms => real_dagger_force_comms
      Procedure,            Private :: set_global_real    => real_matrix_set_global_real
      Procedure,            Private :: set_global_complex => real_matrix_set_global_complex
      Procedure,            Private :: get_global_real    => real_matrix_get_global_real
@@ -143,6 +146,7 @@ Module distributed_matrix_module
      Procedure, Public :: diag       => complex_diag                          !! Diagonalise the (assumed Hermitian) matrix
      Procedure, Public :: extract    => extract_complex
      ! Private implementations
+     Procedure,            Private :: matrix_dagger_force_comms => complex_dagger_force_comms
      Procedure,            Private :: set_global_real    => complex_matrix_set_global_real
      Procedure,            Private :: set_global_complex => complex_matrix_set_global_complex
      Procedure,            Private :: get_global_real    => complex_matrix_get_global_real
@@ -630,7 +634,7 @@ Contains
     
   End Function matrix_communicator
 
-  Pure Function matrix_dagger( A ) Result( tm )
+  Function matrix_dagger( A ) Result( tm )
 
     !! Apply the dagger operator to the matrix
     !  Note this does NOT do any communication. Instead we simply set the flag
@@ -2765,57 +2769,64 @@ Contains
 
   ! Tranpose routines that ALWAYS communicate data as required
 
-  Function real_dagger_force_comms( A ) Result( AT )
+  Function real_dagger_force_comms( A ) Result( tm )
 
     !! Transpose a real matrix and always move the data (c.f dagger which simply sets the daggered flag)
 
     Use Scalapack_interfaces, Only : pdgeadd
 
-    Type( real_distributed_matrix ) :: AT    
+    Class( distributed_matrix ), Allocatable :: tm    
 
     Class( real_distributed_matrix ), Intent( In ) :: A
 
-    Integer :: mA , nA
-    Integer :: mAT, nAT
+    Type( real_distributed_matrix ) :: T
+    
+    Integer :: mA ,nA
+    Integer :: mT, nT
 
     Call A%matrix_map%get_data( m = mA, n = nA )
 
-    mAT = nA
-    nAT = mA
+    mT = nA
+    nT = mA
 
-    Call AT%create( mAT, nAT, A )
-    AT%daggered = .Not. A%daggered
+    Call T%create( mT, nT, A )
+    T%daggered = A%daggered
 
-    Call pdgeadd ( 'T', mAT, nAT, 1.0_wp,  A%data, 1, 1,  A%matrix_map%get_descriptor(), &
-                                  0.0_wp, AT%data, 1, 1, AT%matrix_map%get_descriptor() )
+    Call pdgeadd ( 'T', mT, nT, 1.0_wp, A%data, 1, 1, A%matrix_map%get_descriptor(), &
+                                0.0_wp, T%data, 1, 1, T%matrix_map%get_descriptor() )
 
+    tm = T
 
   End Function real_dagger_force_comms
 
-  Function complex_dagger_force_comms( A ) Result( AT )
+  Function complex_dagger_force_comms( A ) Result( tm )
 
     !! Hermitian Conjugate a complex matrix and always move the data (c.f dagger which simply sets the daggered flag)
 
     Use Scalapack_interfaces, Only : pzgeadd
 
-    Type( complex_distributed_matrix ) :: AT    
+    Class( distributed_matrix ), Allocatable :: tm    
 
     Class( complex_distributed_matrix ), Intent( In ) :: A
 
+    Type( complex_distributed_matrix ) :: T
+
     Integer :: mA , nA
-    Integer :: mAT, nAT
+    Integer :: mT, nT
 
     Call A%matrix_map%get_data( m = mA, n = nA )
 
-    mAT = nA
-    nAT = mA
+    mT = nA
+    nT = mA
 
-    Call AT%create( mAT, nAT, A )
-    AT%daggered = .Not. A%daggered
+    Call tm%create( mT, nT, A )
+    tm%daggered = A%daggered
 
-    Call pzgeadd ( 'T', mAT, nAT, ( 1.0_wp, 0.0_wp ),  A%data, 1, 1,  A%matrix_map%get_descriptor(), &
-                                  ( 0.0_wp, 0.0_wp ), AT%data, 1, 1, AT%matrix_map%get_descriptor() )
+    Call pzgeadd ( 'C', mT, nT, ( 1.0_wp, 0.0_wp ), A%data, 1, 1, A%matrix_map%get_descriptor(), &
+                                ( 0.0_wp, 0.0_wp ), T%data, 1, 1, T%matrix_map%get_descriptor() )
 
+    tm = T
+    
   End Function complex_dagger_force_comms
 
   ! Unary plus/minus routines
