@@ -843,7 +843,7 @@ Contains
        End Do
     End Do
 
-    ! Now replicate the result across all ks pints being careful to preserve the type
+    ! Now replicate the result across all ks points being careful to preserve the type
     ! ( compex or real ) of the result
     Allocate( tmp( 1:Size( C%data ) ) )
     tmp = C%data

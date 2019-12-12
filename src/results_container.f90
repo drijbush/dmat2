@@ -88,6 +88,8 @@ Module replicated_result_container_module
 
 Contains
 
+  ! Top level store routines
+  
   Elemental Subroutine store_real( A, data )
 
     Class( replicated_result_container ), Intent( InOut ) :: A
@@ -111,6 +113,8 @@ Contains
     A%data = data
 
   End Subroutine store_complex
+
+  ! Storing into a real scalar
   
   Elemental Subroutine store_real_data_into_real( A, data )
 
@@ -130,6 +134,8 @@ Contains
     
   End Subroutine store_complex_data_into_real
   
+  ! Storing into a complex scalar
+
   Elemental Subroutine store_real_data_into_complex( A, data )
 
     Class( complex_replicated_result ), Intent( InOut ) :: A
@@ -147,6 +153,8 @@ Contains
     A%data = data
     
   End Subroutine store_complex_data_into_complex
+
+  ! Top level get routines
   
   Elemental Subroutine get_real( data, A )
 
@@ -166,6 +174,8 @@ Contains
     
   End Subroutine get_complex
   
+  ! Getting into a real scalar
+  
   Elemental Subroutine get_real_data_from_real( data, A )
 
     Real( wp )                     , Intent(   Out ) :: data
@@ -183,7 +193,9 @@ Contains
     data = Real( A%data, Kind( data ) )
     
   End Subroutine get_real_data_from_complex
-    
+
+  ! Getting into a complex scalar
+  
   Elemental Subroutine get_complex_data_from_real( data, A )
 
     Complex( wp )                  , Intent(   Out ) :: data
