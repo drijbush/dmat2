@@ -1501,7 +1501,7 @@ Contains
     ! Need to replicate data over parent communicator if split ks points
     ! Need to replicate data over parent communicator
     If( local_comms_level == KS_ARRAY_COMMS_GET_ON_ALL ) Then
-       Call mpi_sizeof( ( 1.234_wp, 0.0_wp ), csize, error )
+       csize =  storage_size( ( 1.2345_wp, 0.0_wp ) ) / character_storage_size
        Call mpi_type_match_size( MPI_TYPECLASS_COMPLEX, csize, handle, error )
        Call mpi_allreduce( MPI_IN_PLACE, data, Size( data ), handle, MPI_SUM, A%parent_communicator, error )
     End If
