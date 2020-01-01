@@ -4,8 +4,8 @@ Module distributed_matrix_module
   !  Once compilers become more mature submodule would be a good way to keep this one under control
   !  once for real, one for complex
 
-  Use numbers_module                    , Only : wp
-  Use matrix_mapping_module             , Only : matrix_mapping 
+  Use numbers_module             , Only : wp
+  Use matrix_mapping_module      , Only : matrix_mapping 
   Use replicated_container_module, Only : replicated_scalar_container
   
   Implicit None

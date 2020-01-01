@@ -4,8 +4,8 @@ Module ks_array_module
   !-------------------------
   ! Currently assume 1 - i.e. nosymada
   
-  Use numbers_module                    , Only : wp
-  Use ks_matrix_module                  , Only : ks_matrix
+  Use numbers_module             , Only : wp
+  Use ks_matrix_module           , Only : ks_matrix
   Use replicated_container_module, Only : replicated_scalar_container
 
   Implicit None

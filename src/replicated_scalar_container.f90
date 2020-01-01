@@ -119,7 +119,7 @@ Contains
   Subroutine store_real_data_into_real( A, data )
 
     Class( real_replicated_scalar ), Intent( InOut ) :: A
-    Real( wp )                            , Intent( In    ) :: data
+    Real( wp )                     , Intent( In    ) :: data
 
     A%data = data
     
@@ -128,7 +128,7 @@ Contains
   Subroutine store_complex_data_into_real( A, data )
 
     Class( real_replicated_scalar ), Intent( InOut ) :: A
-    Complex( wp )                         , Intent( In    ) :: data
+    Complex( wp )                  , Intent( In    ) :: data
 
     A%data = Real( data, Kind( A%data ) )
     
@@ -139,7 +139,7 @@ Contains
   Subroutine store_real_data_into_complex( A, data )
 
     Class( complex_replicated_scalar ), Intent( InOut ) :: A
-    Real( wp )                               , Intent( In    ) :: data
+    Real( wp )                        , Intent( In    ) :: data
 
     A%data = data
     
@@ -148,7 +148,7 @@ Contains
   Subroutine store_complex_data_into_complex( A, data )
 
     Class( complex_replicated_scalar ), Intent( InOut ) :: A
-    Complex( wp )                            , Intent( In    ) :: data
+    Complex( wp )                     , Intent( In    ) :: data
 
     A%data = data
     
@@ -178,7 +178,7 @@ Contains
   
   Subroutine get_real_data_from_real( data, A )
 
-    Real( wp )                            , Intent(   Out ) :: data
+    Real( wp )                     , Intent(   Out ) :: data
     Class( real_replicated_scalar ), Intent( In    ) :: A
 
     data = A%data
@@ -187,7 +187,7 @@ Contains
   
   Subroutine get_real_data_from_complex( data, A )
 
-    Real( wp )                               , Intent(   Out ) :: data
+    Real( wp )                        , Intent(   Out ) :: data
     Class( complex_replicated_scalar ), Intent( In    ) :: A
 
     data = Real( A%data, Kind( data ) )
@@ -198,7 +198,7 @@ Contains
   
   Subroutine get_complex_data_from_real( data, A )
 
-    Complex( wp )                         , Intent(   Out ) :: data
+    Complex( wp )                  , Intent(   Out ) :: data
     Class( real_replicated_scalar ), Intent( In    ) :: A
 
     data = A%data
@@ -207,7 +207,7 @@ Contains
   
   Subroutine get_complex_data_from_complex( data, A )
 
-    Complex( wp )                            , Intent(   Out ) :: data
+    Complex( wp )                     , Intent(   Out ) :: data
     Class( complex_replicated_scalar ), Intent( In    ) :: A
 
     data = A%data

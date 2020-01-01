@@ -3,8 +3,8 @@ Module ks_matrix_module
   !! Wrapper module for distributed matrix classes so we can implement an opaque array - 
   !! At this level we only consider 1 k/spin point 
 
-  Use numbers_module                    , Only : wp
-  Use distributed_matrix_module         , Only : distributed_matrix
+  Use numbers_module             , Only : wp
+  Use distributed_matrix_module  , Only : distributed_matrix
   Use replicated_container_module, Only : replicated_scalar_container
 
   Implicit None
