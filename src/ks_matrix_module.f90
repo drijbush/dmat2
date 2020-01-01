@@ -5,7 +5,7 @@ Module ks_matrix_module
 
   Use numbers_module                    , Only : wp
   Use distributed_matrix_module         , Only : distributed_matrix
-  Use replicated_result_container_module, Only : replicated_result_container
+  Use replicated_scalar_container_module, Only : replicated_scalar_container
 
   Implicit None
 
@@ -249,7 +249,7 @@ Contains
 
     !! Double dot two matrices together
 
-    Type( replicated_result_container ) :: C
+    Type( replicated_scalar_container ) :: C
 
     Class( ks_matrix ), Intent( In ) :: A
     Type ( ks_matrix ), Intent( In ) :: B

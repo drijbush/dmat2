@@ -1840,7 +1840,7 @@ contains
 
     Use numbers_module , Only : wp
     Use ks_array_module, Only : ks_array, ks_array_init, ks_array_comm_to_base, ks_array_finalise, &
-         K_POINT_REAL, K_POINT_COMPLEX, ks_point_replicated_result
+         K_POINT_REAL, K_POINT_COMPLEX, ks_array_replicated_scalar
 !!$    Use mpi            , Only : mpi_bcast, mpi_comm_world, mpi_double_complex, mpi_double_precision
     Use mpi            , Only : mpi_comm_world, mpi_double_complex, mpi_double_precision
 
@@ -1857,7 +1857,7 @@ contains
     Type( ks_array ) :: Am, Bm
     Type( ks_array ) :: Am_base
 
-    Type( ks_point_replicated_result ), Dimension( : ), Allocatable :: result
+    Type( ks_array_replicated_scalar ), Dimension( : ), Allocatable :: result
     Complex( wp ) :: r_c
     Real( wp ) :: r_r
 
@@ -1976,7 +1976,7 @@ contains
 
     Use numbers_module , Only : wp
     Use ks_array_module, Only : ks_array, ks_array_init, ks_array_comm_to_base, ks_array_finalise, &
-         K_POINT_REAL, K_POINT_COMPLEX, ks_point_replicated_result
+         K_POINT_REAL, K_POINT_COMPLEX, ks_array_replicated_scalar
 !!$    Use mpi            , Only : mpi_bcast, mpi_comm_world, mpi_double_complex, mpi_double_precision
     Use mpi            , Only : mpi_comm_world, mpi_double_complex, mpi_double_precision
 
@@ -1993,7 +1993,7 @@ contains
     Type( ks_array ) :: Am, Bm
     Type( ks_array ) :: Am_base
 
-    Type( ks_point_replicated_result ), Dimension( : ), Allocatable :: result
+    Type( ks_array_replicated_scalar ), Dimension( : ), Allocatable :: result
     Complex( wp ) :: r_c
     Real( wp ) :: r_r
 

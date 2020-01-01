@@ -6,7 +6,7 @@ Module distributed_matrix_module
 
   Use numbers_module                    , Only : wp
   Use matrix_mapping_module             , Only : matrix_mapping 
-  Use replicated_result_container_module, Only : replicated_result_container
+  Use replicated_scalar_container_module, Only : replicated_scalar_container
   
   Implicit None
 
@@ -350,9 +350,9 @@ Module distributed_matrix_module
      Function double_dot_op( A, B ) Result( C )
        !! A binary operation between two base class objects
        Import :: distributed_matrix
-       Import :: replicated_result_container
+       Import :: replicated_scalar_container
        Implicit None
-       Type( replicated_result_container )               :: C
+       Type( replicated_scalar_container )               :: C
        Class( distributed_matrix )        , Intent( In ) :: A
        Class( distributed_matrix )        , Intent( In ) :: B
      End Function double_dot_op
@@ -360,9 +360,9 @@ Module distributed_matrix_module
        !! A binary operation between a real matrix and the base class
        Import ::      distributed_matrix
        Import :: real_distributed_matrix
-       Import :: replicated_result_container
+       Import :: replicated_scalar_container
        Implicit None
-       Type( replicated_result_container )               :: C
+       Type( replicated_scalar_container )               :: C
        Class( real_distributed_matrix )   , Intent( In ) :: A
        Class(      distributed_matrix )   , Intent( In ) :: B
      End Function real_double_dot_op
@@ -370,9 +370,9 @@ Module distributed_matrix_module
        !! A binary operation between a complex matrix and the base class
        Import ::         distributed_matrix
        Import :: complex_distributed_matrix
-       Import :: replicated_result_container
+       Import :: replicated_scalar_container
        Implicit None
-       Type( replicated_result_container )               :: C
+       Type( replicated_scalar_container )               :: C
        Class( complex_distributed_matrix ), Intent( In ) :: A
        Class(         distributed_matrix ), Intent( In ) :: B
      End Function complex_double_dot_op
@@ -2540,7 +2540,7 @@ Contains
 
     !! Calculates the double dot product of a real matrix with something yet to be determined
     
-    Type( replicated_result_container ) :: C
+    Type( replicated_scalar_container ) :: C
 
     Class( real_distributed_matrix ), Intent( In ) :: A
     Class(      distributed_matrix ), Intent( In ) :: B
@@ -2553,7 +2553,7 @@ Contains
 
     !! Calculates the double dot product of a complex matrix with something yet to be determined
     
-    Type( replicated_result_container ) :: C
+    Type( replicated_scalar_container ) :: C
 
     Class( complex_distributed_matrix ), Intent( In ) :: A
     Class(         distributed_matrix ), Intent( In ) :: B
@@ -2575,7 +2575,7 @@ Contains
          MPI_Typeclass_real
     Use Scalapack_interfaces, Only : pdgeadd
 
-    Type( replicated_result_container ) :: C
+    Type( replicated_scalar_container ) :: C
 
     Class( real_distributed_matrix ), Intent( In ) :: A
     Class( real_distributed_matrix ), Intent( In ) :: B
@@ -2661,7 +2661,7 @@ Contains
          MPI_Typeclass_complex
     Use Scalapack_interfaces, Only : pzgeadd
 
-    Type( replicated_result_container ) :: C
+    Type( replicated_scalar_container ) :: C
 
     Class( complex_distributed_matrix ), Intent( In ) :: A
     Class( complex_distributed_matrix ), Intent( In ) :: B
@@ -2741,7 +2741,7 @@ Contains
 
     !! Double dot a real matrix with a complex matrix - ILLEGAL
 
-    Type( replicated_result_container ) :: C
+    Type( replicated_scalar_container ) :: C
 
     Class(    real_distributed_matrix ), Intent( In ) :: A
     Class( complex_distributed_matrix ), Intent( In ) :: B
@@ -2756,7 +2756,7 @@ Contains
 
     !! Double dot a real matrix with a complex matrix - ILLEGAL
 
-    Type( replicated_result_container ) :: C
+    Type( replicated_scalar_container ) :: C
 
     Class( complex_distributed_matrix ), Intent( In ) :: A
     Class(    real_distributed_matrix ), Intent( In ) :: B

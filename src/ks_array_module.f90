@@ -6,7 +6,7 @@ Module ks_array_module
   
   Use numbers_module                    , Only : wp
   Use ks_matrix_module                  , Only : ks_matrix
-  Use replicated_result_container_module, Only : replicated_result_container
+  Use replicated_scalar_container_module, Only : replicated_scalar_container
 
   Implicit None
 
@@ -29,15 +29,15 @@ Module ks_array_module
      Integer, Dimension( : ), Allocatable, Public :: k_indices
   End type ks_point_info
 
-  Type, Public :: ks_point_replicated_result
-     !! A type to hold the replicated data result from an operation
+  Type, Public :: ks_array_replicated_scalar
+     !! A type to hold the replicated_scalar data result from an operation
      Type( ks_point_info               ), Public  :: info
-     Type( replicated_result_container ), Private :: data
+     Type( replicated_scalar_container ), Private :: data
    Contains
-     Generic, Public :: Assignment( = ) => ks_result_to_real, ks_result_to_complex
-     Procedure, Pass( A ), Private :: ks_result_to_real
-     Procedure, Pass( A ), Private :: ks_result_to_complex
-  End type ks_point_replicated_result
+     Generic, Public :: Assignment( = ) => ks_scalar_to_real, ks_scalar_to_complex
+     Procedure, Pass( A ), Private :: ks_scalar_to_real
+     Procedure, Pass( A ), Private :: ks_scalar_to_complex
+  End type ks_array_replicated_scalar
 
   Type, Private :: k_point_matrices
      !! A wrapper for data at a k point - will eventually be used to create arrays when we deal with irreps
@@ -810,7 +810,7 @@ Contains
 
     !! NOT FINISHED!
 
-    Type( ks_point_replicated_result ), Dimension( : ), Allocatable :: C
+    Type( ks_array_replicated_scalar ), Dimension( : ), Allocatable :: C
 
     Class( ks_array ), Intent( In ) :: A
     Type ( ks_array ), Intent( In ) :: B
@@ -1721,22 +1721,22 @@ Contains
     
   End Function get_ks
 
-  Subroutine ks_result_to_real( data, A )
+  Subroutine ks_scalar_to_real( data, A )
 
     Real ( wp )                        , Intent(   Out ) :: data
-    Class( ks_point_replicated_result ), Intent( In    ) :: A
+    Class( ks_array_replicated_scalar ), Intent( In    ) :: A
 
     data = A%data
     
-  End Subroutine ks_result_to_real
+  End Subroutine ks_scalar_to_real
   
-  Subroutine ks_result_to_complex( data, A )
+  Subroutine ks_scalar_to_complex( data, A )
 
     Complex( wp )                        , Intent(   Out ) :: data
-    Class  ( ks_point_replicated_result ), Intent( In    ) :: A
+    Class  ( ks_array_replicated_scalar ), Intent( In    ) :: A
 
     data = A%data
     
-  End Subroutine ks_result_to_complex
+  End Subroutine ks_scalar_to_complex
   
 End Module ks_array_module
