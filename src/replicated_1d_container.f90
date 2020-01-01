@@ -20,7 +20,7 @@ Module replicated_1D_container_module
   End type replicated_1D
 
   Type, Private, Extends( replicated_1D ) :: real_replicated_1D
-     Real( wp ), Private :: data
+     Real( wp ), Dimension( : ), Allocatable, Private :: data
    Contains
      Procedure, Pass( A ), Private :: store_real_data    => store_real_data_into_real
      Procedure, Pass( A ), Private :: store_complex_data => store_complex_data_into_real
@@ -29,7 +29,7 @@ Module replicated_1D_container_module
   End type real_replicated_1D
 
   Type, Private, Extends( replicated_1D ) :: complex_replicated_1D
-     Complex( wp ), Private :: data
+     Complex( wp ), Dimension( : ), Allocatable, Private :: data
    Contains
      Procedure, Pass( A ), Private :: store_real_data    => store_real_data_into_complex
      Procedure, Pass( A ), Private :: store_complex_data => store_complex_data_into_complex
@@ -51,37 +51,37 @@ Module replicated_1D_container_module
   Private
 
   Abstract Interface
-     
+
      Subroutine store_real_data( A, data )
        Import :: wp
        Import :: replicated_1D
        Implicit None
-       Class( replicated_1D ), Intent( InOut ) :: A
-       Real( wp )                , Intent( In    ) :: data
+       Class( replicated_1D )                , Intent( InOut ) :: A
+       Real ( wp )           , Dimension( : ), Intent( In    ) :: data
      End Subroutine store_real_data
      
      Subroutine store_complex_data( A, data )
        Import :: wp
        Import :: replicated_1D
        Implicit None
-       Class( replicated_1D ), Intent( InOut ) :: A
-       Complex( wp )             , Intent( In    ) :: data
+       Class  ( replicated_1D ),                 Intent( InOut ) :: A
+       Complex( wp )           , Dimension( : ), Intent( In    ) :: data
      End Subroutine store_complex_data
      
      Subroutine get_real_data( data, A )
        Import :: wp
        Import :: replicated_1D
        Implicit None
-       Real( wp )                , Intent(   Out ) :: data
-       Class( replicated_1D ), Intent( In    ) :: A
+       Real( wp )            , Dimension( : ), Allocatable, Intent(   Out ) :: data
+       Class( replicated_1D ),                              Intent( In    ) :: A
      End Subroutine get_real_data
      
      Subroutine get_complex_data( data, A )
        Import :: wp
        Import :: replicated_1D
        Implicit None
-       Complex( wp )             , Intent(   Out ) :: data
-       Class( replicated_1D ), Intent( In    ) :: A
+       Complex( wp )         , Dimension( : ), Allocatable, Intent(   Out ) :: data
+       Class( replicated_1D ),                              Intent( In    ) :: A
      End Subroutine get_complex_data
      
   End Interface
@@ -92,8 +92,8 @@ Contains
   
   Subroutine store_real( A, data )
 
-    Class( replicated_1D_container ), Intent( InOut ) :: A
-    Real( wp )                          , Intent( In    ) :: data
+    Class( replicated_1D_container ),                 Intent( InOut ) :: A
+    Real( wp )                      , Dimension( : ), Intent( In    ) :: data
 
     If( Allocated( A%data ) ) Deallocate( A%data )
     Allocate( real_replicated_1D :: A%data )
@@ -104,8 +104,8 @@ Contains
   
   Subroutine store_complex( A, data )
 
-    Class( replicated_1D_container ), Intent( InOut ) :: A
-    Complex( wp )                       , Intent( In    ) :: data
+    Class( replicated_1D_container ),                 Intent( InOut ) :: A
+    Complex( wp )                   , Dimension( : ), Intent( In    ) :: data
 
     If( Allocated( A%data ) ) Deallocate( A%data )
     Allocate( complex_replicated_1D :: A%data )
@@ -118,8 +118,8 @@ Contains
   
   Subroutine store_real_data_into_real( A, data )
 
-    Class( real_replicated_1D ), Intent( InOut ) :: A
-    Real( wp )                     , Intent( In    ) :: data
+    Class( real_replicated_1D ),                 Intent( InOut ) :: A
+    Real( wp )                 , Dimension( : ), Intent( In    ) :: data
 
     A%data = data
     
@@ -127,8 +127,8 @@ Contains
   
   Subroutine store_complex_data_into_real( A, data )
 
-    Class( real_replicated_1D ), Intent( InOut ) :: A
-    Complex( wp )                  , Intent( In    ) :: data
+    Class( real_replicated_1D ),                 Intent( InOut ) :: A
+    Complex( wp )              , Dimension( : ), Intent( In    ) :: data
 
     A%data = Real( data, Kind( A%data ) )
     
@@ -138,8 +138,8 @@ Contains
 
   Subroutine store_real_data_into_complex( A, data )
 
-    Class( complex_replicated_1D ), Intent( InOut ) :: A
-    Real( wp )                        , Intent( In    ) :: data
+    Class( complex_replicated_1D ),                 Intent( InOut ) :: A
+    Real( wp )                    , Dimension( : ), Intent( In    ) :: data
 
     A%data = data
     
@@ -147,8 +147,8 @@ Contains
   
   Subroutine store_complex_data_into_complex( A, data )
 
-    Class( complex_replicated_1D ), Intent( InOut ) :: A
-    Complex( wp )                     , Intent( In    ) :: data
+    Class( complex_replicated_1D ),                 Intent( InOut ) :: A
+    Complex( wp )                 , Dimension( : ), Intent( In    ) :: data
 
     A%data = data
     
@@ -158,17 +158,17 @@ Contains
   
   Subroutine get_real( data, A )
 
-    Real( wp )                          , Intent( InOut ) :: data
-    Class( replicated_1D_container ), Intent( In    ) :: A
+    Real( wp )                      , Dimension( : ), Allocatable, Intent(   Out ) :: data
+    Class( replicated_1D_container )                             , Intent( In    ) :: A
 
     data = A%data
     
   End Subroutine get_real
-  
+
   Subroutine get_complex( data, A )
 
-    Complex( wp )                       , Intent( InOut ) :: data
-    Class( replicated_1D_container ), Intent( In    ) :: A
+    Complex( wp )                   , Dimension( : ), Allocatable, Intent(   Out ) :: data
+    Class( replicated_1D_container ),                              Intent( In    ) :: A
 
     data = A%data
     
@@ -178,8 +178,8 @@ Contains
   
   Subroutine get_real_data_from_real( data, A )
 
-    Real( wp )                     , Intent(   Out ) :: data
-    Class( real_replicated_1D ), Intent( In    ) :: A
+    Real( wp )                 , Dimension( : ), Allocatable, Intent(   Out ) :: data
+    Class( real_replicated_1D ),                              Intent( In    ) :: A
 
     data = A%data
     
@@ -187,8 +187,8 @@ Contains
   
   Subroutine get_real_data_from_complex( data, A )
 
-    Real( wp )                        , Intent(   Out ) :: data
-    Class( complex_replicated_1D ), Intent( In    ) :: A
+    Real( wp )                    , Dimension( : ), Allocatable, Intent(   Out ) :: data
+    Class( complex_replicated_1D ),                              Intent( In    ) :: A
 
     data = Real( A%data, Kind( data ) )
     
@@ -198,8 +198,8 @@ Contains
   
   Subroutine get_complex_data_from_real( data, A )
 
-    Complex( wp )                  , Intent(   Out ) :: data
-    Class( real_replicated_1D ), Intent( In    ) :: A
+    Complex( wp )              , Dimension( : ), Allocatable, Intent(   Out ) :: data
+    Class( real_replicated_1D ),                              Intent( In    ) :: A
 
     data = A%data
     
@@ -207,8 +207,8 @@ Contains
   
   Subroutine get_complex_data_from_complex( data, A )
 
-    Complex( wp )                     , Intent(   Out ) :: data
-    Class( complex_replicated_1D ), Intent( In    ) :: A
+    Complex( wp )                 , Dimension( : ), Allocatable, Intent(   Out ) :: data
+    Class( complex_replicated_1D ),                              Intent( In    ) :: A
 
     data = A%data
     

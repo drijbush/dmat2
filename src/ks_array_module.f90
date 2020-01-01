@@ -6,7 +6,7 @@ Module ks_array_module
   
   Use numbers_module             , Only : wp
   Use ks_matrix_module           , Only : ks_matrix
-  Use replicated_container_module, Only : replicated_scalar_container
+  Use replicated_container_module, Only : replicated_scalar_container, replicated_1D_container
 
   Implicit None
 
@@ -34,9 +34,9 @@ Module ks_array_module
      Type( ks_point_info               ), Public  :: info
      Type( replicated_scalar_container ), Private :: data
    Contains
-     Generic, Public :: Assignment( = ) => ks_scalar_to_real, ks_scalar_to_complex
-     Procedure, Pass( A ), Private :: ks_scalar_to_real
-     Procedure, Pass( A ), Private :: ks_scalar_to_complex
+     Generic, Public :: Assignment( = ) => replicated_scalar_to_real, replicated_scalar_to_complex
+     Procedure, Pass( A ), Private :: replicated_scalar_to_real
+     Procedure, Pass( A ), Private :: replicated_scalar_to_complex
   End type ks_array_replicated_scalar
 
   Type, Private :: k_point_matrices
@@ -1721,22 +1721,22 @@ Contains
     
   End Function get_ks
 
-  Subroutine ks_scalar_to_real( data, A )
+  Subroutine replicated_scalar_to_real( data, A )
 
     Real ( wp )                        , Intent(   Out ) :: data
     Class( ks_array_replicated_scalar ), Intent( In    ) :: A
 
     data = A%data
     
-  End Subroutine ks_scalar_to_real
+  End Subroutine replicated_scalar_to_real
   
-  Subroutine ks_scalar_to_complex( data, A )
+  Subroutine replicated_scalar_to_complex( data, A )
 
     Complex( wp )                        , Intent(   Out ) :: data
     Class  ( ks_array_replicated_scalar ), Intent( In    ) :: A
 
     data = A%data
     
-  End Subroutine ks_scalar_to_complex
+  End Subroutine replicated_scalar_to_complex
   
 End Module ks_array_module
