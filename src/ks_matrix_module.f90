@@ -5,7 +5,7 @@ Module ks_matrix_module
 
   Use numbers_module                    , Only : wp
   Use distributed_matrix_module         , Only : distributed_matrix
-  Use replicated_scalar_container_module, Only : replicated_scalar_container
+  Use replicated_container_module, Only : replicated_scalar_container
 
   Implicit None
 

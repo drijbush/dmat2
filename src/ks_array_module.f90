@@ -6,7 +6,7 @@ Module ks_array_module
   
   Use numbers_module                    , Only : wp
   Use ks_matrix_module                  , Only : ks_matrix
-  Use replicated_scalar_container_module, Only : replicated_scalar_container
+  Use replicated_container_module, Only : replicated_scalar_container
 
   Implicit None
 

@@ -6,7 +6,7 @@ Module distributed_matrix_module
 
   Use numbers_module                    , Only : wp
   Use matrix_mapping_module             , Only : matrix_mapping 
-  Use replicated_scalar_container_module, Only : replicated_scalar_container
+  Use replicated_container_module, Only : replicated_scalar_container
   
   Implicit None
 
