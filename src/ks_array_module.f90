@@ -6,7 +6,8 @@ Module ks_array_module
   
   Use numbers_module             , Only : wp
   Use ks_matrix_module           , Only : ks_matrix
-  Use replicated_container_module, Only : replicated_scalar_container, replicated_1D_container
+  Use replicated_container_module, Only : replicated_scalar_container, &
+       replicated_1D_container, replicated_2D_container
 
   Implicit None
 
@@ -38,6 +39,26 @@ Module ks_array_module
      Procedure, Pass( A ), Private :: replicated_scalar_to_real
      Procedure, Pass( A ), Private :: replicated_scalar_to_complex
   End type ks_array_replicated_scalar
+
+  Type, Public :: ks_array_replicated_1D
+     !! A type to hold the replicated_1D data result from an operation
+     Type( ks_point_info           ), Public  :: info
+     Type( replicated_1D_container ), Private :: data
+   Contains
+     Generic, Public :: Assignment( = ) => replicated_1D_to_real, replicated_1D_to_complex
+     Procedure, Pass( A ), Private :: replicated_1D_to_real
+     Procedure, Pass( A ), Private :: replicated_1D_to_complex
+  End type ks_array_replicated_1D
+
+  Type, Public :: ks_array_replicated_2D
+     !! A type to hold the replicated_2D data result from an operation
+     Type( ks_point_info           ), Public  :: info
+     Type( replicated_2D_container ), Private :: data
+   Contains
+     Generic, Public :: Assignment( = ) => replicated_2D_to_real, replicated_2D_to_complex
+     Procedure, Pass( A ), Private :: replicated_2D_to_real
+     Procedure, Pass( A ), Private :: replicated_2D_to_complex
+  End type ks_array_replicated_2D
 
   Type, Private :: k_point_matrices
      !! A wrapper for data at a k point - will eventually be used to create arrays when we deal with irreps
@@ -1738,5 +1759,41 @@ Contains
     data = A%data
     
   End Subroutine replicated_scalar_to_complex
+  
+  Subroutine replicated_1D_to_real( data, A )
+
+    Real ( wp )                    , Dimension( : ), Allocatable, Intent(   Out ) :: data
+    Class( ks_array_replicated_1D ),                              Intent( In    ) :: A
+
+    data = A%data
+    
+  End Subroutine replicated_1D_to_real
+  
+  Subroutine replicated_1D_to_complex( data, A )
+
+    Complex( wp )                    , Dimension( : ), Allocatable, Intent(   Out ) :: data
+    Class  ( ks_array_replicated_1D ),                              Intent( In    ) :: A
+
+    data = A%data
+    
+  End Subroutine replicated_1D_to_complex
+  
+  Subroutine replicated_2D_to_real( data, A )
+
+    Real ( wp )                    , Dimension( :, : ), Allocatable, Intent(   Out ) :: data
+    Class( ks_array_replicated_2D ),                                 Intent( In    ) :: A
+
+    data = A%data
+    
+  End Subroutine replicated_2D_to_real
+  
+  Subroutine replicated_2D_to_complex( data, A )
+
+    Complex( wp )                    , Dimension( :, : ), Allocatable, Intent(   Out ) :: data
+    Class  ( ks_array_replicated_2D ),                                 Intent( In    ) :: A
+
+    data = A%data
+    
+  End Subroutine replicated_2D_to_complex
   
 End Module ks_array_module
