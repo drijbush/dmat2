@@ -1953,7 +1953,7 @@ contains
     Do spin = 1, ns
        Do kpoint = 1, nk
           ks = ks + 1
-          If( result( ks )%info%k_type == K_POINT_REAL ) Then
+          If( result( ks )%ks_point%k_type == K_POINT_REAL ) Then
              r_r = result( ks )
              this_diff = Abs( Kahan_sum( A_r( :, :, kpoint, spin ) * B_r( :, :, kpoint, spin ) ) - r_r )
           Else
@@ -2089,7 +2089,7 @@ contains
     Do spin = 1, ns
        Do kpoint = 1, nk
           ks = ks + 1
-          If( result( ks )%info%k_type == K_POINT_REAL ) Then
+          If( result( ks )%ks_point%k_type == K_POINT_REAL ) Then
              r_r = result( ks )
              this_diff = Abs( Kahan_sum( Transpose( A_r( :, :, kpoint, spin ) ) * B_r( :, :, kpoint, spin ) ) - r_r )
           Else

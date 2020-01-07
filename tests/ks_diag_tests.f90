@@ -8,7 +8,7 @@ contains
 
     Use numbers_module , Only : wp
     Use ks_array_module, Only : ks_array, ks_array_init, ks_array_comm_to_base, ks_array_finalise, &
-      K_POINT_REAL, K_POINT_COMPLEX, ks_eval_storage
+         K_POINT_REAL, K_POINT_COMPLEX, ks_array_replicated_1D
 !!$    Use mpi            , Only : mpi_bcast, mpi_comm_world, mpi_double_complex, mpi_double_precision
     Use mpi            , Only : mpi_comm_world, mpi_double_complex, mpi_double_precision
 
@@ -20,7 +20,7 @@ contains
     Type( ks_array ) :: QT
     Type( ks_array ) :: B
 
-    Type( ks_eval_storage ), Dimension( 1:nk * ns ) :: E
+    Type( ks_array_replicated_1D ), Dimension( 1:nk * ns ) :: E
 
     Type( ks_array ) :: base_k
 
@@ -29,6 +29,8 @@ contains
 
     Real( wp ), Dimension( :, :, :, : ), Allocatable :: A_r
     Real( wp ), Dimension( :, :    ), Allocatable :: tmp_r
+
+    Real( wp ), Dimension( : ), Allocatable :: evals_ks
 
     Real( wp ) :: rand
     Real( wp ) :: max_diff
@@ -53,28 +55,28 @@ contains
 
     If( me == 0 ) Then
 
-      Call Random_number( A_r )
-      Do s = 1, ns
-        Do k = 1, nk
-          A_r( :, :, k, s ) = A_r( :, :, k, s ) + Transpose( A_r( :, :, k, s  ) )
-        End Do
-      End Do
+       Call Random_number( A_r )
+       Do s = 1, ns
+          Do k = 1, nk
+             A_r( :, :, k, s ) = A_r( :, :, k, s ) + Transpose( A_r( :, :, k, s  ) )
+          End Do
+       End Do
 
-      Do s = 1, ns
-        Do k = 1, nk
-          Call Random_number( tmp_r )
-          A_c( :, :, k, s ) = tmp_r
-          Call Random_number( tmp_r )
-          A_c( :, :, k, s ) = A_c( :, :, k, s ) + Cmplx( 0.0_wp, tmp_r, Kind = wp )
-          A_c( :, :, k, s ) = A_c( :, :, k, s ) + Conjg( Transpose( A_c( :, :, k, s  ) ) )
-        End Do
-      End Do
+       Do s = 1, ns
+          Do k = 1, nk
+             Call Random_number( tmp_r )
+             A_c( :, :, k, s ) = tmp_r
+             Call Random_number( tmp_r )
+             A_c( :, :, k, s ) = A_c( :, :, k, s ) + Cmplx( 0.0_wp, tmp_r, Kind = wp )
+             A_c( :, :, k, s ) = A_c( :, :, k, s ) + Conjg( Transpose( A_c( :, :, k, s  ) ) )
+          End Do
+       End Do
 
-      Do k = 1, nk
-        k_points( :, k ) = [ k - 1, 0, 0 ]
-        Call Random_number( rand )
-        k_types( k ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
-      End Do
+       Do k = 1, nk
+          k_points( :, k ) = [ k - 1, 0, 0 ]
+          Call Random_number( rand )
+          k_types( k ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
+       End Do
 
     End If
 
@@ -90,51 +92,52 @@ contains
 
     Call A%create( n, n, base_k )
     If( verbose ) Then
-      Call A%print_info( 'A', 200 )
+       Call A%print_info( 'A', 200 )
     End If
     Do s = 1, ns
-      Do k = 1, nk
-        If( k_types( k ) == K_POINT_REAL ) Then
-          Call A%set_by_global( k_points( :, k ), s, 1, n, 1, n, A_r( :, :, k, s ) )
-        Else
-          Call A%set_by_global( k_points( :, k ), s, 1, n, 1, n, A_c( :, :, k, s ) )
-        End If
-      End Do
+       Do k = 1, nk
+          If( k_types( k ) == K_POINT_REAL ) Then
+             Call A%set_by_global( k_points( :, k ), s, 1, n, 1, n, A_r( :, :, k, s ) )
+          Else
+             Call A%set_by_global( k_points( :, k ), s, 1, n, 1, n, A_c( :, :, k, s ) )
+          End If
+       End Do
     End Do
 
     Call A%split_ks( 2.0_wp, A_split )
     If( verbose ) Then
-      Call A_split%print_info( 'A_split', 100 )
+       Call A_split%print_info( 'A_split', 100 )
     End If
 
     Call A_split%diag( Q, E )
     QT = .Dagger. Q
     B = QT * A_split * Q
     If( verbose ) Then
-      Call B%print_info( 'B', 100 )
+       Call B%print_info( 'B', 100 )
     End If
 
     max_diff = -1.0_wp
     Do s = 1, ns
-      Do k = 1, nk
-        tmp_r = 0.0_wp
-        If( k_types( k ) == K_POINT_REAL ) Then
-          Call B%get_by_global( k_points( :, k ), s, 1, n, 1, n, tmp_r )
-          Do i = 1, n
-            tmp_r( i, i ) = Abs( tmp_r( i, i ) - E( k + ( s - 1 ) * nk )%evals( i ) )
-          End Do
-        Else
-          Call B%get_by_global( k_points( :, k ), s, 1, n, 1, n, tmp_c )
-          Do i = 1, n
-            tmp_r( i, i ) = Abs( tmp_c( i, i ) - E( k + ( s - 1 ) * nk )%evals( i ) )
-          End Do
-        End If
-        max_diff = Max( max_diff, Maxval( tmp_r ) )
-      End Do
+       Do k = 1, nk
+          tmp_r = 0.0_wp
+          evals_ks = E( k + ( s - 1 ) * nk )
+          If( k_types( k ) == K_POINT_REAL ) Then
+             Call B%get_by_global( k_points( :, k ), s, 1, n, 1, n, tmp_r )
+             Do i = 1, n
+                tmp_r( i, i ) = Abs( tmp_r( i, i ) - evals_ks( i ) )
+             End Do
+          Else
+             Call B%get_by_global( k_points( :, k ), s, 1, n, 1, n, tmp_c )
+             Do i = 1, n
+                tmp_r( i, i ) = Abs( tmp_c( i, i ) - evals_ks( i ) )
+             End Do
+          End If
+          max_diff = Max( max_diff, Maxval( tmp_r ) )
+       End Do
     End Do
     If( me == 0 ) Then
-      Write( *, error_format ) 'Error in ks_split diag ', max_diff, &
-        Merge( passed, FAILED, max_diff < tol )
+       Write( *, error_format ) 'Error in ks_split diag ', max_diff, &
+            Merge( passed, FAILED, max_diff < tol )
     End If
 
     Call ks_array_finalise
@@ -145,7 +148,7 @@ contains
 
     Use numbers_module , Only : wp
     Use ks_array_module, Only : ks_array, ks_array_init, ks_array_comm_to_base, ks_array_finalise, &
-      K_POINT_REAL, K_POINT_COMPLEX, ks_eval_storage
+         K_POINT_REAL, K_POINT_COMPLEX
 !!$    Use mpi            , Only : mpi_bcast, mpi_comm_world, mpi_double_complex, mpi_double_precision
     Use mpi            , Only : mpi_comm_world, mpi_double_complex, mpi_double_precision
 
@@ -187,30 +190,30 @@ contains
 
     If( me == 0 ) Then
 
-      Call Random_number( A_r )
-      Do s = 1, ns
-        Do k = 1, nk
-          ! Make sure matrix is positive definite
-          A_r( :, :, k, s ) = Matmul( A_r( :, :, k, s ), Transpose( A_r( :, :, k, s  ) ) )
-        End Do
-      End Do
+       Call Random_number( A_r )
+       Do s = 1, ns
+          Do k = 1, nk
+             ! Make sure matrix is positive definite
+             A_r( :, :, k, s ) = Matmul( A_r( :, :, k, s ), Transpose( A_r( :, :, k, s  ) ) )
+          End Do
+       End Do
 
-      Do s = 1, ns
-        Do k = 1, nk
-          Call Random_number( tmp_r )
-          A_c( :, :, k, s ) = tmp_r
-          Call Random_number( tmp_r )
-          A_c( :, :, k, s ) = A_c( :, :, k, s ) + Cmplx( 0.0_wp, tmp_r, Kind = wp )
-          ! Make sure matrix is positive definite
-          A_c( :, :, k, s ) = Matmul( A_c( :, :, k, s ), Conjg( Transpose( A_c( :, :, k, s  ) ) ) )
-        End Do
-      End Do
+       Do s = 1, ns
+          Do k = 1, nk
+             Call Random_number( tmp_r )
+             A_c( :, :, k, s ) = tmp_r
+             Call Random_number( tmp_r )
+             A_c( :, :, k, s ) = A_c( :, :, k, s ) + Cmplx( 0.0_wp, tmp_r, Kind = wp )
+             ! Make sure matrix is positive definite
+             A_c( :, :, k, s ) = Matmul( A_c( :, :, k, s ), Conjg( Transpose( A_c( :, :, k, s  ) ) ) )
+          End Do
+       End Do
 
-      Do k = 1, nk
-        k_points( :, k ) = [ k - 1, 0, 0 ]
-        Call Random_number( rand )
-        k_types( k ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
-      End Do
+       Do k = 1, nk
+          k_points( :, k ) = [ k - 1, 0, 0 ]
+          Call Random_number( rand )
+          k_types( k ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
+       End Do
 
     End If
 
@@ -226,47 +229,47 @@ contains
 
     Call A%create( n, n, base_k )
     If( verbose ) Then
-      Call A%print_info( 'A', 200 )
+       Call A%print_info( 'A', 200 )
     End If
     Do s = 1, ns
-      Do k = 1, nk
-        If( k_types( k ) == K_POINT_REAL ) Then
-          Call A%set_by_global( k_points( :, k ), s, 1, n, 1, n, A_r( :, :, k, s ) )
-        Else
-          Call A%set_by_global( k_points( :, k ), s, 1, n, 1, n, A_c( :, :, k, s ) )
-        End If
-      End Do
+       Do k = 1, nk
+          If( k_types( k ) == K_POINT_REAL ) Then
+             Call A%set_by_global( k_points( :, k ), s, 1, n, 1, n, A_r( :, :, k, s ) )
+          Else
+             Call A%set_by_global( k_points( :, k ), s, 1, n, 1, n, A_c( :, :, k, s ) )
+          End If
+       End Do
     End Do
 
     Call A%split_ks( 2.0_wp, A_split )
     If( verbose ) Then
-      Call A_split%print_info( 'A_split', 100 )
+       Call A_split%print_info( 'A_split', 100 )
     End If
 
     L = .Choleski. A_split
     LT = .Dagger. L
     B = L * LT - A_split
     If( verbose ) Then
-      Call B%print_info( 'B', 100 )
+       Call B%print_info( 'B', 100 )
     End If
 
     max_diff = -1.0_wp
     Do s = 1, ns
-      Do k = 1, nk
-        tmp_r = 0.0_wp
-        If( k_types( k ) == K_POINT_REAL ) Then
-          Call B%get_by_global( k_points( :, k ), s, 1, n, 1, n, tmp_r )
-          tmp_r = Abs( tmp_r )
-        Else
-          Call B%get_by_global( k_points( :, k ), s, 1, n, 1, n, tmp_c )
-          tmp_r = Abs( tmp_c )
-        End If
-        max_diff = Max( max_diff, Maxval( tmp_r ) )
-      End Do
+       Do k = 1, nk
+          tmp_r = 0.0_wp
+          If( k_types( k ) == K_POINT_REAL ) Then
+             Call B%get_by_global( k_points( :, k ), s, 1, n, 1, n, tmp_r )
+             tmp_r = Abs( tmp_r )
+          Else
+             Call B%get_by_global( k_points( :, k ), s, 1, n, 1, n, tmp_c )
+             tmp_r = Abs( tmp_c )
+          End If
+          max_diff = Max( max_diff, Maxval( tmp_r ) )
+       End Do
     End Do
     If( me == 0 ) Then
-      Write( *, error_format ) 'Error in ks_split choleski ', max_diff, &
-        Merge( passed, FAILED, max_diff < tol )
+       Write( *, error_format ) 'Error in ks_split choleski ', max_diff, &
+            Merge( passed, FAILED, max_diff < tol )
     End If
 
     Call ks_array_finalise
@@ -277,7 +280,7 @@ contains
 
     Use numbers_module , Only : wp
     Use ks_array_module, Only : ks_array, ks_array_init, ks_array_comm_to_base, ks_array_finalise, &
-      K_POINT_REAL, K_POINT_COMPLEX, ks_eval_storage
+         K_POINT_REAL, K_POINT_COMPLEX
 !!$    Use mpi            , Only : mpi_bcast, mpi_comm_world, mpi_double_complex, mpi_double_precision
     Use mpi            , Only : mpi_comm_world, mpi_double_complex, mpi_double_precision
 
@@ -320,30 +323,30 @@ contains
 
     If( me == 0 ) Then
 
-      Call Random_number( A_r )
-      Do s = 1, ns
-        Do k = 1, nk
-          ! Make sure matrix is positive definite
-          A_r( :, :, k, s ) = Matmul( A_r( :, :, k, s ), Transpose( A_r( :, :, k, s  ) ) )
-        End Do
-      End Do
+       Call Random_number( A_r )
+       Do s = 1, ns
+          Do k = 1, nk
+             ! Make sure matrix is positive definite
+             A_r( :, :, k, s ) = Matmul( A_r( :, :, k, s ), Transpose( A_r( :, :, k, s  ) ) )
+          End Do
+       End Do
 
-      Do s = 1, ns
-        Do k = 1, nk
-          Call Random_number( tmp_r )
-          A_c( :, :, k, s ) = tmp_r
-          Call Random_number( tmp_r )
-          A_c( :, :, k, s ) = A_c( :, :, k, s ) + Cmplx( 0.0_wp, tmp_r, Kind = wp )
-          ! Make sure matrix is positive definite
-          A_c( :, :, k, s ) = Matmul( A_c( :, :, k, s ), Conjg( Transpose( A_c( :, :, k, s  ) ) ) )
-        End Do
-      End Do
+       Do s = 1, ns
+          Do k = 1, nk
+             Call Random_number( tmp_r )
+             A_c( :, :, k, s ) = tmp_r
+             Call Random_number( tmp_r )
+             A_c( :, :, k, s ) = A_c( :, :, k, s ) + Cmplx( 0.0_wp, tmp_r, Kind = wp )
+             ! Make sure matrix is positive definite
+             A_c( :, :, k, s ) = Matmul( A_c( :, :, k, s ), Conjg( Transpose( A_c( :, :, k, s  ) ) ) )
+          End Do
+       End Do
 
-      Do k = 1, nk
-        k_points( :, k ) = [ k - 1, 0, 0 ]
-        Call Random_number( rand )
-        k_types( k ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
-      End Do
+       Do k = 1, nk
+          k_points( :, k ) = [ k - 1, 0, 0 ]
+          Call Random_number( rand )
+          k_types( k ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
+       End Do
 
     End If
 
@@ -359,21 +362,21 @@ contains
 
     Call A%create( n, n, base_k )
     If( verbose ) Then
-      Call A%print_info( 'A', 200 )
+       Call A%print_info( 'A', 200 )
     End If
     Do s = 1, ns
-      Do k = 1, nk
-        If( k_types( k ) == K_POINT_REAL ) Then
-          Call A%set_by_global( k_points( :, k ), s, 1, n, 1, n, A_r( :, :, k, s ) )
-        Else
-          Call A%set_by_global( k_points( :, k ), s, 1, n, 1, n, A_c( :, :, k, s ) )
-        End If
-      End Do
+       Do k = 1, nk
+          If( k_types( k ) == K_POINT_REAL ) Then
+             Call A%set_by_global( k_points( :, k ), s, 1, n, 1, n, A_r( :, :, k, s ) )
+          Else
+             Call A%set_by_global( k_points( :, k ), s, 1, n, 1, n, A_c( :, :, k, s ) )
+          End If
+       End Do
     End Do
 
     Call A%split_ks( 2.0_wp, A_split )
     If( verbose ) Then
-      Call A_split%print_info( 'A_split', 100 )
+       Call A_split%print_info( 'A_split', 100 )
     End If
 
     ! Generate a traingular array by Choleski Decomposition
@@ -381,30 +384,30 @@ contains
     L_inv = .TrInv. L
     B = L * L_inv
     If( verbose ) Then
-      Call B%print_info( 'B', 100 )
+       Call B%print_info( 'B', 100 )
     End If
 
     max_diff = -1.0_wp
     Do s = 1, ns
-      Do k = 1, nk
-        tmp_r = 0.0_wp
-        If( k_types( k ) == K_POINT_REAL ) Then
-          ! B should be the unit matrix
-          Call B%get_by_global( k_points( :, k ), s, 1, n, 1, n, tmp_r )
-          tmp_r = Abs( tmp_r )
-        Else
-          Call B%get_by_global( k_points( :, k ), s, 1, n, 1, n, tmp_c )
-          tmp_r = Abs( tmp_c )
-        End If
-        Do i = 1, n
-          tmp_r( i, i ) = tmp_r( i, i ) - 1.0_wp
-        End Do
-        max_diff = Max( max_diff, Maxval( tmp_r ) )
-      End Do
+       Do k = 1, nk
+          tmp_r = 0.0_wp
+          If( k_types( k ) == K_POINT_REAL ) Then
+             ! B should be the unit matrix
+             Call B%get_by_global( k_points( :, k ), s, 1, n, 1, n, tmp_r )
+             tmp_r = Abs( tmp_r )
+          Else
+             Call B%get_by_global( k_points( :, k ), s, 1, n, 1, n, tmp_c )
+             tmp_r = Abs( tmp_c )
+          End If
+          Do i = 1, n
+             tmp_r( i, i ) = tmp_r( i, i ) - 1.0_wp
+          End Do
+          max_diff = Max( max_diff, Maxval( tmp_r ) )
+       End Do
     End Do
     If( me == 0 ) Then
-      Write( *, error_format ) 'Error in ks_split tr_inv ', max_diff, &
-        Merge( passed, FAILED, max_diff < tol )
+       Write( *, error_format ) 'Error in ks_split tr_inv ', max_diff, &
+            Merge( passed, FAILED, max_diff < tol )
     End If
 
     Call ks_array_finalise
@@ -415,7 +418,7 @@ contains
 
     Use numbers_module , Only : wp
     Use ks_array_module, Only : ks_array, ks_point_info, ks_array_init, ks_array_comm_to_base, ks_array_finalise, &
-      K_POINT_REAL, K_POINT_COMPLEX, K_POINT_NOT_EXIST, ks_eval_storage
+         K_POINT_REAL, K_POINT_COMPLEX, K_POINT_NOT_EXIST
 !!$    Use mpi            , Only : mpi_bcast, mpi_comm_world, mpi_double_complex, mpi_double_precision
     Use mpi            , Only : mpi_comm_world, mpi_double_complex, mpi_double_precision
 
@@ -460,30 +463,30 @@ contains
 
     If( me == 0 ) Then
 
-      Call Random_number( A_r )
-      Do s = 1, ns
-        Do k = 1, nk
-          ! Make sure matrix is positive definite
-          A_r( :, :, k, s ) = Matmul( A_r( :, :, k, s ), Transpose( A_r( :, :, k, s  ) ) )
-        End Do
-      End Do
+       Call Random_number( A_r )
+       Do s = 1, ns
+          Do k = 1, nk
+             ! Make sure matrix is positive definite
+             A_r( :, :, k, s ) = Matmul( A_r( :, :, k, s ), Transpose( A_r( :, :, k, s  ) ) )
+          End Do
+       End Do
 
-      Do s = 1, ns
-        Do k = 1, nk
-          Call Random_number( tmp_r )
-          A_c( :, :, k, s ) = tmp_r
-          Call Random_number( tmp_r )
-          A_c( :, :, k, s ) = A_c( :, :, k, s ) + Cmplx( 0.0_wp, tmp_r, Kind = wp )
-          ! Make sure matrix is positive definite
-          A_c( :, :, k, s ) = Matmul( A_c( :, :, k, s ), Conjg( Transpose( A_c( :, :, k, s  ) ) ) )
-        End Do
-      End Do
+       Do s = 1, ns
+          Do k = 1, nk
+             Call Random_number( tmp_r )
+             A_c( :, :, k, s ) = tmp_r
+             Call Random_number( tmp_r )
+             A_c( :, :, k, s ) = A_c( :, :, k, s ) + Cmplx( 0.0_wp, tmp_r, Kind = wp )
+             ! Make sure matrix is positive definite
+             A_c( :, :, k, s ) = Matmul( A_c( :, :, k, s ), Conjg( Transpose( A_c( :, :, k, s  ) ) ) )
+          End Do
+       End Do
 
-      Do k = 1, nk
-        k_points( :, k ) = [ k - 1, 0, 0 ]
-        Call Random_number( rand )
-        k_types( k ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
-      End Do
+       Do k = 1, nk
+          k_points( :, k ) = [ k - 1, 0, 0 ]
+          Call Random_number( rand )
+          k_types( k ) = Merge( K_POINT_REAL, K_POINT_COMPLEX, rand > 0.5_wp )
+       End Do
 
     End If
 
@@ -499,7 +502,7 @@ contains
 
     Call A%create( n, n, base_k )
     If( verbose ) Then
-      Call A%print_info( 'A', 200 )
+       Call A%print_info( 'A', 200 )
     End If
 !!$    Do s = 1, ns
 !!$       Do k = 1, nk
@@ -512,26 +515,26 @@ contains
 !!$    End Do
     Call A%split_ks( 2.0_wp, A_split )
     If( verbose ) Then
-      Call A_split%print_info( 'A_split', 100 )
+       Call A_split%print_info( 'A_split', 100 )
     End If
 
     Call A_split%iterator_init()
     Do
-      info = A_split%iterator_next()
+       info = A_split%iterator_next()
 !!$       Write( *, * ) info%k_type
-      If( info%k_type == K_POINT_NOT_EXIST ) Exit
-      Outer: Do s = 1, ns
-        Do k = 1, nk
-          If( All( info%k_indices == k_points( :, k ) .And. info%spin == s ) ) Then
-            If( info%k_type == K_POINT_REAL ) Then
-              Call A_split%set_by_global( k_points( :, k ), s, 1, n, 1, n, A_r( :, :, k, s ) )
-            Else
-              Call A_split%set_by_global( k_points( :, k ), s, 1, n, 1, n, A_c( :, :, k, s ) )
-            End If
-            Exit Outer
-          End If
-        End Do
-      End Do Outer
+       If( info%k_type == K_POINT_NOT_EXIST ) Exit
+       Outer: Do s = 1, ns
+          Do k = 1, nk
+             If( All( info%k_indices == k_points( :, k ) .And. info%spin == s ) ) Then
+                If( info%k_type == K_POINT_REAL ) Then
+                   Call A_split%set_by_global( k_points( :, k ), s, 1, n, 1, n, A_r( :, :, k, s ) )
+                Else
+                   Call A_split%set_by_global( k_points( :, k ), s, 1, n, 1, n, A_c( :, :, k, s ) )
+                End If
+                Exit Outer
+             End If
+          End Do
+       End Do Outer
     End Do
     Call A_split%iterator_reset()
 
@@ -540,30 +543,30 @@ contains
     L_inv = .TrInv. L
     B = L * L_inv
     If( verbose ) Then
-      Call B%print_info( 'B', 100 )
+       Call B%print_info( 'B', 100 )
     End If
 
     max_diff = -1.0_wp
     Do s = 1, ns
-      Do k = 1, nk
-        tmp_r = 0.0_wp
-        If( k_types( k ) == K_POINT_REAL ) Then
-          ! B should be the unit matrix
-          Call B%get_by_global( k_points( :, k ), s, 1, n, 1, n, tmp_r )
-          tmp_r = Abs( tmp_r )
-        Else
-          Call B%get_by_global( k_points( :, k ), s, 1, n, 1, n, tmp_c )
-          tmp_r = Abs( tmp_c )
-        End If
-        Do i = 1, n
-          tmp_r( i, i ) = tmp_r( i, i ) - 1.0_wp
-        End Do
-        max_diff = Max( max_diff, Maxval( tmp_r ) )
-      End Do
+       Do k = 1, nk
+          tmp_r = 0.0_wp
+          If( k_types( k ) == K_POINT_REAL ) Then
+             ! B should be the unit matrix
+             Call B%get_by_global( k_points( :, k ), s, 1, n, 1, n, tmp_r )
+             tmp_r = Abs( tmp_r )
+          Else
+             Call B%get_by_global( k_points( :, k ), s, 1, n, 1, n, tmp_c )
+             tmp_r = Abs( tmp_c )
+          End If
+          Do i = 1, n
+             tmp_r( i, i ) = tmp_r( i, i ) - 1.0_wp
+          End Do
+          max_diff = Max( max_diff, Maxval( tmp_r ) )
+       End Do
     End Do
     If( me == 0 ) Then
-      Write( *, error_format ) 'Error in ks_split tr_inv iterator ', max_diff, &
-        Merge( passed, FAILED, max_diff < tol )
+       Write( *, error_format ) 'Error in ks_split tr_inv iterator ', max_diff, &
+            Merge( passed, FAILED, max_diff < tol )
     End If
 
     Call ks_array_finalise

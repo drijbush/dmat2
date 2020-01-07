@@ -32,7 +32,7 @@ Module ks_array_module
 
   Type, Public :: ks_array_replicated_scalar
      !! A type to hold the replicated_scalar data result from an operation
-     Type( ks_point_info               ), Public  :: info
+     Type( ks_point_info               ), Public  :: ks_point
      Type( replicated_scalar_container ), Private :: data
    Contains
      Generic, Public :: Assignment( = ) => replicated_scalar_to_real, replicated_scalar_to_complex
@@ -42,7 +42,7 @@ Module ks_array_module
 
   Type, Public :: ks_array_replicated_1D
      !! A type to hold the replicated_1D data result from an operation
-     Type( ks_point_info           ), Public  :: info
+     Type( ks_point_info           ), Public  :: ks_point
      Type( replicated_1D_container ), Private :: data
    Contains
      Generic, Public :: Assignment( = ) => replicated_1D_to_real, replicated_1D_to_complex
@@ -52,7 +52,7 @@ Module ks_array_module
 
   Type, Public :: ks_array_replicated_2D
      !! A type to hold the replicated_2D data result from an operation
-     Type( ks_point_info           ), Public  :: info
+     Type( ks_point_info           ), Public  :: ks_point
      Type( replicated_2D_container ), Private :: data
    Contains
      Generic, Public :: Assignment( = ) => replicated_2D_to_real, replicated_2D_to_complex
@@ -150,11 +150,6 @@ Module ks_array_module
      Procedure,            Private :: ks_array_get_ks_point_info
   End type ks_array
   
-  Type, Public :: ks_eval_storage
-     Type( ks_point_info )                   :: ks_point
-     Real( wp ), Dimension( : ), Allocatable :: evals
-  End type ks_eval_storage
-
   Public :: ks_array_init         !! Initalise the KS arrays
   Public :: ks_array_comm_to_base !! Turn an MPI communicator inot a base KS_array object
   Public :: ks_array_finalise     !! Finalise the KS array mechanism
@@ -849,8 +844,8 @@ Contains
     ! Set up the result
     Allocate( C( 1:Size( A%all_k_point_info ) ) )
     Do ks = 1, Size( A%all_k_point_info )
-       C( ks )%info = A%all_k_point_info( ks )
-       C( ks )%data = 0.0_wp
+       C( ks )%ks_point = A%all_k_point_info( ks )
+       C( ks )%data     = 0.0_wp
     End Do
 
     ! Calculate theose results that can be done locallly
@@ -1104,10 +1099,12 @@ Contains
          mpi_sizeof, mpi_type_match_size, MPI_INTEGER, MPI_ANY_SOURCE, MPI_STATUS_IGNORE, &
          MPI_TYPECLASS_REAL
 
-    Class( ks_array        ),                 Intent( In    ) :: A
-    Type ( ks_array        ),                 Intent(   Out ) :: Q
-    Type ( ks_eval_storage ), Dimension( : ), Intent(   Out ) :: E
+    Class( ks_array              ),                 Intent( In    ) :: A
+    Type ( ks_array              ),                 Intent(   Out ) :: Q
+    Type( ks_array_replicated_1D ), Dimension( : ), Intent(   Out ) :: E
 
+    Real( wp ), Dimension( : ), Allocatable :: evals_ks
+    
     Real( wp ) :: rdum
 
     Integer, Dimension( 1:2 ) :: buff_send, buff_recv
@@ -1131,7 +1128,8 @@ Contains
           ks = A%get_all_ks_index( my_ks )
           Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
                      Qks => Q%my_k_points( my_ks )%data( my_irrep )%matrix )
-            Call Aks%diag( Qks, E( ks )%evals )
+            Call Aks%diag( Qks, evals_ks )
+            E( ks )%data = evals_ks
           End Associate
        End Do
     End Do
@@ -1151,7 +1149,8 @@ Contains
           sending_data = me == 0
           If( sending_data ) then
              buff_send( 1 ) = me_parent
-             buff_send( 2 ) = Size( E( ks )%evals )
+             evals_ks = E( ks )%data
+             buff_send( 2 ) = Size( evals_ks )
              Call mpi_isend( buff_send, 2, MPI_INTEGER, 0, ks, A%parent_communicator, request, error )
           End If
        End If
@@ -1167,13 +1166,14 @@ Contains
        ks_root = buff_recv( 1 )
        nb      = buff_recv( 2 )
        ! Now know how many evals we will recv - allocate memory if haven't done so already because I don't 'own' this k point
-       If( .Not. Allocated( E( ks )%evals ) ) Then
-          Allocate( E( ks )%evals( 1:nb ) )
+       If( .Not. Allocated( evals_ks ) ) Then
+          Allocate( evals_ks( 1:nb ) )
        End If
        ! And finally bcast out the values from the root node of the communicator that owns this set of evals
        Call mpi_sizeof( rdum, rsize, error )
        Call mpi_type_match_size( MPI_TYPECLASS_REAL, rsize, handle, error )
-       Call mpi_bcast( E( ks )%evals, Size( E( ks )%evals ), handle, ks_root, A%parent_communicator, error )
+       Call mpi_bcast( evals_ks, Size( evals_ks ), handle, ks_root, A%parent_communicator, error )
+       E( ks )%data = evals_ks
     End Do
     
   End Subroutine ks_array_diag

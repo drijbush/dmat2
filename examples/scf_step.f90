@@ -3,7 +3,7 @@ Module scf_step_module
 
   Use numbers_module , Only : wp
   Use mpi            , Only : MPI_COMM_WORLD
-  Use ks_array_module, Only : ks_array, ks_eval_storage, ks_array_init, ks_array_comm_to_base, ks_array_finalise, &
+  Use ks_array_module, Only : ks_array, ks_array_replicated_1D, ks_array_init, ks_array_comm_to_base, ks_array_finalise, &
       K_POINT_REAL, K_POINT_COMPLEX
 
   Implicit None
@@ -32,7 +32,7 @@ Contains
     Type( ks_array ) :: Lds, Lds_inv, Lds_inv_T
     Type( ks_array ) :: Qds
 
-    Type( ks_eval_storage ), Dimension( : ), Allocatable :: E
+    Type( ks_array_replicated_1D ), Dimension( : ), Allocatable :: E
     
     Integer :: n, nk
     Integer :: spin, k
