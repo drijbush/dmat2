@@ -38,6 +38,9 @@ Module ks_array_module
      Generic, Public :: Assignment( = ) => replicated_scalar_to_real, replicated_scalar_to_complex
      Procedure, Pass( A ), Private :: replicated_scalar_to_real
      Procedure, Pass( A ), Private :: replicated_scalar_to_complex
+     Generic, Public :: Assignment( = ) => real_to_replicated_scalar, complex_to_replicated_scalar
+     Procedure, Pass( A ), Private :: real_to_replicated_scalar
+     Procedure, Pass( A ), Private :: complex_to_replicated_scalar
   End type ks_array_replicated_scalar
 
   Type, Public :: ks_array_replicated_1D
@@ -48,6 +51,9 @@ Module ks_array_module
      Generic, Public :: Assignment( = ) => replicated_1D_to_real, replicated_1D_to_complex
      Procedure, Pass( A ), Private :: replicated_1D_to_real
      Procedure, Pass( A ), Private :: replicated_1D_to_complex
+     Generic, Public :: Assignment( = ) => real_to_replicated_1D, complex_to_replicated_1D
+     Procedure, Pass( A ), Private :: real_to_replicated_1D
+     Procedure, Pass( A ), Private :: complex_to_replicated_1D
   End type ks_array_replicated_1D
 
   Type, Public :: ks_array_replicated_2D
@@ -58,6 +64,9 @@ Module ks_array_module
      Generic, Public :: Assignment( = ) => replicated_2D_to_real, replicated_2D_to_complex
      Procedure, Pass( A ), Private :: replicated_2D_to_real
      Procedure, Pass( A ), Private :: replicated_2D_to_complex
+     Generic, Public :: Assignment( = ) => real_to_replicated_2D, complex_to_replicated_2D
+     Procedure, Pass( A ), Private :: real_to_replicated_2D
+     Procedure, Pass( A ), Private :: complex_to_replicated_2D
   End type ks_array_replicated_2D
 
   Type, Private :: k_point_matrices
@@ -1742,6 +1751,8 @@ Contains
     
   End Function get_ks
 
+  ! Routines for getting data out of replicated objects
+  
   Subroutine replicated_scalar_to_real( data, A )
 
     Real ( wp )                        , Intent(   Out ) :: data
@@ -1795,5 +1806,61 @@ Contains
     data = A%data
     
   End Subroutine replicated_2D_to_complex
+
+  ! Routines for putting data into replicated objects
+  
+  Subroutine real_to_replicated_scalar( A, data )
+
+    Class( ks_array_replicated_scalar ), Intent(   Out ) :: A
+    Real ( wp )                        , Intent( In    ) :: data
+
+    A%data = data
+    
+  End Subroutine real_to_replicated_scalar
+  
+  Subroutine complex_to_replicated_scalar( A, data )
+
+    Class  ( ks_array_replicated_scalar ), Intent(   Out ) :: A
+    Complex( wp )                        , Intent( In    ) :: data
+
+    A%data = data
+    
+  End Subroutine complex_to_replicated_scalar
+  
+  Subroutine real_to_replicated_1D( A, data )
+
+    Class( ks_array_replicated_1D ),                 Intent(   Out ) :: A
+    Real ( wp )                    , Dimension( : ), Intent( In    ) :: data
+
+    A%data = data
+    
+  End Subroutine real_to_replicated_1D
+  
+  Subroutine complex_to_replicated_1D( A, data )
+
+    Class  ( ks_array_replicated_1D ),                 Intent(   Out ) :: A
+    Complex( wp )                    , Dimension( : ), Intent( In    ) :: data
+
+    A%data = data
+    
+  End Subroutine complex_to_replicated_1D
+  
+  Subroutine real_to_replicated_2D( A, data )
+
+    Class( ks_array_replicated_2D ),                    Intent(   Out ) :: A
+    Real ( wp )                    , Dimension( :, : ), Intent( In    ) :: data
+
+    A%data = data
+    
+  End Subroutine real_to_replicated_2D
+  
+  Subroutine complex_to_replicated_2D( A, data )
+
+    Class  ( ks_array_replicated_2D ),                    Intent(   Out ) :: A
+    Complex( wp )                    , Dimension( :, : ), Intent( In    ) :: data
+
+    A%data = data
+    
+  End Subroutine complex_to_replicated_2D
   
 End Module ks_array_module
