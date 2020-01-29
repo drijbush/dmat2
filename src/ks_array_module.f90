@@ -104,7 +104,9 @@ Module ks_array_module
      Generic  , Public :: Operator( * )           => rscal_multiply                    !! Pre-multiply by a real scalar
      Generic  , Public :: Operator( * )           => multiply_rscal                    !! Post-multiply by a real scalar
      Generic  , Public :: Operator( * )           => diagonal_multiply                 !! Pre-multiply by a real diagonal matrix
+     Generic  , Public :: Operator( * )           => diagonal_multiply_vary            !! Pre-multiply by a different real diagonal matrix at each ks point
      Generic  , Public :: Operator( * )           => multiply_diagonal                 !! Post-multiply by a real diagonal matrix
+     Generic  , Public :: Operator( * )           => multiply_diagonal_vary            !! Post-multiply by a different real diagonal matrix at each ks point
      Generic  , Public :: Operator( + )           => plus                              !! Unary plus operator
      Generic  , Public :: Operator( + )           => add                               !! Add each element of the array with the corresponding element in another array
      Generic  , Public :: Operator( + )           => add_diagonal                      !! Add each element of the array to a diagonal matrix
@@ -146,7 +148,9 @@ Module ks_array_module
      Procedure, Pass( A ), Private :: rscal_multiply       => ks_array_rscal_mult
      Procedure,            Private :: multiply_rscal       => ks_array_mult_rscal
      Procedure, Pass( A ), Private :: diagonal_multiply    => ks_array_diagonal_mult
+     Procedure, Pass( A ), Private :: diagonal_multiply_vary    => ks_array_diagonal_mult_vary
      Procedure,            Private :: multiply_diagonal    => ks_array_mult_diagonal
+     Procedure,            Private :: multiply_diagonal_vary    => ks_array_mult_diagonal_vary
      Procedure,            Private :: plus                 => ks_array_plus
      Procedure,            Private :: add                  => ks_array_add
      Procedure,            Private :: add_diagonal         => ks_array_add_diagonal
@@ -837,8 +841,6 @@ Contains
     Use mpi, Only : MPI_Comm_rank, MPI_STATUS_IGNORE, MPI_SUM, MPI_IN_PLACE, MPI_Type_match_size, &
          MPI_TYPECLASS_COMPLEX
 
-    !! NOT FINISHED!
-
     Type( ks_array_replicated_scalar ), Dimension( : ), Allocatable :: C
 
     Class( ks_array ), Intent( In ) :: A
@@ -977,6 +979,37 @@ Contains
 
   End Function ks_array_diagonal_mult
 
+  Function ks_array_diagonal_mult_vary( d, A ) Result( C )
+
+    !! Pre-Multiply the matrices by a diagonal matrix, a different matrix at each ks point
+
+    Type( ks_array ) :: C
+
+    Type ( ks_array_replicated_1d ), Dimension( : ), Intent( In ) :: d
+    Class( ks_array               ),                 Intent( In ) :: A
+
+    Real( wp ), Dimension(: ), Allocatable :: dks
+    
+    Integer :: ks_d
+    Integer :: my_ks, my_irrep
+
+    Call C%create( NO_DATA, NO_DATA, A )
+    
+    Do my_ks = 1, Size( A%my_k_points )
+       ! Find which element of the d array holds the diagonal matrix for this ks point
+       ks_d = search_ks_point_list( A%my_k_points( my_ks )%info, d( : )%ks_point )
+       dks = d( ks_d )
+       ! Irreps will need more thought - work currenly as burnt into as 1
+       Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
+          Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
+                     Cks => C%my_k_points( my_ks )%data( my_irrep )%matrix )
+            Cks = dks * Aks
+          End Associate
+       End Do
+    End Do
+
+  End Function ks_array_diagonal_mult_vary
+
   Function ks_array_mult_diagonal( A, d ) Result( C )
 
     !! Post-Multiply the matrices by a diagonal matrix
@@ -1001,6 +1034,37 @@ Contains
     End Do
 
   End Function ks_array_mult_diagonal
+
+  Function ks_array_mult_diagonal_vary( A, d ) Result( C )
+
+    !! Post-Multiply the matrices by a diagonal matrix, a different matrix at each ks point
+
+    Type( ks_array ) :: C
+
+    Class( ks_array               ),                 Intent( In ) :: A
+    Type ( ks_array_replicated_1d ), Dimension( : ), Intent( In ) :: d
+
+    Real( wp ), Dimension(: ), Allocatable :: dks
+    
+    Integer :: ks_d
+    Integer :: my_ks, my_irrep
+
+    Call C%create( NO_DATA, NO_DATA, A )
+    
+    Do my_ks = 1, Size( A%my_k_points )
+       ! Find which element of the d array holds the diagonal matrix for this ks point
+       ks_d = search_ks_point_list( A%my_k_points( my_ks )%info, d( : )%ks_point )
+       dks = d( ks_d )
+       ! Irreps will need more thought - work currenly as burnt into as 1
+       Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
+          Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
+                     Cks => C%my_k_points( my_ks )%data( my_irrep )%matrix )
+            Cks = Aks * dks
+          End Associate
+       End Do
+    End Do
+
+  End Function ks_array_mult_diagonal_vary
 
   Function ks_array_add( A, B ) Result( C )
 
@@ -1804,6 +1868,26 @@ Contains
     End Do
     
   End Function get_ks
+
+  Function search_ks_point_list( ref_point, list ) Result( ks )
+
+    !! Search for the index of a given ks point in a list of ks points
+
+    Integer :: ks
+    
+    Type( ks_point_info ),                 Intent( In ) :: ref_point
+    Type( ks_point_info ), Dimension( : ), Intent( In ) :: list
+
+    Do ks = 1, Size( list )
+       If( All( list( ks )%k_indices == ref_point%k_indices ) .And. &
+                list( ks )%spin      == ref_point%spin ) Then
+          Return
+       End If
+    End Do
+
+    Stop "Can't find ks point in a list of ks points"
+    
+  End Function search_ks_point_list
 
   ! Routines for getting data out of replicated objects
   

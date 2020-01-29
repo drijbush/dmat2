@@ -1419,13 +1419,22 @@ Contains
     Integer :: i, j
 
     T = A
-    Do j = 1, Size( T%data, Dim = 2 )
-       Do i = 1, Size( T%data, Dim = 1 )
-          i_glob = T%local_to_global_rows( i )
-          d_ii = d( i_glob )
-          T%data( i, j ) = d_ii * T%data( i, j )
+
+    Select Case( A%daggered )
+
+    Case( .False. )
+       Do j = 1, Size( T%data, Dim = 2 )
+          Do i = 1, Size( T%data, Dim = 1 )
+             i_glob = T%local_to_global_rows( i )
+             d_ii = d( i_glob )
+             T%data( i, j ) = d_ii * T%data( i, j )
+          End Do
        End Do
-    End Do
+
+    Case( .True. )
+       ! NEED TO IMPLEMENT!!!
+    End Select
+    
     B = T
     
   End Function diagonal_multiply_real
@@ -1447,13 +1456,19 @@ Contains
     Integer :: i, j
 
     T = A
-    Do j = 1, Size( T%data, Dim = 2 )
-       j_glob = T%local_to_global_rows( j )
-       d_jj = d( j_glob )
-       Do i = 1, Size( T%data, Dim = 1 )
-          T%data( i, j ) = T%data( i, j ) * d_jj
+
+    Select Case( A%daggered )
+    Case( .False. )
+       Do j = 1, Size( T%data, Dim = 2 )
+          j_glob = T%local_to_global_cols( j )
+          d_jj = d( j_glob )
+          Do i = 1, Size( T%data, Dim = 1 )
+             T%data( i, j ) = T%data( i, j ) * d_jj
+          End Do
        End Do
-    End Do
+    Case( .True. )
+    End Select
+
     B = T
     
   End Function real_multiply_diagonal
@@ -1504,7 +1519,7 @@ Contains
 
     T = A
     Do j = 1, Size( T%data, Dim = 2 )
-       j_glob = T%local_to_global_rows( j )
+       j_glob = T%local_to_global_cols( j )
        d_jj = d( j_glob )
        Do i = 1, Size( T%data, Dim = 1 )
           T%data( i, j ) = T%data( i, j ) * d_jj
