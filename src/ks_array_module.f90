@@ -103,6 +103,8 @@ Module ks_array_module
      Generic  , Public :: Operator( * )           => multiply                          !! Multiply each element of the array with the corresponding element in another array
      Generic  , Public :: Operator( * )           => rscal_multiply                    !! Pre-multiply by a real scalar
      Generic  , Public :: Operator( * )           => multiply_rscal                    !! Post-multiply by a real scalar
+     Generic  , Public :: Operator( * )           => diagonal_multiply                 !! Pre-multiply by a real diagonal matrix
+     Generic  , Public :: Operator( * )           => multiply_diagonal                 !! Post-multiply by a real diagonal matrix
      Generic  , Public :: Operator( + )           => plus                              !! Unary plus operator
      Generic  , Public :: Operator( + )           => add                               !! Add each element of the array with the corresponding element in another array
      Generic  , Public :: Operator( + )           => add_diagonal                      !! Add each element of the array to a diagonal matrix
@@ -143,6 +145,8 @@ Module ks_array_module
      Procedure,            Private :: multiply             => ks_array_mult
      Procedure, Pass( A ), Private :: rscal_multiply       => ks_array_rscal_mult
      Procedure,            Private :: multiply_rscal       => ks_array_mult_rscal
+     Procedure, Pass( A ), Private :: diagonal_multiply    => ks_array_diagonal_mult
+     Procedure,            Private :: multiply_diagonal    => ks_array_mult_diagonal
      Procedure,            Private :: plus                 => ks_array_plus
      Procedure,            Private :: add                  => ks_array_add
      Procedure,            Private :: add_diagonal         => ks_array_add_diagonal
@@ -900,7 +904,7 @@ Contains
 
   Function ks_array_rscal_mult( s, A ) Result( C )
 
-    !! Multiply the arays together element by element (i.e. matrix by matrix ) 
+    !! Multiply the matrices by a scalar
 
     Type( ks_array ) :: C
 
@@ -925,7 +929,7 @@ Contains
 
   Function ks_array_mult_rscal( A, s ) Result( C )
 
-    !! Multiply the arays together element by element (i.e. matrix by matrix ) 
+    !! Multiply the matrices by a scalar
 
     Type( ks_array ) :: C
 
@@ -947,6 +951,56 @@ Contains
     End Do
 
   End Function ks_array_mult_rscal
+
+  Function ks_array_diagonal_mult( d, A ) Result( C )
+
+    !! Pre-Multiply the matrices by a diagonal matrix
+
+    Type( ks_array ) :: C
+
+    Real( wp )       , Dimension( : ), Intent( In ) :: d
+    Class( ks_array ),                 Intent( In ) :: A
+
+    Integer :: my_ks, my_irrep
+
+    Call C%create( NO_DATA, NO_DATA, A )
+    
+    Do my_ks = 1, Size( A%my_k_points )
+       ! Irreps will need more thought - work currenly as burnt into as 1
+       Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
+          Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
+                     Cks => C%my_k_points( my_ks )%data( my_irrep )%matrix )
+            Cks = d * Aks
+          End Associate
+       End Do
+    End Do
+
+  End Function ks_array_diagonal_mult
+
+  Function ks_array_mult_diagonal( A, d ) Result( C )
+
+    !! Post-Multiply the matrices by a diagonal matrix
+
+    Type( ks_array ) :: C
+
+    Class( ks_array ),                 Intent( In ) :: A
+    Real( wp )       , Dimension( : ), Intent( In ) :: d
+
+    Integer :: my_ks, my_irrep
+
+    Call C%create( NO_DATA, NO_DATA, A )
+    
+    Do my_ks = 1, Size( A%my_k_points )
+       ! Irreps will need more thought - work currenly as burnt into as 1
+       Do my_irrep = 1, Size( A%my_k_points( my_ks )%data )
+          Associate( Aks => A%my_k_points( my_ks )%data( my_irrep )%matrix, &
+                     Cks => C%my_k_points( my_ks )%data( my_irrep )%matrix )
+            Cks = Aks * d
+          End Associate
+       End Do
+    End Do
+
+  End Function ks_array_mult_diagonal
 
   Function ks_array_add( A, B ) Result( C )
 

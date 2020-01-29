@@ -20,6 +20,8 @@ Module ks_matrix_module
      Generic  , Public :: Operator( * )          => multiply                             !! Multiply 2 ks_matrix's
      Generic  , Public :: Operator( * )          => rscal_multiply                       !! Pre-multiply by a real scalar
      Generic  , Public :: Operator( * )          => multiply_rscal                       !! Post-multiply by a real scalar
+     Generic  , Public :: Operator( * )          => diagonal_multiply                    !! Pre-multiply by a real diagonal matrix
+     Generic  , Public :: Operator( * )          => multiply_diagonal                    !! Post-multiply by a real diagonal matrix
      Generic  , Public :: Operator( + )          => plus                                 !! Unary plus operation
      Generic  , Public :: Operator( + )          => add                                  !! Add 2 ks_matrix's
      Generic  , Public :: Operator( + )          => add_diagonal                         !! Add a ks_matrix to a diagonal matrix
@@ -45,6 +47,8 @@ Module ks_matrix_module
      Procedure,            Private :: multiply             => ks_matrix_mult
      Procedure, Pass( A ), Private :: rscal_multiply       => ks_matrix_rscal_mult
      Procedure,            Private :: multiply_rscal       => ks_matrix_mult_rscal
+     Procedure, Pass( A ), Private :: diagonal_multiply    => ks_matrix_diagonal_mult
+     Procedure,            Private :: multiply_diagonal    => ks_matrix_mult_diagonal
      Procedure,            Private :: plus                 => ks_matrix_plus
      Procedure,            Private :: add                  => ks_matrix_add
      Procedure,            Private :: add_diagonal         => ks_matrix_add_diagonal
@@ -231,6 +235,32 @@ Contains
     C%matrix = s * A%matrix
 
   End Function ks_matrix_mult_rscal
+
+  Function ks_matrix_diagonal_mult( d, A ) Result( C )
+
+    !! Pre-multiply a matrix by a real diagonal matrix
+    
+    Type( ks_matrix ) :: C
+    
+    Real( wp ), Dimension( : ), Intent( In ) :: d
+    Class( ks_matrix )        , Intent( In ) :: A
+
+    C%matrix = d * A%matrix
+
+  End Function ks_matrix_diagonal_mult
+
+  Function ks_matrix_mult_diagonal( A, d ) Result( C )
+
+    !! Post multiply a matrix by a real diagonal matrix
+    
+    Type( ks_matrix ) :: C
+    
+    Class( ks_matrix )        , Intent( In ) :: A
+    Real( wp ), Dimension( : ), Intent( In ) :: d
+
+    C%matrix = A%matrix * d
+
+  End Function ks_matrix_mult_diagonal
 
   Function ks_matrix_mult( A, B ) Result( C )
 

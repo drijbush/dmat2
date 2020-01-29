@@ -50,7 +50,6 @@ Program test_distributed_matrix
        "ks_unary   ", &
        "ks_add     ", &
        "ks_subtract", &
-       "ks_multiply", &
        "ks_misc    " ]
 
 
@@ -229,6 +228,8 @@ Program test_distributed_matrix
         End If
         Call test_ks_split_real_pre_scale
         Call test_ks_split_real_post_scale
+        Call test_ks_split_real_pre_multiply_diagonal
+        Call test_ks_split_real_post_multiply_diagonal
         Call test_ks_split_matmul_NN
         Call test_ks_split_matmul_TN
         Call test_ks_split_matmul_NT

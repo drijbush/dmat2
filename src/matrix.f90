@@ -33,6 +33,8 @@ Module distributed_matrix_module
      Generic  , Public :: Operator( * )          => multiply                   !! Multiply two matrices together
      Generic  , Public :: Operator( * )          => rscal_multiply             !! Pre -scale by a real scalar
      Generic  , Public :: Operator( * )          => multiply_rscal             !! Post-scale by a real scalar
+     Generic  , Public :: Operator( * )          => diagonal_multiply          !! Pre -scale by a real diagonal matrix
+     Generic  , Public :: Operator( * )          => multiply_diagonal          !! Post-scale by a real diagonal matrix
      Generic  , Public :: Operator( + )          => plus                       !! Unary plus operation
      Generic  , Public :: Operator( + )          => add                        !! Add two matrices together
      Generic  , Public :: Operator( + )          => add_diagonal               !! Add a general matrix to a diagonal matrix
@@ -70,6 +72,8 @@ Module distributed_matrix_module
      Procedure( complex_double_dot_op ), Deferred, Pass( B ), Private :: complex_double_dot
      Procedure(          pre_rscal_op ), Deferred, Pass( A ), Private :: rscal_multiply
      Procedure(         post_rscal_op ), Deferred,            Private :: multiply_rscal
+     Procedure(       pre_diagonal_op ), Deferred, Pass( A ), Private :: diagonal_multiply
+     Procedure(      post_diagonal_op ), Deferred,            Private :: multiply_diagonal
      Procedure(              unary_op ), Deferred,            Private :: plus
      Procedure(             binary_op ), Deferred,            Private :: add
      Procedure(      post_diagonal_op ), Deferred,            Private :: add_diagonal
@@ -115,6 +119,8 @@ Module distributed_matrix_module
      Procedure, Pass( B ), Private :: complex_double_dot => complex_double_dot_real
      Procedure, Pass( A ), Private :: rscal_multiply     => rscal_multiply_real
      Procedure,            Private :: multiply_rscal     => real_multiply_rscal
+     Procedure, Pass( A ), Private :: diagonal_multiply  => diagonal_multiply_real
+     Procedure,            Private :: multiply_diagonal  => real_multiply_diagonal
      Procedure,            Private :: plus               => plus_real
      Procedure,            Private :: add                => real_add
      Procedure, Pass( B ), Private :: real_add           => real_add_real
@@ -160,6 +166,8 @@ Module distributed_matrix_module
      Procedure, Pass( B ), Private :: complex_double_dot => complex_double_dot_complex
      Procedure, Pass( A ), Private :: rscal_multiply     => rscal_multiply_complex
      Procedure,            Private :: multiply_rscal     => complex_multiply_rscal
+     Procedure, Pass( A ), Private :: diagonal_multiply  => diagonal_multiply_complex
+     Procedure,            Private :: multiply_diagonal  => complex_multiply_diagonal
      Procedure,            Private :: plus               => plus_complex
      Procedure,            Private :: add                => complex_add
      Procedure, Pass( B ), Private :: real_add           => real_add_complex
@@ -280,7 +288,7 @@ Module distributed_matrix_module
        Import :: distributed_matrix
        Implicit None
        Class( distributed_matrix ), Allocatable  :: B
-       Real( wp )                 , Intent( In ) :: s
+       Real( wp ),                  Intent( In ) :: s
        Class( distributed_matrix ), Intent( In ) :: A
      End Function pre_rscal_op
      Function post_rscal_op( A, s ) Result( B )
@@ -290,7 +298,7 @@ Module distributed_matrix_module
        Implicit None
        Class( distributed_matrix ), Allocatable  :: B
        Class( distributed_matrix ), Intent( In ) :: A
-       Real( wp )                 , Intent( In ) :: s
+       Real( wp ),                  Intent( In ) :: s
      End Function post_rscal_op
      
      Function pre_diagonal_op( d, A ) Result( B )
@@ -1393,6 +1401,118 @@ Contains
     B = T
     
   End Function rscal_multiply_complex
+
+  Function diagonal_multiply_real( d, A ) Result( B )
+
+    !! Pre-scale a real matrix
+
+    Class(      distributed_matrix ), Allocatable :: B
+
+    Real( wp ), Dimension( : )      , Intent( In ) :: d
+    Class( real_distributed_matrix ), Intent( In ) :: A
+
+    Type( real_distributed_matrix ) :: T
+
+    Real( wp ) :: d_ii
+
+    Integer :: i_glob
+    Integer :: i, j
+
+    T = A
+    Do j = 1, Size( T%data, Dim = 2 )
+       Do i = 1, Size( T%data, Dim = 1 )
+          i_glob = T%local_to_global_rows( i )
+          d_ii = d( i_glob )
+          T%data( i, j ) = d_ii * T%data( i, j )
+       End Do
+    End Do
+    B = T
+    
+  End Function diagonal_multiply_real
+
+  Function real_multiply_diagonal( A, d ) Result( B )
+
+    !! Post-scale a real matrix
+
+    Class(      distributed_matrix ), Allocatable :: B
+
+    Real( wp ), Dimension( : )      , Intent( In ) :: d
+    Class( real_distributed_matrix ), Intent( In ) :: A
+
+    Type( real_distributed_matrix ) :: T
+
+    Real( wp ) :: d_jj
+
+    Integer :: j_glob
+    Integer :: i, j
+
+    T = A
+    Do j = 1, Size( T%data, Dim = 2 )
+       j_glob = T%local_to_global_rows( j )
+       d_jj = d( j_glob )
+       Do i = 1, Size( T%data, Dim = 1 )
+          T%data( i, j ) = T%data( i, j ) * d_jj
+       End Do
+    End Do
+    B = T
+    
+  End Function real_multiply_diagonal
+
+  Function diagonal_multiply_complex( d, A ) Result( B )
+
+    !! Pre-scale a complex matrix
+
+    Class(         distributed_matrix ), Allocatable :: B
+
+    Class( complex_distributed_matrix ), Intent( In ) :: A
+    Real( wp ), Dimension( : )         , Intent( In ) :: d
+
+    Type( complex_distributed_matrix ) :: T
+
+    Real( wp ) :: d_ii
+
+    Integer :: i_glob
+    Integer :: i, j
+
+    T = A
+    Do j = 1, Size( T%data, Dim = 2 )
+       Do i = 1, Size( T%data, Dim = 1 )
+          i_glob = T%local_to_global_rows( i )
+          d_ii = d( i_glob )
+          T%data( i, j ) = d_ii * T%data( i, j )
+       End Do
+    End Do
+    B = T
+    
+  End Function diagonal_multiply_complex
+
+  Function complex_multiply_diagonal( A, d ) Result( B )
+
+    !! Post-scale a complex matrix
+
+    Class(      distributed_matrix )   , Allocatable :: B
+
+    Real ( wp ), Dimension( : )        , Intent( In ) :: d
+    Class( complex_distributed_matrix ), Intent( In ) :: A
+
+    Type( complex_distributed_matrix ) :: T
+
+    Real( wp ) :: d_jj
+
+    Integer :: j_glob
+    Integer :: i, j
+
+    T = A
+    Do j = 1, Size( T%data, Dim = 2 )
+       j_glob = T%local_to_global_rows( j )
+       d_jj = d( j_glob )
+       Do i = 1, Size( T%data, Dim = 1 )
+          T%data( i, j ) = T%data( i, j ) * d_jj
+       End Do
+    End Do
+    B = T
+    
+  End Function complex_multiply_diagonal
 
   ! Addition routines
 
