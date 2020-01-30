@@ -17,7 +17,7 @@ module test_params
   Integer, parameter :: ns_def = 2
   integer, parameter :: nk_def = 3
   
-  Character( Len = * ), Parameter :: error_format = '( "--> ", a, t40, g26.20, t70, a )'
+  Character( Len = * ), Parameter :: error_format = '( "--> ", a, t44, g26.20, t72, a )'
   Character( Len = * ), Parameter ::   run_format = '( a, t20, i0 )'
   Character( Len = * ), Parameter :: title_format = '( t5, a )'
   Character( Len = * ), Parameter :: passed       = 'Passed      '

@@ -1413,26 +1413,54 @@ Contains
 
     Type( real_distributed_matrix ) :: T
 
-    Real( wp ) :: d_ii
+    Real( wp ) :: d_ii, d_jj
 
-    Integer :: i_glob
+    Integer :: m, n
+    Integer :: i_glob, j_glob
     Integer :: i, j
 
-    T = A
+    Call A%matrix_map%get_data( m = m, n = n )
+
+    T = A ! Note this picks up the correct daggerization of A
 
     Select Case( A%daggered )
 
     Case( .False. )
-       Do j = 1, Size( T%data, Dim = 2 )
-          Do i = 1, Size( T%data, Dim = 1 )
-             i_glob = T%local_to_global_rows( i )
-             d_ii = d( i_glob )
-             T%data( i, j ) = d_ii * T%data( i, j )
+
+       If( Size( d ) == m ) Then
+
+          Do j = 1, Size( T%data, Dim = 2 )
+             Do i = 1, Size( T%data, Dim = 1 )
+                i_glob = T%local_to_global_rows( i )
+                d_ii = d( i_glob )
+                T%data( i, j ) = d_ii * T%data( i, j )
+             End Do
           End Do
-       End Do
+
+       Else
+
+          Stop "Inconsistent matrix dimensions in diagonal_multiply_real"
+
+       End If
 
     Case( .True. )
-       ! NEED TO IMPLEMENT!!!
+
+       If( Size( d ) == n ) Then
+
+          Do j = 1, Size( T%data, Dim = 2 )
+             j_glob = T%local_to_global_cols( j )
+             d_jj = d( j_glob )
+             Do i = 1, Size( T%data, Dim = 1 )
+                T%data( i, j ) = d_jj * T%data( i, j )
+             End Do
+          End Do
+
+       Else
+
+          Stop "Inconsistent matrix dimensions in diagonal_multiply_real"
+
+       End If
+       
     End Select
     
     B = T
@@ -1450,23 +1478,54 @@ Contains
 
     Type( real_distributed_matrix ) :: T
 
-    Real( wp ) :: d_jj
+    Real( wp ) :: d_ii, d_jj
 
-    Integer :: j_glob
+    Integer :: m, n
+    Integer :: i_glob, j_glob
     Integer :: i, j
+    
+    Call A%matrix_map%get_data( m = m, n = n )
 
-    T = A
+    T = A ! Note this picks up the correct daggerization of A
 
     Select Case( A%daggered )
+
     Case( .False. )
-       Do j = 1, Size( T%data, Dim = 2 )
-          j_glob = T%local_to_global_cols( j )
-          d_jj = d( j_glob )
-          Do i = 1, Size( T%data, Dim = 1 )
-             T%data( i, j ) = T%data( i, j ) * d_jj
+
+       If( Size( d ) == n ) Then
+
+          Do j = 1, Size( T%data, Dim = 2 )
+             j_glob = T%local_to_global_cols( j )
+             d_jj = d( j_glob )
+             Do i = 1, Size( T%data, Dim = 1 )
+                T%data( i, j ) = T%data( i, j ) * d_jj
+             End Do
           End Do
-       End Do
+          
+       Else
+
+          Stop "Inconsistent matrix dimensions in real_multiply_diagonal"
+          
+       End If
+       
     Case( .True. )
+
+       If( Size( d ) == m ) Then
+
+          Do j = 1, Size( T%data, Dim = 2 )
+             Do i = 1, Size( T%data, Dim = 1 )
+                i_glob = T%local_to_global_rows( i )
+                d_ii = d( i_glob )
+                T%data( i, j ) = d_ii * T%data( i, j )
+             End Do
+          End Do
+
+       Else
+
+          Stop "Inconsistent matrix dimensions in real_multiply_diagonal"
+          
+       End If
+       
     End Select
 
     B = T
@@ -1484,19 +1543,56 @@ Contains
 
     Type( complex_distributed_matrix ) :: T
 
-    Real( wp ) :: d_ii
+    Real( wp ) :: d_ii, d_jj
 
-    Integer :: i_glob
+    Integer :: m, n
+    Integer :: i_glob, j_glob
     Integer :: i, j
 
-    T = A
-    Do j = 1, Size( T%data, Dim = 2 )
-       Do i = 1, Size( T%data, Dim = 1 )
-          i_glob = T%local_to_global_rows( i )
-          d_ii = d( i_glob )
-          T%data( i, j ) = d_ii * T%data( i, j )
-       End Do
-    End Do
+    Call A%matrix_map%get_data( m = m, n = n )
+
+    T = A ! Note this picks up the correct daggerization of A
+
+    Select Case( A%daggered )
+
+    Case( .False. )
+
+       If( Size( d ) == m ) Then
+
+          Do j = 1, Size( T%data, Dim = 2 )
+             Do i = 1, Size( T%data, Dim = 1 )
+                i_glob = T%local_to_global_rows( i )
+                d_ii = d( i_glob )
+                T%data( i, j ) = d_ii * T%data( i, j )
+             End Do
+          End Do
+
+       Else
+
+          Stop "Inconsistent matrix dimensions in diagonal_multiply_complex"
+
+       End If
+
+    Case( .True. )
+
+       If( Size( d ) == n ) Then
+
+          Do j = 1, Size( T%data, Dim = 2 )
+             j_glob = T%local_to_global_cols( j )
+             d_jj = d( j_glob )
+             Do i = 1, Size( T%data, Dim = 1 )
+                T%data( i, j ) = d_jj * T%data( i, j )
+             End Do
+          End Do
+
+       Else
+
+          Stop "Inconsistent matrix dimensions in diagonal_multiply_complex"
+
+       End If
+       
+    End Select
+    
     B = T
     
   End Function diagonal_multiply_complex
@@ -1512,19 +1608,56 @@ Contains
 
     Type( complex_distributed_matrix ) :: T
 
-    Real( wp ) :: d_jj
+    Real( wp ) :: d_ii, d_jj
 
-    Integer :: j_glob
+    Integer :: m, n
+    Integer :: i_glob, j_glob
     Integer :: i, j
+    
+    Call A%matrix_map%get_data( m = m, n = n )
 
-    T = A
-    Do j = 1, Size( T%data, Dim = 2 )
-       j_glob = T%local_to_global_cols( j )
-       d_jj = d( j_glob )
-       Do i = 1, Size( T%data, Dim = 1 )
-          T%data( i, j ) = T%data( i, j ) * d_jj
-       End Do
-    End Do
+    T = A ! Note this picks up the correct daggerization of A
+
+    Select Case( A%daggered )
+
+    Case( .False. )
+
+       If( Size( d ) == n ) Then
+
+          Do j = 1, Size( T%data, Dim = 2 )
+             j_glob = T%local_to_global_cols( j )
+             d_jj = d( j_glob )
+             Do i = 1, Size( T%data, Dim = 1 )
+                T%data( i, j ) = T%data( i, j ) * d_jj
+             End Do
+          End Do
+          
+       Else
+
+          Stop "Inconsistent matrix dimensions in complex_multiply_diagonal"
+          
+       End If
+       
+    Case( .True. )
+
+       If( Size( d ) == m ) Then
+
+          Do j = 1, Size( T%data, Dim = 2 )
+             Do i = 1, Size( T%data, Dim = 1 )
+                i_glob = T%local_to_global_rows( i )
+                d_ii = d( i_glob )
+                T%data( i, j ) = d_ii * T%data( i, j )
+             End Do
+          End Do
+
+       Else
+
+          Stop "Inconsistent matrix dimensions in complex_multiply_diagonal"
+          
+       End If
+       
+    End Select
+
     B = T
     
   End Function complex_multiply_diagonal
@@ -1826,7 +1959,7 @@ Contains
 
     If( m == n .And. Size( d ) == n ) Then
 
-       T = A
+       T = A ! note this picks up the correct "daggerization" of A
        Do i_glob = 1, n
           i_loc = A%global_to_local_rows( i_glob )
           j_loc = A%global_to_local_cols( i_glob )
