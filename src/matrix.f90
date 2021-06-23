@@ -13,6 +13,30 @@ Module distributed_matrix_module
   Integer, Parameter :: distributed_matrix_INVALID = -1
   Integer, Parameter :: distributed_matrix_NOT_ME  = -2
 
+  ! Enumeration for diagonaliser classes
+  Enum, Bind( C )
+     Enumerator :: SCALAPACK
+     Enumerator :: ELSI
+  End Enum
+
+  ! Enumeration for types of diagonaliser with class SCALAPACK
+  Enum, Bind( C )
+     Enumerator :: SCALAPACK_DIVIDE_AND_CONQUER
+  End Enum
+
+  ! Enumeration for types of diagonaliser with class ELSI
+  Enum, Bind( C )
+     Enumerator :: ELSI_ELPA
+  End Enum
+
+  ! Set default diagonaliser
+!!$  Integer, Parameter, Private :: default_diagonaliser_class = SCALAPACK
+!!$  Integer, Parameter, Private :: default_diagonaliser_type  = SCALAPACK_DIVIDE_AND_CONQUER
+  Integer, Parameter, Private :: default_diagonaliser_class = ELSI
+  Integer, Parameter, Private :: default_diagonaliser_type  = ELSI_ELPA
+  Integer,            Private :: diagonaliser_class         = default_diagonaliser_class
+  Integer,            Private :: diagonaliser_type          = default_diagonaliser_type
+
   Type, Abstract, Public :: distributed_matrix
      !! An abstract for the base type. This deal with dimensions, mappings and transposes
      !! but contains no data
@@ -22,8 +46,11 @@ Module distributed_matrix_module
      Integer, Dimension( : ), Allocatable, Private :: local_to_global_rows   !! Map the local row index to a global one
      Integer, Dimension( : ), Allocatable, Private :: local_to_global_cols   !! Map the local column index to a global one
      Logical                             , Private :: daggered = .False.     !! If true use the matrix in daggered form
+     Integer                             , Private :: diag_class = default_diagonaliser_class !! The class of the diagonaliser to be used for this object
+     Integer                             , Private :: diag_type  = default_diagonaliser_type  !! Within the class which particular diagonaliser
    Contains
      ! Public methods that are NOT overridden
+     Procedure, Public :: set_diag               => matrix_set_diag            !! Set the diagonaliser to be used
      Procedure, Public :: get_maps               => matrix_get_maps            !! Get all the mapping arrays
      Procedure, Public :: global_to_local        => matrix_global_to_local     !! Get an array for mapping global indices to local  ones
      Procedure, Public :: local_to_global        => matrix_local_to_global     !! Get an array for mapping local  indices to global ones
@@ -196,7 +223,8 @@ Module distributed_matrix_module
   Private
 
   Integer, Parameter, Private :: diag_work_size_fiddle_factor = 4 ! From experience Scalapack sometimes returns too small a work size
-  
+
+  ! Default blocking factors
   Integer, Parameter, Private :: default_block_fac = 96
   Integer,            Private :: block_fac = default_block_fac
 
@@ -2517,6 +2545,8 @@ Contains
     !! Diagonalise a real symmetric matrix
 
     Use Scalapack_interfaces, Only : pdsyevd
+    Use elsi                , Only : elsi_handle, elsi_init, elsi_set_mpi, &
+         elsi_set_blacs, elsi_set_unit_ovlp, elsi_ev_real, elsi_finalize
 
     Implicit None
 
@@ -2524,19 +2554,27 @@ Contains
     Class( real_distributed_matrix ),              Intent(   Out ) :: Q
     Real( wp ), Dimension( : )      , Allocatable, Intent(   Out ) :: E
 
+    Type( elsi_handle ) :: eh
+
     Real( wp ), Dimension( :, : ), Allocatable :: tmp_a
 
     Real( wp ), Dimension( : ), Allocatable :: work
 
+    Real( wp ), Dimension( 1:0, 1:0 ) :: S
+
     Integer, Dimension( : ), Allocatable :: iwork
 
     Integer, Parameter :: diag_work_size_fiddle_factor_small_matrices = 60
-    
+
+    Integer :: solver_for_elsi
+    Integer :: ctxt, block_fac
     Integer :: nwork
     Integer :: npcol, nprow
     Integer :: mb, nb
     Integer :: m
     Integer :: info
+
+    info = 0
 
     ! Give Q the same mapping as A
     Call A%matrix_map%get_data( m = m, npcol = npcol )
@@ -2546,30 +2584,78 @@ Contains
     
     ! The diag overwrites the matrix. Horrible so use a temporary
     tmp_A = A%data
-    
-    ! Workspace size enquiry
-    Allocate( work( 1:1 ), iwork( 1:1 ) )
-    Call pdsyevd( 'V', 'U', m, tmp_A, 1, 1, A%matrix_map%get_descriptor(), E, Q%data, 1, 1, Q%matrix_map%get_descriptor(), &
-         work, -1, iwork, Size( iwork ), info )
-    nwork = Nint( work( 1 ) )
-    nwork = nwork * diag_work_size_fiddle_factor ! From experience ...
-    ! Unfortunately there is a bug in scalapack that means this can still might not
-    ! be enough for small matrices on large numbers of processes. What follows is a complete
-    ! hack that seems to work around this, but there is no gaurantee it works
-    ! in all cases
-    ! The overhead won't be large as this only affects small cases
-    ! Note the bug also only affects the real symmetric case - hermitian diags are OK
-    Call A%matrix_map%get_data( nprow = nprow, npcol = npcol, mb = mb, nb = nb )
-    If( m <= Min( mb, nb ) * Min( nprow, npcol ) ) Then ! i.e. some processes don't have a full block
-       nwork = nwork * diag_work_size_fiddle_factor_small_matrices
-    End If
-    Deallocate( work, iwork )
-    Allocate(  work( 1:nwork ) )
-    ! Scalapack recipe is behind the strange numbers
-    Allocate( iwork( 1:7 * m + 8 * npcol + 2 ) )
-    ! Do the diag
-    Call pdsyevd( 'V', 'U', m, tmp_A, 1, 1, A%matrix_map%get_descriptor(), E, Q%data, 1, 1, Q%matrix_map%get_descriptor(), &
-         work, Size( work ), iwork, Size( iwork ), info )
+
+    Diagonaliser_selector: Select Case( A%diag_class )
+    Case( SCALAPACK )
+
+       Select Case( A%diag_type )
+       Case( SCALAPACK_DIVIDE_AND_CONQUER )
+          ! Workspace size enquiry
+          Allocate( work( 1:1 ), iwork( 1:1 ) )
+          Call pdsyevd( 'V', 'U', m, tmp_A, 1, 1, A%matrix_map%get_descriptor(), E, Q%data, 1, 1, Q%matrix_map%get_descriptor(), &
+               work, -1, iwork, Size( iwork ), info )
+          nwork = Nint( work( 1 ) )
+          nwork = nwork * diag_work_size_fiddle_factor ! From experience ...
+          ! Unfortunately there is a bug in scalapack that means this can still might not
+          ! be enough for small matrices on large numbers of processes. What follows is a complete
+          ! hack that seems to work around this, but there is no gaurantee it works
+          ! in all cases
+          ! The overhead won't be large as this only affects small cases
+          ! Note the bug also only affects the real symmetric case - hermitian diags are OK
+          Call A%matrix_map%get_data( nprow = nprow, npcol = npcol, mb = mb, nb = nb )
+          If( m <= Min( mb, nb ) * Min( nprow, npcol ) ) Then ! i.e. some processes don't have a full block
+             nwork = nwork * diag_work_size_fiddle_factor_small_matrices
+          End If
+          Deallocate( work, iwork )
+          Allocate(  work( 1:nwork ) )
+          ! Scalapack recipe is behind the strange numbers
+          Allocate( iwork( 1:7 * m + 8 * npcol + 2 ) )
+          ! Do the diag
+          Call pdsyevd( 'V', 'U', m, tmp_A, 1, 1, A%matrix_map%get_descriptor(), E, Q%data, 1, 1, Q%matrix_map%get_descriptor(), &
+               work, Size( work ), iwork, Size( iwork ), info )
+       Case Default
+          Stop "Unknown Scalpack Diagonaliser selected"
+       End Select
+
+    Case( ELSI )
+
+       Write( *, * ) 'Using elsi'
+
+       Select Case( A%diag_type )
+       Case( ELSI_ELPA )
+          solver_for_elsi = 1 ! Magic constant from ELSI documentation, indicates the solver is ELPA
+       Case Default
+          Stop "Unknown Elsi Diagonaliser"
+       End Select
+
+       ! More magic constants from the ELSI documentation
+       ! The 1 indicates a parallel mode of MULTI_PROC
+       ! The 0 indicates a matrix format of BLACS_DENSE
+       ! Note the number of electrons is not important for us
+       ! as we don't make a density matrix
+       Call elsi_init( eh, solver_for_elsi, 1, 0, m, 0.0_wp, m )
+
+       ! Set the communicator
+       Call elsi_set_mpi( eh, A%get_comm() )
+
+       ! For elsi set the blacs information
+       Call A%matrix_map%get_data( ctxt = ctxt, mb = block_fac )
+       Call elsi_set_blacs( eh, ctxt, block_fac )
+
+       ! Indicate we are using a unit overlap matrix - i.e. a standard eval problem
+       ! Magic constant indicates true
+       Call elsi_set_unit_ovlp( eh, 1 )
+       
+       ! Diagonalise the matrix
+       Call elsi_ev_real( eh, tmp_A, S, E, Q%data )
+
+       ! Shut elsi down
+       Call elsi_finalize( eh )
+
+       ! Can't work out currently how elsi handles errors
+       info = 0
+
+    End Select Diagonaliser_selector
 
     If( info /= 0 ) Then
        Deallocate( E )

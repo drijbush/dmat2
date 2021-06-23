@@ -1,6 +1,9 @@
 file(GLOB sources *.f90)
 add_executable(test_prog ${sources})
-target_link_libraries(test_prog dmat2)
+target_link_libraries(test_prog PRIVATE dmat2)
+#target_link_libraries(test_prog dmat2)
+target_link_libraries(test_prog PRIVATE elsi::elsi)
+#target_link_libraries(test_prog elsi::elsi)
 
 add_test(NAME build_tests
   COMMAND ${CMAKE_MAKE_PROGRAM} test_prog
