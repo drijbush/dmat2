@@ -30,12 +30,10 @@ Module distributed_matrix_module
   End Enum
 
   ! Set default diagonaliser
-!!$  Integer, Parameter, Private :: default_diagonaliser_class = SCALAPACK
-!!$  Integer, Parameter, Private :: default_diagonaliser_type  = SCALAPACK_DIVIDE_AND_CONQUER
   Integer, Parameter, Private :: default_diagonaliser_class = ELSI
   Integer, Parameter, Private :: default_diagonaliser_type  = ELSI_ELPA
-  Integer,            Private :: diagonaliser_class         = default_diagonaliser_class
-  Integer,            Private :: diagonaliser_type          = default_diagonaliser_type
+  Integer,            Private :: module_diagonaliser_class  = default_diagonaliser_class
+  Integer,            Private :: module_diagonaliser_type   = default_diagonaliser_type
 
   Type, Abstract, Public :: distributed_matrix
      !! An abstract for the base type. This deal with dimensions, mappings and transposes
@@ -46,11 +44,8 @@ Module distributed_matrix_module
      Integer, Dimension( : ), Allocatable, Private :: local_to_global_rows   !! Map the local row index to a global one
      Integer, Dimension( : ), Allocatable, Private :: local_to_global_cols   !! Map the local column index to a global one
      Logical                             , Private :: daggered = .False.     !! If true use the matrix in daggered form
-     Integer                             , Private :: diag_class = default_diagonaliser_class !! The class of the diagonaliser to be used for this object
-     Integer                             , Private :: diag_type  = default_diagonaliser_type  !! Within the class which particular diagonaliser
    Contains
      ! Public methods that are NOT overridden
-     Procedure, Public :: set_diag               => matrix_set_diag            !! Set the diagonaliser to be used
      Procedure, Public :: get_maps               => matrix_get_maps            !! Get all the mapping arrays
      Procedure, Public :: global_to_local        => matrix_global_to_local     !! Get an array for mapping global indices to local  ones
      Procedure, Public :: local_to_global        => matrix_local_to_global     !! Get an array for mapping local  indices to global ones
@@ -219,6 +214,7 @@ Module distributed_matrix_module
   Public :: distributed_matrix_comm_to_base
   Public :: distributed_matrix_finalise
   Public :: distributed_matrix_set_default_blocking
+  Public :: distributed_matrix_set_diag
   
   Private
 
@@ -556,6 +552,46 @@ Contains
     
   End Subroutine distributed_matrix_set_default_blocking
 
+  Subroutine distributed_matrix_set_diag( diag_class, diag_type )
+
+    Character( Len = * ), Intent( In    ) :: diag_class
+    Character( Len = * ), Intent( In    ) :: diag_type
+
+    Character( Len = : ), Allocatable :: diag_class_lower_case
+    Character( Len = : ), Allocatable :: diag_type_lower_case
+
+    diag_class_lower_case = to_lower( Trim( Adjustl( diag_class ) ) )
+    diag_type_lower_case  = to_lower( Trim( Adjustl( diag_type  ) ) )
+
+    select_diag_class: Select Case( diag_class_lower_case )
+
+    Case( 'scalapack' )
+       module_diagonaliser_class = SCALAPACK
+
+       Select Case( diag_type_lower_case )
+       Case( 'divide_and_conquer', 'pdsyevd' )
+          module_diagonaliser_type = SCALAPACK_DIVIDE_AND_CONQUER
+       Case Default
+          Stop 'Unknown scalapack diagoaliser'
+       End Select
+       
+    Case( 'elsi' )
+       module_diagonaliser_class = ELSI
+       
+       Select Case( diag_type_lower_case )
+       Case( 'elpa' )
+          module_diagonaliser_type = ELSI_ELPA
+       Case Default
+          Stop 'Unknown scalapack diagoaliser'
+       End Select
+
+    Case Default
+       Stop 'Unknow diag class'
+       
+    End Select select_diag_class
+    
+  End Subroutine distributed_matrix_set_diag
+    
   !###################################################################################
   ! Methods implemented on the base type and inherited by the extended types
 
@@ -2585,10 +2621,10 @@ Contains
     ! The diag overwrites the matrix. Horrible so use a temporary
     tmp_A = A%data
 
-    Diagonaliser_selector: Select Case( A%diag_class )
+    Diagonaliser_selector: Select Case( module_diagonaliser_class )
     Case( SCALAPACK )
 
-       Select Case( A%diag_type )
+       Select Case( module_diagonaliser_type )
        Case( SCALAPACK_DIVIDE_AND_CONQUER )
           ! Workspace size enquiry
           Allocate( work( 1:1 ), iwork( 1:1 ) )
@@ -2619,9 +2655,9 @@ Contains
 
     Case( ELSI )
 
-       Write( *, * ) 'Using elsi'
+       Write( *, * ) 'Using elsi - REAL'
 
-       Select Case( A%diag_type )
+       Select Case( module_diagonaliser_type )
        Case( ELSI_ELPA )
           solver_for_elsi = 1 ! Magic constant from ELSI documentation, indicates the solver is ELPA
        Case Default
@@ -3736,6 +3772,23 @@ Contains
     End Do
     
   End Function kahan_sum_complex
+
+  Pure Function to_lower( string ) Result( low_string )
+
+    Character( Len = : ), Allocatable :: low_string
+
+    Character( Len = * ), Intent( In ) :: string
+
+    Integer :: i
+    
+    low_string = string
+    Do i = 1, Len( low_string )
+       If( low_string( i:i ) >= 'A' .And. low_string( i:i ) <= 'Z' ) Then
+          low_string( i:i ) = Achar( Iachar( low_string( i:i ) ) - Iachar( 'A' ) + Iachar( 'a' ) )
+       End If
+    End Do
+    
+  End Function to_lower
   
 End Module distributed_matrix_module
  
