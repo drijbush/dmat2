@@ -13,7 +13,6 @@ Module distributed_matrix_module
   Integer, Parameter :: distributed_matrix_INVALID = -1
   Integer, Parameter :: distributed_matrix_NOT_ME  = -2
 
-  ! Enumeration for diagonaliser classes
   Enum, Bind( C )
      Enumerator :: SCALAPACK
      Enumerator :: ELSI
@@ -26,6 +25,7 @@ Module distributed_matrix_module
 
   ! Enumeration for types of diagonaliser with class ELSI
   Enum, Bind( C )
+     Enumerator :: ELSI_AUTO
      Enumerator :: ELSI_ELPA
   End Enum
 
@@ -554,6 +554,8 @@ Contains
 
   Subroutine distributed_matrix_set_diag( diag_class, diag_type )
 
+    !! Set the diagonaliser to be used
+
     Character( Len = * ), Intent( In    ) :: diag_class
     Character( Len = * ), Intent( In    ) :: diag_type
 
@@ -579,6 +581,8 @@ Contains
        module_diagonaliser_class = ELSI
        
        Select Case( diag_type_lower_case )
+       Case( 'auto' )
+          module_diagonaliser_type = ELSI_AUTO
        Case( 'elpa' )
           module_diagonaliser_type = ELSI_ELPA
        Case Default
@@ -2626,6 +2630,8 @@ Contains
     Diagonaliser_selector: Select Case( module_diagonaliser_class )
     Case( SCALAPACK )
 
+       Write( *, * ) 'Using SCALAPCK - REAL'
+
        Select Case( module_diagonaliser_type )
        Case( SCALAPACK_DIVIDE_AND_CONQUER )
           ! Workspace size enquiry
@@ -2660,6 +2666,8 @@ Contains
        Write( *, * ) 'Using elsi - REAL'
 
        Select Case( module_diagonaliser_type )
+       Case( ELSI_AUTO )
+          solver_for_elsi = 0 ! Magic constant from ELSI documentation, indicates the solver is automagically chosen
        Case( ELSI_ELPA )
           solver_for_elsi = 1 ! Magic constant from ELSI documentation, indicates the solver is ELPA
        Case Default
@@ -2788,6 +2796,8 @@ Contains
     Diagonaliser_selector: Select Case( module_diagonaliser_class )
     Case( SCALAPACK )
 
+       Write( *, * ) 'Using SCALAPCK - COMPLEX'
+
        Select Case( module_diagonaliser_type )
        Case( SCALAPACK_DIVIDE_AND_CONQUER )
           ! Workspace size enquiry
@@ -2815,6 +2825,8 @@ Contains
        Write( *, * ) 'Using elsi - COMPLEX'
 
        Select Case( module_diagonaliser_type )
+       Case( ELSI_AUTO )
+          solver_for_elsi = 0 ! Magic constant from ELSI documentation, indicates the solver is automagically chosen
        Case( ELSI_ELPA )
           solver_for_elsi = 1 ! Magic constant from ELSI documentation, indicates the solver is ELPA
        Case Default

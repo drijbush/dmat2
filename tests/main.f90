@@ -37,7 +37,8 @@ Program test_distributed_matrix
   Use ks_extract_tests
   Use ks_unary_tests
   Use test_params
-
+  Use ks_array_module, Only : ks_array_set_diag
+  
   Implicit None
 
   Character( len = * ), Dimension( * ), Parameter :: test_sets = [ &
@@ -301,9 +302,22 @@ Program test_distributed_matrix
      Case("ks_misc")
         ! Diags and other misc
         If( me == 0 ) Then
-           Write( *, title_format ) 'Split distribution diags'
+           Write( *, title_format ) 'Split distribution diags Scalapack'
            Flush( output_unit )
         End If
+        Call ks_array_set_diag( 'SCALAPACK', 'DIVIDE_AND_CONQUER' )
+        Call test_ks_array_diag
+        If( me == 0 ) Then
+           Write( *, title_format ) 'Split distribution diags ELSI ELPA'
+           Flush( output_unit )
+        End If
+        Call ks_array_set_diag( 'Elsi', 'elpA' )
+        Call test_ks_array_diag
+        If( me == 0 ) Then
+           Write( *, title_format ) 'Split distribution diags ELSI AUTO'
+           Flush( output_unit )
+        End If
+        Call ks_array_set_diag( 'ElsI', 'aUtO' )
         Call test_ks_array_diag
         If( me == 0 ) Then
            Write( *, title_format ) 'Split distribution Choleskis'

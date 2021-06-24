@@ -70,6 +70,7 @@ Module ks_matrix_module
   Public :: ks_matrix_comm_to_base  !! Converts an MPI communicator into the data structures required to describe a ks matrix mapped onto it
   Public :: ks_matrix_remap_data    !! Remap the data held by A onto the distribution described by B
   Public :: ks_matrix_finalise      !! Finalise the matrix system
+  Public :: ks_matrix_set_diag      !! Set the diagonaliser to be used
 
 Contains
 
@@ -171,6 +172,19 @@ Contains
     Call distributed_matrix_finalise
     
   End Subroutine ks_matrix_finalise
+
+  Subroutine ks_matrix_set_diag( diag_class, diag_type )
+
+    !! Set the diagonaliser to be used
+
+    Use distributed_matrix_module, Only : distributed_matrix_set_diag
+
+    Character( Len = * ), Intent( In    ) :: diag_class
+    Character( Len = * ), Intent( In    ) :: diag_type
+
+    Call distributed_matrix_set_diag( diag_class, diag_type )
+
+  End Subroutine ks_matrix_set_diag
 
   !##########################################################################################################
   ! Type bound procedures

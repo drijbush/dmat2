@@ -168,6 +168,7 @@ Module ks_array_module
   End type ks_array
   
   Public :: ks_array_init         !! Initalise the KS arrays
+  Public :: ks_array_set_diag     !! Set the diagonaliser to be used
   Public :: ks_array_comm_to_base !! Turn an MPI communicator inot a base KS_array object
   Public :: ks_array_finalise     !! Finalise the KS array mechanism
   
@@ -191,9 +192,22 @@ Contains
 
   End Subroutine ks_array_init
 
+  Subroutine ks_array_set_diag( diag_class, diag_type )
+
+    !! Set the diagonaliser to be used
+
+    Use ks_matrix_module, Only : ks_matrix_set_diag
+
+    Character( Len = * ), Intent( In    ) :: diag_class
+    Character( Len = * ), Intent( In    ) :: diag_type
+
+    Call ks_matrix_set_diag( diag_class, diag_type )
+
+  End Subroutine ks_array_set_diag
+
   Subroutine ks_array_comm_to_base( comm, n_spin, k_point_type, k_points, base_ks_array )
 
-    !! Turn an MPI communicator inot a base KS_array object
+    !! Turn an MPI communicator into a base KS_array object
     !! from which other KS_arrays can be created.
     !! Note each element of the array will be distributed across all processes in the communicator
     
