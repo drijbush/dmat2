@@ -2590,12 +2590,14 @@ Contains
     Class( real_distributed_matrix ),              Intent(   Out ) :: Q
     Real( wp ), Dimension( : )      , Allocatable, Intent(   Out ) :: E
 
+    ! Handle for ELSI routines
     Type( elsi_handle ) :: eh
 
     Real( wp ), Dimension( :, : ), Allocatable :: tmp_a
 
     Real( wp ), Dimension( : ), Allocatable :: work
 
+    ! Dummy overlap matrix for ELSI
     Real( wp ), Dimension( 1:0, 1:0 ) :: S
 
     Integer, Dimension( : ), Allocatable :: iwork
@@ -2650,7 +2652,7 @@ Contains
           Call pdsyevd( 'V', 'U', m, tmp_A, 1, 1, A%matrix_map%get_descriptor(), E, Q%data, 1, 1, Q%matrix_map%get_descriptor(), &
                work, Size( work ), iwork, Size( iwork ), info )
        Case Default
-          Stop "Unknown Scalpack Diagonaliser selected"
+          Stop "Unknown real Scalpack Diagonaliser selected"
        End Select
 
     Case( ELSI )
@@ -2661,7 +2663,7 @@ Contains
        Case( ELSI_ELPA )
           solver_for_elsi = 1 ! Magic constant from ELSI documentation, indicates the solver is ELPA
        Case Default
-          Stop "Unknown Elsi Diagonaliser"
+          Stop "Unknown real Elsi Diagonaliser"
        End Select
 
        ! More magic constants from the ELSI documentation
@@ -2690,6 +2692,9 @@ Contains
 
        ! Can't work out currently how elsi handles errors
        info = 0
+
+    Case Default
+       Stop "Unknown real diagonaliser class"
 
     End Select Diagonaliser_selector
 
@@ -2738,6 +2743,9 @@ Contains
     !! Diagonalise a complex Hermitian matrix
 
     Use Scalapack_interfaces, Only : pzheevd
+    Use elsi                , Only : elsi_handle, elsi_init, elsi_set_mpi, &
+         elsi_set_blacs, elsi_set_unit_ovlp, elsi_ev_complex, elsi_finalize
+
 
     Implicit None
 
@@ -2745,18 +2753,28 @@ Contains
     Class( complex_distributed_matrix ),              Intent(   Out ) :: Q
     Real( wp ), Dimension( : )         , Allocatable, Intent(   Out ) :: E
 
+    ! Handle for ELSI routines
+    Type( elsi_handle ) :: eh
+
     Complex( wp ), Dimension( :, : ), Allocatable :: tmp_a
 
     Complex( wp ), Dimension( : ), Allocatable :: cwork
 
     Real( wp ), Dimension( : ), Allocatable :: rwork
 
+    ! Dummy overlap matrix for ELSI
+    Complex( wp ), Dimension( 1:0, 1:0 ) :: S
+    
     Integer, Dimension( : ), Allocatable :: iwork
     
+    Integer :: solver_for_elsi
+    Integer :: ctxt, block_fac
     Integer :: ncwork, nrwork
     Integer :: npcol
     Integer :: m
     Integer :: info
+
+    info = 0
 
     ! Give Q the same mapping as A
     Call A%matrix_map%get_data( m = m, npcol = npcol )
@@ -2767,22 +2785,73 @@ Contains
     ! The diag overwrites the matrix. Horrible so use a temporary
     tmp_A = A%data
        
-    ! Workspace size enquiry
-    Allocate( cwork( 1:1 ), rwork( 1:1 ), iwork( 1:1 ) )
-    Call pzheevd( 'V', 'U', m, tmp_A, 1, 1, A%matrix_map%get_descriptor(), E, Q%data, 1, 1, Q%matrix_map%get_descriptor(), &
-         cwork, -1, rwork, -1, iwork, 0, info )
-    ncwork = Nint( Real( cwork( 1 ), wp ) )
-    ncwork = ncwork * diag_work_size_fiddle_factor ! From experience ...
-    nrwork = Nint( rwork( 1 ) )
-    nrwork = nrwork * diag_work_size_fiddle_factor ! From experience ...
-    Deallocate( cwork, rwork, iwork )
-    Allocate( cwork( 1:ncwork ) )
-    Allocate( rwork( 1:nrwork ) )
-    ! Scalapack recipe is behind the strange numbers
-    Allocate( iwork( 1:7 * m + 8 * npcol + 2 ) )
-    ! Do the diag
-    Call pzheevd( 'V', 'U', m, tmp_A, 1, 1, A%matrix_map%get_descriptor(), E, Q%data, 1, 1, Q%matrix_map%get_descriptor(), &
-            cwork, Size( cwork ), rwork, Size( rwork ), iwork, Size( iwork ), info )
+    Diagonaliser_selector: Select Case( module_diagonaliser_class )
+    Case( SCALAPACK )
+
+       Select Case( module_diagonaliser_type )
+       Case( SCALAPACK_DIVIDE_AND_CONQUER )
+          ! Workspace size enquiry
+          Allocate( cwork( 1:1 ), rwork( 1:1 ), iwork( 1:1 ) )
+          Call pzheevd( 'V', 'U', m, tmp_A, 1, 1, A%matrix_map%get_descriptor(), E, Q%data, 1, 1, Q%matrix_map%get_descriptor(), &
+               cwork, -1, rwork, -1, iwork, 0, info )
+          ncwork = Nint( Real( cwork( 1 ), wp ) )
+          ncwork = ncwork * diag_work_size_fiddle_factor ! From experience ...
+          nrwork = Nint( rwork( 1 ) )
+          nrwork = nrwork * diag_work_size_fiddle_factor ! From experience ...
+          Deallocate( cwork, rwork, iwork )
+          Allocate( cwork( 1:ncwork ) )
+          Allocate( rwork( 1:nrwork ) )
+          ! Scalapack recipe is behind the strange numbers
+          Allocate( iwork( 1:7 * m + 8 * npcol + 2 ) )
+          ! Do the diag
+          Call pzheevd( 'V', 'U', m, tmp_A, 1, 1, A%matrix_map%get_descriptor(), E, Q%data, 1, 1, Q%matrix_map%get_descriptor(), &
+               cwork, Size( cwork ), rwork, Size( rwork ), iwork, Size( iwork ), info )
+       Case Default
+          Stop "Unknown complex Scalpack Diagonaliser selected"
+       End Select
+
+    Case( ELSI )
+
+       Write( *, * ) 'Using elsi - COMPLEX'
+
+       Select Case( module_diagonaliser_type )
+       Case( ELSI_ELPA )
+          solver_for_elsi = 1 ! Magic constant from ELSI documentation, indicates the solver is ELPA
+       Case Default
+          Stop "Unknown complex Elsi Diagonaliser"
+       End Select
+
+       ! More magic constants from the ELSI documentation
+       ! The 1 indicates a parallel mode of MULTI_PROC
+       ! The 0 indicates a matrix format of BLACS_DENSE
+       ! Note the number of electrons is not important for us
+       ! as we don't make a density matrix
+       Call elsi_init( eh, solver_for_elsi, 1, 0, m, 0.0_wp, m )
+
+       ! Set the communicator
+       Call elsi_set_mpi( eh, A%get_comm() )
+
+       ! For elsi set the blacs information
+       Call A%matrix_map%get_data( ctxt = ctxt, mb = block_fac )
+       Call elsi_set_blacs( eh, ctxt, block_fac )
+
+       ! Indicate we are using a unit overlap matrix - i.e. a standard eval problem
+       ! Magic constant indicates true
+       Call elsi_set_unit_ovlp( eh, 1 )
+       
+       ! Diagonalise the matrix
+       Call elsi_ev_complex( eh, tmp_A, S, E, Q%data )
+
+       ! Shut elsi down
+       Call elsi_finalize( eh )
+
+       ! Can't work out currently how elsi handles errors
+       info = 0
+
+    Case Default
+       Stop "Unknown complex diagonaliser class"
+
+    End Select Diagonaliser_selector
 
     If( info /= 0 ) Then
        Deallocate( E )
