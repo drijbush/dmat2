@@ -288,22 +288,24 @@ Module distributed_matrix_module
        Logical                           , Intent( In    ), Optional :: do_comms
      End Subroutine get_global_complex
 
-     Subroutine get_raw_real( A, raw_data, descriptor )
+     Subroutine get_raw_real( A, raw_data, communicator, descriptor )
        !! Get raw data from a real array 
        Import :: wp
        Import :: distributed_matrix
        Implicit None
        Class( distributed_matrix )  ,              Intent( In    ) :: A
        Real( wp ), Dimension( :, : ), Allocatable, Intent(   Out ) :: raw_data
+       Integer   ,                                 Intent(   Out ) :: communicator
        Integer   , Dimension( :    ),              Intent(   Out ) :: descriptor
      End Subroutine get_raw_real
-     Subroutine get_raw_complex( A, raw_data, descriptor )
+     Subroutine get_raw_complex( A, raw_data, communicator, descriptor )
        !! Get raw data from a complex array 
        Import :: wp
        Import :: distributed_matrix
        Implicit None
        Class( distributed_matrix )     ,              Intent( In    ) :: A
        Complex( wp ), Dimension( :, : ), Allocatable, Intent(   Out ) :: raw_data
+       Integer      ,                                 Intent(   Out ) :: communicator
        Integer      , Dimension( :    ),              Intent(   Out ) :: descriptor
      End Subroutine get_raw_complex
 
@@ -312,16 +314,16 @@ Module distributed_matrix_module
        Import :: wp
        Import :: distributed_matrix
        Implicit None
-       Class( distributed_matrix )  ,              Intent( InOut ) :: A
-       Real( wp ), Dimension( :, : ), Allocatable, Intent( In    ) :: raw_data
+       Class( distributed_matrix )  , Intent( InOut ) :: A
+       Real( wp ), Dimension( :, : ), Intent( In    ) :: raw_data
      End Subroutine set_raw_real
      Subroutine set_raw_complex( A, raw_data )
        !! set raw data from a real array 
        Import :: wp
        Import :: distributed_matrix
        Implicit None
-       Class( distributed_matrix )     ,              Intent( InOut ) :: A
-       Complex( wp ), Dimension( :, : ), Allocatable, Intent( In    ) :: raw_data
+       Class( distributed_matrix )     , Intent( InOut ) :: A
+       Complex( wp ), Dimension( :, : ), Intent( In    ) :: raw_data
      End Subroutine set_raw_complex
 
      Subroutine real_assign( A, data )
@@ -1215,8 +1217,8 @@ Contains
 
     !! Set the raw data for A
 
-    Class( real_distributed_matrix ),              Intent( InOut ) :: A
-    Real( wp ), Dimension( :, : )   , Allocatable, Intent( In    ) :: raw_data
+    Class( real_distributed_matrix ), Intent( InOut ) :: A
+    Real( wp ), Dimension( :, : )   , Intent( In    ) :: raw_data
 
     If( A%warn_on_raw ) Then
        Call warn_on_raw( "real_matrix_set_raw_real" )
@@ -1230,14 +1232,14 @@ Contains
 
     !! get the raw data for A
 
-    Class  ( real_distributed_matrix  ),              Intent( InOut ) :: A
-    Complex( wp ), Dimension( :, : )   , Allocatable, Intent( In    ) :: raw_data
+    Class  ( real_distributed_matrix  ), Intent( InOut ) :: A
+    Complex( wp ), Dimension( :, : )   , Intent( In    ) :: raw_data
 
     If( A%warn_on_raw ) Then
        Call warn_on_raw( "real_matrix_set_raw_complex" )
     End If
 
-    Error Stop "Trying to get raw data from real matrix into complex data in real_matrix_get_raw_complex"
+    Error Stop "Trying to get raw data from real matrix into complex data in real_matrix_set_raw_complex"
     ! Shut the compiler up about unused vars
     A%data = Real( raw_data, Kind = Kind( A%data ) )
 
@@ -1247,14 +1249,14 @@ Contains
 
     !! get the raw data for A
 
-    Class( complex_distributed_matrix  ),              Intent( InOut ) :: A
-    Real ( wp ), Dimension( :, : )      , Allocatable, Intent( In    ) :: raw_data
+    Class( complex_distributed_matrix  ), Intent( InOut ) :: A
+    Real ( wp ), Dimension( :, : )      , Intent( In    ) :: raw_data
 
     If( A%warn_on_raw ) Then
        Call warn_on_raw( "complex_matrix_set_raw_real" )
     End If
 
-    Error Stop "Trying to get raw data from real matrix into complex data in real_matrix_get_raw_complex"
+    Error Stop "Trying to get raw data from real matrix into complex data in real_matrix_set_raw_complex"
     ! Shut the compiler up about unused vars
     A%data = raw_data
 
@@ -1264,8 +1266,8 @@ Contains
 
     !! Set the raw data for A
 
-    Class( complex_distributed_matrix ),              Intent( InOut ) :: A
-    Complex( wp ), Dimension( :, : )   , Allocatable, Intent( In    ) :: raw_data
+    Class( complex_distributed_matrix ), Intent( InOut ) :: A
+    Complex( wp ), Dimension( :, : )   , Intent( In    ) :: raw_data
 
     If( A%warn_on_raw ) Then
        Call warn_on_raw( "complex_matrix_set_raw_complex" )
@@ -1276,29 +1278,32 @@ Contains
   End Subroutine complex_matrix_set_raw_complex
 
   ! Get the raw data
-  Subroutine real_matrix_get_raw_real( A, raw_data, descriptor )
+  Subroutine real_matrix_get_raw_real( A, raw_data, communicator, descriptor )
 
     !! get the raw data for A
 
     Class( real_distributed_matrix ),              Intent( In    ) :: A
     Real( wp ), Dimension( :, : )   , Allocatable, Intent(   Out ) :: raw_data
+    Integer   ,                                    Intent(   Out ) :: communicator
     Integer   , Dimension( :    )   ,              Intent(   Out ) :: descriptor
 
     If( A%warn_on_raw ) Then
        Call warn_on_raw( "real_matrix_get_raw_real" )
     End If
 
-    raw_data   = A%data
-    descriptor = A%matrix_map%get_descriptor() 
+    raw_data     = A%data
+    communicator = A%get_comm()
+    descriptor   = A%matrix_map%get_descriptor() 
     
   End Subroutine real_matrix_get_raw_real
 
-  Subroutine real_matrix_get_raw_complex( A, raw_data, descriptor )
+  Subroutine real_matrix_get_raw_complex( A, raw_data, communicator, descriptor )
 
     !! get the raw data for A
 
     Class  ( real_distributed_matrix  ),              Intent( In    ) :: A
     Complex( wp ), Dimension( :, : )   , Allocatable, Intent(   Out ) :: raw_data
+    Integer      ,                                    Intent(   Out ) :: communicator
     Integer      , Dimension( :    )   ,              Intent(   Out ) :: descriptor
 
     If( A%warn_on_raw ) Then
@@ -1307,17 +1312,19 @@ Contains
 
     Error Stop "Trying to get raw data from real matrix into complex data in real_matrix_get_raw_complex"
     ! Shut the compiler up about unused vars
-    raw_data   = 1
-    descriptor = A%matrix_map%get_descriptor() 
+    raw_data     = 1
+    communicator = A%get_comm()
+    descriptor   = A%matrix_map%get_descriptor() 
 
   End Subroutine real_matrix_get_raw_complex
 
-  Subroutine complex_matrix_get_raw_real( A, raw_data, descriptor )
+  Subroutine complex_matrix_get_raw_real( A, raw_data, communicator, descriptor )
 
     !! get the raw data for A
 
     Class  ( complex_distributed_matrix  ),              Intent( In    ) :: A
     Real   ( wp ), Dimension( :, : )      , Allocatable, Intent(   Out ) :: raw_data
+    Integer      ,                                       Intent(   Out ) :: communicator
     Integer      , Dimension( :    )      ,              Intent(   Out ) :: descriptor
 
     If( A%warn_on_raw ) Then
@@ -1326,25 +1333,28 @@ Contains
 
     Error Stop "Trying to get raw data from complex matrix into real data in complex_matrix_get_raw_real"
     ! Shut the compiler up about unused vars
-    raw_data   = 1
-    descriptor = A%matrix_map%get_descriptor() 
+    raw_data     = 1
+    communicator = A%get_comm()
+    descriptor   = A%matrix_map%get_descriptor() 
 
   End Subroutine complex_matrix_get_raw_real
 
-  Subroutine complex_matrix_get_raw_complex( A, raw_data, descriptor )
+  Subroutine complex_matrix_get_raw_complex( A, raw_data, communicator, descriptor )
 
     !! get the raw data for A
 
     Class  ( complex_distributed_matrix ),              Intent( In    ) :: A
     Complex( wp ), Dimension( :, : )     , Allocatable, Intent(   Out ) :: raw_data
+    Integer      ,                                      Intent(   Out ) :: communicator
     Integer      , Dimension( :    )     ,              Intent(   Out ) :: descriptor
 
     If( A%warn_on_raw ) Then
        Call warn_on_raw( "complex_matrix_get_raw_complex" )
     End If
 
-    raw_data   = A%data
-    descriptor = A%matrix_map%get_descriptor() 
+    raw_data     = A%data
+    communicator = A%get_comm()
+    descriptor   = A%matrix_map%get_descriptor() 
     
   End Subroutine complex_matrix_get_raw_complex
 

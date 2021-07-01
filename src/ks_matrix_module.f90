@@ -38,6 +38,8 @@ Module ks_matrix_module
      Procedure, Public :: size                   => ks_matrix_size                       !! Get the dimensions of the matrix
      Generic  , Public :: set_by_global          => set_global_real, set_global_complex  !! Set elements by global indices
      Generic  , Public :: get_by_global          => get_global_real, get_global_complex  !! Get elements using global indices
+     Generic  , Public :: set_raw                => set_raw_real, set_raw_complex        !! Set raw data
+     Generic  , Public :: get_raw                => get_raw_real, get_raw_complex        !! Get raw data
      Procedure, Public :: get_comm               => ks_matrix_communicator               !! Get the communicator containing the processes holding the matrix
      Procedure, Public :: global_to_local        => ks_matrix_global_to_local            !! Get an array for mapping global indices to local  ones
      Procedure, Public :: local_to_global        => ks_matrix_local_to_global            !! Get an array for mapping local  indices to global ones
@@ -64,12 +66,18 @@ Module ks_matrix_module
      Procedure,            Private :: set_global_complex   => ks_matrix_set_global_complex
      Procedure,            Private :: get_global_real      => ks_matrix_get_global_real
      Procedure,            Private :: get_global_complex   => ks_matrix_get_global_complex
+     Procedure,            Private :: set_raw_real         => ks_matrix_set_raw_real
+     Procedure,            Private :: set_raw_complex      => ks_matrix_set_raw_complex
+     Procedure,            Private :: get_raw_real         => ks_matrix_get_raw_real
+     Procedure,            Private :: get_raw_complex      => ks_matrix_get_raw_complex
   End Type ks_matrix
 
   Public :: ks_matrix_init          !! Initialise the ks matrix system and optionally sets the default blocking factor
   Public :: ks_matrix_comm_to_base  !! Converts an MPI communicator into the data structures required to describe a ks matrix mapped onto it
   Public :: ks_matrix_remap_data    !! Remap the data held by A onto the distribution described by B
   Public :: ks_matrix_finalise      !! Finalise the matrix system
+
+  Private
 
 Contains
 
@@ -537,6 +545,54 @@ Contains
     End If
 
   End Subroutine ks_matrix_get_global_complex
+
+  Subroutine ks_matrix_set_raw_real( A, raw_data )
+
+    !! Get the raw data tor A and its data distribution
+
+    Class( ks_matrix )           , Intent( InOut ) :: A
+    Real( wp ), Dimension( :, : ), Intent( In    ) :: raw_data
+
+    Call A%matrix%set_raw( raw_data )
+
+  End Subroutine ks_matrix_set_raw_real
+
+  Subroutine ks_matrix_set_raw_complex( A, raw_data )
+
+    !! Get the raw data tor A and its data distribution
+
+    Class( ks_matrix )              , Intent( InOut ) :: A
+    Complex( wp ), Dimension( :, : ), Intent( In    ) :: raw_data
+
+    Call A%matrix%set_raw( raw_data )
+
+  End Subroutine ks_matrix_set_raw_complex
+
+  Subroutine ks_matrix_get_raw_real( A, raw_data, communicator, descriptor )
+
+    !! Get the raw data tor A and its data distribution
+
+    Class( ks_matrix )                        , Intent( In    ) :: A
+    Real( wp ), Dimension( :, : ), Allocatable, Intent(   Out ) :: raw_data
+    Integer   ,                                 Intent(   Out ) :: communicator
+    Integer   , Dimension( :    ),              Intent(   Out ) :: descriptor
+
+    Call A%matrix%get_raw( raw_data, communicator, descriptor )
+
+  End Subroutine ks_matrix_get_raw_real
+
+  Subroutine ks_matrix_get_raw_complex( A, raw_data, communicator, descriptor )
+
+    !! Get the raw data tor A and its data distribution
+
+    Class( ks_matrix )                           , Intent( In    ) :: A
+    Complex( wp ), Dimension( :, : ), Allocatable, Intent(   Out ) :: raw_data
+    Integer      ,                                 Intent(   Out ) :: communicator
+    Integer      , Dimension( :    ),              Intent(   Out ) :: descriptor
+
+    Call A%matrix%get_raw( raw_data, communicator, descriptor )
+
+  End Subroutine ks_matrix_get_raw_complex
 
   Function ks_matrix_communicator( A ) Result( c )
 
