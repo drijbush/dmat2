@@ -21,7 +21,8 @@ Module distributed_matrix_module
      Integer, Dimension( : ), Allocatable, Private :: global_to_local_cols   !! Map the global column index to a local one
      Integer, Dimension( : ), Allocatable, Private :: local_to_global_rows   !! Map the local row index to a global one
      Integer, Dimension( : ), Allocatable, Private :: local_to_global_cols   !! Map the local column index to a global one
-     Logical                             , Private :: daggered = .False.     !! If true use the matrix in daggered form
+     Logical                             , Private :: daggered    = .False.  !! If true use the matrix in daggered form
+     Logical                             , Private :: warn_on_raw = .False.  !! If true warn on an attempted raw access to a matrix
    Contains
      ! Public methods that are NOT overridden
      Procedure, Public :: get_maps               => matrix_get_maps            !! Get all the mapping arrays
@@ -50,6 +51,8 @@ Module distributed_matrix_module
      Generic  , Public :: Operator( .Trinv.    ) => tr_inv                     !! invert a traingular matrix
      Generic  , Public :: set_by_global          => set_global_real, set_global_complex !! Set a matrix using global indexing
      Generic  , Public :: get_by_global          => get_global_real, get_global_complex !! Get from a matrix using global indexing
+     Generic  , Public :: set_raw                => set_raw_real   , set_raw_complex    !! Get raw data from a matrix
+     Generic  , Public :: get_raw                => get_raw_real   , get_raw_complex    !! Get raw data from a matrix
      ! Public methods that are overridden
      Procedure( create     ), Deferred, Public :: create                     !! Create storage for the data of the matrix 
      Procedure( local_size ), Deferred, Public :: local_size                 !! Get the dimensions of the local part of the matrix
@@ -63,6 +66,10 @@ Module distributed_matrix_module
      Procedure(    set_global_complex ), Deferred,            Private :: set_global_complex      !! Set values with a complex array using global indexing
      Procedure(    get_global_real    ), Deferred,            Private :: get_global_real         !! Get values from a real    array using global indexing
      Procedure(    get_global_complex ), Deferred,            Private :: get_global_complex      !! Get values from a complex array using global indexing
+     Procedure(    set_raw_real       ), Deferred,            Private :: set_raw_real            !! Get raw data from a real array
+     Procedure(    set_raw_complex    ), Deferred,            Private :: set_raw_complex         !! Get raw data from a complex array
+     Procedure(    get_raw_real       ), Deferred,            Private :: get_raw_real            !! Get raw data from a real array
+     Procedure(    get_raw_complex    ), Deferred,            Private :: get_raw_complex         !! Get raw data from a complex array
      Procedure(           real_assign ), Deferred,            Private :: set_real_scalar
      Procedure(             binary_op ), Deferred,            Private :: multiply
      Procedure(        real_binary_op ), Deferred, Pass( B ), Private :: real_multiply
@@ -110,6 +117,10 @@ Module distributed_matrix_module
      Procedure,            Private :: set_global_complex => real_matrix_set_global_complex
      Procedure,            Private :: get_global_real    => real_matrix_get_global_real
      Procedure,            Private :: get_global_complex => real_matrix_get_global_complex
+     Procedure,            Private :: set_raw_real       => real_matrix_set_raw_real
+     Procedure,            Private :: set_raw_complex    => real_matrix_set_raw_complex
+     Procedure,            Private :: get_raw_real       => real_matrix_get_raw_real
+     Procedure,            Private :: get_raw_complex    => real_matrix_get_raw_complex
      Procedure,            Private :: set_real_scalar    => real_matrix_set_real_scalar
      Procedure,            Private :: multiply           => real_multiply
      Procedure, Pass( B ), Private :: real_multiply      => real_multiply_real
@@ -157,6 +168,10 @@ Module distributed_matrix_module
      Procedure,            Private :: set_global_complex => complex_matrix_set_global_complex
      Procedure,            Private :: get_global_real    => complex_matrix_get_global_real
      Procedure,            Private :: get_global_complex => complex_matrix_get_global_complex
+     Procedure,            Private :: set_raw_real       => complex_matrix_set_raw_real
+     Procedure,            Private :: set_raw_complex    => complex_matrix_set_raw_complex
+     Procedure,            Private :: get_raw_real       => complex_matrix_get_raw_real
+     Procedure,            Private :: get_raw_complex    => complex_matrix_get_raw_complex
      Procedure,            Private :: set_real_scalar    => complex_matrix_set_real_scalar
      Procedure,            Private :: multiply           => complex_multiply
      Procedure, Pass( B ), Private :: real_multiply      => real_multiply_complex
@@ -272,6 +287,42 @@ Module distributed_matrix_module
        Complex( wp ), Dimension( m:, p: ), Intent(   Out )           :: data
        Logical                           , Intent( In    ), Optional :: do_comms
      End Subroutine get_global_complex
+
+     Subroutine get_raw_real( A, raw_data, descriptor )
+       !! Get raw data from a real array 
+       Import :: wp
+       Import :: distributed_matrix
+       Implicit None
+       Class( distributed_matrix )  ,              Intent( In    ) :: A
+       Real( wp ), Dimension( :, : ), Allocatable, Intent(   Out ) :: raw_data
+       Integer   , Dimension( :    ),              Intent(   Out ) :: descriptor
+     End Subroutine get_raw_real
+     Subroutine get_raw_complex( A, raw_data, descriptor )
+       !! Get raw data from a complex array 
+       Import :: wp
+       Import :: distributed_matrix
+       Implicit None
+       Class( distributed_matrix )     ,              Intent( In    ) :: A
+       Complex( wp ), Dimension( :, : ), Allocatable, Intent(   Out ) :: raw_data
+       Integer      , Dimension( :    ),              Intent(   Out ) :: descriptor
+     End Subroutine get_raw_complex
+
+     Subroutine set_raw_real( A, raw_data )
+       !! set raw data from a real array 
+       Import :: wp
+       Import :: distributed_matrix
+       Implicit None
+       Class( distributed_matrix )  ,              Intent( InOut ) :: A
+       Real( wp ), Dimension( :, : ), Allocatable, Intent( In    ) :: raw_data
+     End Subroutine set_raw_real
+     Subroutine set_raw_complex( A, raw_data )
+       !! set raw data from a real array 
+       Import :: wp
+       Import :: distributed_matrix
+       Implicit None
+       Class( distributed_matrix )     ,              Intent( InOut ) :: A
+       Complex( wp ), Dimension( :, : ), Allocatable, Intent( In    ) :: raw_data
+     End Subroutine set_raw_complex
 
      Subroutine real_assign( A, data )
        !! Set a matrix to a scalar real value
@@ -1158,6 +1209,144 @@ Contains
     End If
        
   End Subroutine complex_matrix_get_global_complex
+
+  ! Set raw data
+  Subroutine real_matrix_set_raw_real( A, raw_data )
+
+    !! Set the raw data for A
+
+    Class( real_distributed_matrix ),              Intent( InOut ) :: A
+    Real( wp ), Dimension( :, : )   , Allocatable, Intent( In    ) :: raw_data
+
+    If( A%warn_on_raw ) Then
+       Call warn_on_raw( "real_matrix_set_raw_real" )
+    End If
+
+    A%data = raw_data
+
+  End Subroutine real_matrix_set_raw_real
+
+  Subroutine real_matrix_set_raw_complex( A, raw_data )
+
+    !! get the raw data for A
+
+    Class  ( real_distributed_matrix  ),              Intent( InOut ) :: A
+    Complex( wp ), Dimension( :, : )   , Allocatable, Intent( In    ) :: raw_data
+
+    If( A%warn_on_raw ) Then
+       Call warn_on_raw( "real_matrix_set_raw_complex" )
+    End If
+
+    Error Stop "Trying to get raw data from real matrix into complex data in real_matrix_get_raw_complex"
+    ! Shut the compiler up about unused vars
+    A%data = Real( raw_data, Kind = Kind( A%data ) )
+
+  End Subroutine real_matrix_set_raw_complex
+
+  Subroutine complex_matrix_set_raw_real( A, raw_data )
+
+    !! get the raw data for A
+
+    Class( complex_distributed_matrix  ),              Intent( InOut ) :: A
+    Real ( wp ), Dimension( :, : )      , Allocatable, Intent( In    ) :: raw_data
+
+    If( A%warn_on_raw ) Then
+       Call warn_on_raw( "complex_matrix_set_raw_real" )
+    End If
+
+    Error Stop "Trying to get raw data from real matrix into complex data in real_matrix_get_raw_complex"
+    ! Shut the compiler up about unused vars
+    A%data = raw_data
+
+  End Subroutine complex_matrix_set_raw_real
+
+  Subroutine complex_matrix_set_raw_complex( A, raw_data )
+
+    !! Set the raw data for A
+
+    Class( complex_distributed_matrix ),              Intent( InOut ) :: A
+    Complex( wp ), Dimension( :, : )   , Allocatable, Intent( In    ) :: raw_data
+
+    If( A%warn_on_raw ) Then
+       Call warn_on_raw( "complex_matrix_set_raw_complex" )
+    End If
+
+    A%data = raw_data
+
+  End Subroutine complex_matrix_set_raw_complex
+
+  ! Get the raw data
+  Subroutine real_matrix_get_raw_real( A, raw_data, descriptor )
+
+    !! get the raw data for A
+
+    Class( real_distributed_matrix ),              Intent( In    ) :: A
+    Real( wp ), Dimension( :, : )   , Allocatable, Intent(   Out ) :: raw_data
+    Integer   , Dimension( :    )   ,              Intent(   Out ) :: descriptor
+
+    If( A%warn_on_raw ) Then
+       Call warn_on_raw( "real_matrix_get_raw_real" )
+    End If
+
+    raw_data   = A%data
+    descriptor = A%matrix_map%get_descriptor() 
+    
+  End Subroutine real_matrix_get_raw_real
+
+  Subroutine real_matrix_get_raw_complex( A, raw_data, descriptor )
+
+    !! get the raw data for A
+
+    Class  ( real_distributed_matrix  ),              Intent( In    ) :: A
+    Complex( wp ), Dimension( :, : )   , Allocatable, Intent(   Out ) :: raw_data
+    Integer      , Dimension( :    )   ,              Intent(   Out ) :: descriptor
+
+    If( A%warn_on_raw ) Then
+       Call warn_on_raw( "real_matrix_get_raw_complex" )
+    End If
+
+    Error Stop "Trying to get raw data from real matrix into complex data in real_matrix_get_raw_complex"
+    ! Shut the compiler up about unused vars
+    raw_data   = 1
+    descriptor = A%matrix_map%get_descriptor() 
+
+  End Subroutine real_matrix_get_raw_complex
+
+  Subroutine complex_matrix_get_raw_real( A, raw_data, descriptor )
+
+    !! get the raw data for A
+
+    Class  ( complex_distributed_matrix  ),              Intent( In    ) :: A
+    Real   ( wp ), Dimension( :, : )      , Allocatable, Intent(   Out ) :: raw_data
+    Integer      , Dimension( :    )      ,              Intent(   Out ) :: descriptor
+
+    If( A%warn_on_raw ) Then
+       Call warn_on_raw( "complex_matrix_get_raw_real" )
+    End If
+
+    Error Stop "Trying to get raw data from complex matrix into real data in complex_matrix_get_raw_real"
+    ! Shut the compiler up about unused vars
+    raw_data   = 1
+    descriptor = A%matrix_map%get_descriptor() 
+
+  End Subroutine complex_matrix_get_raw_real
+
+  Subroutine complex_matrix_get_raw_complex( A, raw_data, descriptor )
+
+    !! get the raw data for A
+
+    Class  ( complex_distributed_matrix ),              Intent( In    ) :: A
+    Complex( wp ), Dimension( :, : )     , Allocatable, Intent(   Out ) :: raw_data
+    Integer      , Dimension( :    )     ,              Intent(   Out ) :: descriptor
+
+    If( A%warn_on_raw ) Then
+       Call warn_on_raw( "complex_matrix_get_raw_complex" )
+    End If
+
+    raw_data   = A%data
+    descriptor = A%matrix_map%get_descriptor() 
+    
+  End Subroutine complex_matrix_get_raw_complex
 
   ! Multiplication routines
 
@@ -3650,6 +3839,16 @@ Contains
     End Do
     
   End Function kahan_sum_complex
+
+  Subroutine warn_on_raw( message )
+
+    Implicit None
+    
+    Character( Len = * ), Intent( In ) :: message
+
+    Write( *, * ) 'Attemped raw access to matrix data in routine ', message
+    
+  End Subroutine warn_on_raw
   
 End Module distributed_matrix_module
  
