@@ -573,7 +573,7 @@ Contains
 
   End Subroutine test_ks_array_tr_inv_with_iterator
 
-  Subroutine test_ks_array_tr_inv_with_iterator_and_take_out()
+  Subroutine test_ks_array_tr_inv_with_iterator_and_extract()
 
     Use numbers_module , Only : wp
     Use ks_array_module, Only : ks_array, ks_point_info, ks_array_init, ks_array_comm_to_base, ks_array_finalise, &
@@ -695,7 +695,7 @@ Contains
        info = A_split%iterator_next()
        If( info%k_type == K_POINT_NOT_EXIST ) Exit
 
-       A_split_element = A_split%take_out_current_element()
+       A_split_element = A_split%extract_current_element()
 
        L = .Choleski. A_split_element
        L_inv = .TrInv. L
@@ -733,9 +733,9 @@ Contains
        
     Call ks_array_finalise
 
-  End Subroutine test_ks_array_tr_inv_with_iterator_and_take_out
+  End Subroutine test_ks_array_tr_inv_with_iterator_and_extract
 
-  Subroutine test_ks_array_add_with_iterator_and_take_out()
+  Subroutine test_ks_array_add_with_iterator_and_extract()
 
     Use numbers_module , Only : wp
     Use ks_array_module, Only : ks_array, ks_point_info, ks_array_init, ks_array_comm_to_base, ks_array_finalise, &
@@ -850,8 +850,8 @@ Contains
        If( info%k_type == K_POINT_NOT_EXIST ) Exit
        info = C_split%iterator_next()
 
-       A_split_element = A_split%take_out_current_element()
-       C_split_element = C_split%take_out_current_element()
+       A_split_element = A_split%extract_current_element()
+       C_split_element = C_split%extract_current_element()
 
        B = A_split_element + C_split_element
        If( verbose ) Then
@@ -884,7 +884,7 @@ Contains
        
     Call ks_array_finalise
 
-  End Subroutine test_ks_array_add_with_iterator_and_take_out
+  End Subroutine test_ks_array_add_with_iterator_and_extract
 
 End Module ks_diag_tests
 

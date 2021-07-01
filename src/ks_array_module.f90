@@ -121,7 +121,7 @@ Module ks_array_module
      Generic  , Public :: Operator( .TrInv. )     => tr_inv                            !! Invert a lower traingular set of matrices
      Generic  , Public :: extract                 => ks_array_extract                  !! Extract a patch from the matrices and return a new ks_array holding it. Each patch the same shape.
      Generic  , Public :: extract                 => ks_array_extract_vary             !! Extract a patch from the matrices and return a new ks_array holding it. Each patch may differ in shape.
-     Procedure, Public :: take_out_current_element =>  ks_array_take_out_current_element !! Return the element of the ks_array pointed to by the current value of the iterator
+     Procedure, Public :: extract_current_element =>  ks_array_extract_current_element !! Return the element of the ks_array pointed to by the current value of the iterator
      Generic  , Public :: set_by_global           => set_by_global_r, set_by_global_c  !! Set patches of an element
      Generic  , Public :: get_by_global           => get_by_global_r, get_by_global_c  !! Get patches of an element
      Procedure, Public :: global_to_local         => ks_array_g_to_l                   !! Get the global -> local  mapping arrays
@@ -1797,7 +1797,7 @@ Contains
 
   End Function ks_array_iterator_previous
 
-  Function ks_array_take_out_current_element( A ) Result( A_element )
+  Function ks_array_extract_current_element( A ) Result( A_element )
 
     !! Extract the element of the array currently pointed to be the iterator
 
@@ -1815,7 +1815,7 @@ Contains
        A_element%iterator_value = INVALID
     End If
        
-  End Function ks_array_take_out_current_element
+  End Function ks_array_extract_current_element
 
   Pure Function ks_array_get_ks_point_info( A ) Result( info )
 
