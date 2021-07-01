@@ -124,6 +124,8 @@ Module ks_array_module
      Procedure, Public :: extract_current_element =>  ks_array_extract_current_element !! Return the element of the ks_array pointed to by the current value of the iterator
      Generic  , Public :: set_by_global           => set_by_global_r, set_by_global_c  !! Set patches of an element
      Generic  , Public :: get_by_global           => get_by_global_r, get_by_global_c  !! Get patches of an element
+     Generic  , Public :: set_raw                 => set_raw_r, set_raw_c              !! Set the raw data
+     Generic  , Public :: get_raw                 => get_raw_r, get_raw_c              !! Get the raw data
      Procedure, Public :: global_to_local         => ks_array_g_to_l                   !! Get the global -> local  mapping arrays
      Procedure, Public :: local_to_global         => ks_array_l_to_g                   !! Get the local  -> global mapping arrays
      Procedure, Public :: size                    => ks_array_size                     !! Get the size of the matrix along a given dimension
@@ -144,6 +146,10 @@ Module ks_array_module
      Procedure,            Private :: set_by_global_c      => ks_array_set_global_complex
      Procedure,            Private :: get_by_global_r      => ks_array_get_global_real
      Procedure,            Private :: get_by_global_c      => ks_array_get_global_complex
+     Procedure,            Private :: set_raw_r            => ks_array_set_raw_real
+     Procedure,            Private :: set_raw_c            => ks_array_set_raw_complex
+     Procedure,            Private :: get_raw_r            => ks_array_get_raw_real
+     Procedure,            Private :: get_raw_c            => ks_array_get_raw_complex
      Procedure,            Private :: dagger               => ks_array_dagger
      Procedure,            Private :: multiply             => ks_array_mult
      Procedure, Pass( A ), Private :: rscal_multiply       => ks_array_rscal_mult
@@ -1597,6 +1603,104 @@ Contains
     End If
 
   End Subroutine ks_array_get_global_real
+
+  Subroutine ks_array_set_raw_real( A, k, s, raw_data )
+
+    !! Set the raw data for matrix with spin label s and k-point label k
+
+    Class( ks_array )                         , Intent( InOut ) :: A
+    Integer   , Dimension( : )                , Intent( In    ) :: k
+    Integer                                   , Intent( In    ) :: s
+    Real( wp ), Dimension( :, : ), Allocatable, Intent( In    ) :: raw_data
+
+    Integer :: ks, my_ks
+    
+    ks = A%get_ks( k, s )
+    
+    my_ks = A%get_my_ks_index( ks )
+
+    If( my_ks /= NOT_ME ) Then
+       Call A%my_k_points( my_ks )%data( 1 )%matrix%set_raw( raw_data )
+    End If
+
+  End Subroutine ks_array_set_raw_real
+
+  Subroutine ks_array_set_raw_complex( A, k, s, raw_data )
+
+    !! Set the raw data for matrix with spin label s and k-point label k
+
+    Class( ks_array )                            , Intent( InOut ) :: A
+    Integer   , Dimension( : )                   , Intent( In    ) :: k
+    Integer                                      , Intent( In    ) :: s
+    Complex( wp ), Dimension( :, : ), Allocatable, Intent( In    ) :: raw_data
+
+    Integer :: ks, my_ks
+    
+    ks = A%get_ks( k, s )
+    
+    my_ks = A%get_my_ks_index( ks )
+
+    If( my_ks /= NOT_ME ) Then
+       Call A%my_k_points( my_ks )%data( 1 )%matrix%set_raw( raw_data )
+    End If
+
+  End Subroutine ks_array_set_raw_complex
+
+  Subroutine ks_array_get_raw_real( A, k, s, raw_data, communicator, descriptor )
+
+    Use mpi, Only : MPI_COMM_NULL
+
+    !! Get the raw data for matrix with spin label s and k-point label k
+
+    Class( ks_array )                         , Intent( In    ) :: A
+    Integer   , Dimension( : )                , Intent( In    ) :: k
+    Integer                                   , Intent( In    ) :: s
+    Real( wp ), Dimension( :, : ), Allocatable, Intent(   Out ) :: raw_data
+    Integer                                   , Intent(   Out ) :: communicator
+    Integer   , Dimension( : )                , Intent(   Out ) :: descriptor
+
+    Integer :: ks, my_ks
+    
+    ks = A%get_ks( k, s )
+    
+    my_ks = A%get_my_ks_index( ks )
+
+    If( my_ks /= NOT_ME ) Then
+       Call A%my_k_points( my_ks )%data( 1 )%matrix%get_raw( raw_data, communicator, descriptor )
+    Else
+       communicator = MPI_COMM_NULL
+       descriptor = - Huge( descriptor )
+    End If
+
+  End Subroutine ks_array_get_raw_real
+
+  Subroutine ks_array_get_raw_complex( A, k, s, raw_data, communicator, descriptor )
+
+    Use mpi, Only : MPI_COMM_NULL
+
+    !! Get the raw data for matrix with spin label s and k-point label k
+
+    Class( ks_array )                            , Intent( In    ) :: A
+    Integer   , Dimension( : )                   , Intent( In    ) :: k
+    Integer                                      , Intent( In    ) :: s
+    Complex( wp ), Dimension( :, : ), Allocatable, Intent(   Out ) :: raw_data
+    Integer                                      , Intent(   Out ) :: communicator
+    Integer   , Dimension( : )                   , Intent(   Out ) :: descriptor
+
+    Integer :: ks, my_ks
+    
+    ks = A%get_ks( k, s )
+    
+    my_ks = A%get_my_ks_index( ks )
+
+    If( my_ks /= NOT_ME ) Then
+       Call A%my_k_points( my_ks )%data( 1 )%matrix%get_raw( raw_data, communicator, descriptor )
+    Else
+       communicator = MPI_COMM_NULL
+       descriptor = - Huge( descriptor )
+    End If
+
+  End Subroutine ks_array_get_raw_complex
 
   Subroutine ks_array_get_global_complex( A, k, s, m, n, p, q, data, comms_level )
 
