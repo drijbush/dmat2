@@ -121,6 +121,7 @@ Module ks_array_module
      Generic  , Public :: Operator( .TrInv. )     => tr_inv                            !! Invert a lower traingular set of matrices
      Generic  , Public :: extract                 => ks_array_extract                  !! Extract a patch from the matrices and return a new ks_array holding it. Each patch the same shape.
      Generic  , Public :: extract                 => ks_array_extract_vary             !! Extract a patch from the matrices and return a new ks_array holding it. Each patch may differ in shape.
+     Procedure, Public :: take_out_current_element =>  ks_array_take_out_current_element !! Return the element of the ks_array pointed to by the current value of the iterator
      Generic  , Public :: set_by_global           => set_by_global_r, set_by_global_c  !! Set patches of an element
      Generic  , Public :: get_by_global           => get_by_global_r, get_by_global_c  !! Get patches of an element
      Procedure, Public :: global_to_local         => ks_array_g_to_l                   !! Get the global -> local  mapping arrays
@@ -1795,6 +1796,26 @@ Contains
     End If
 
   End Function ks_array_iterator_previous
+
+  Function ks_array_take_out_current_element( A ) Result( A_element )
+
+    !! Extract the element of the array currently pointed to be the iterator
+
+    Type( ks_array ), Allocatable :: A_element
+    
+    Class( ks_array ), Intent( InOut ) :: A
+
+    If( A%iterator_value >= Lbound( A%my_k_points, Dim = 1 ) .And. &
+        A%iterator_value <= Ubound( A%my_k_points, Dim = 1 ) ) Then
+       Allocate( A_element )
+       A_element%my_k_points = [ A%my_k_points( A%iterator_value ) ]
+       A_element%all_k_point_info = [ A%my_k_points( A%iterator_value )%info ]
+       ! Single element, so not really part of an array, so "isolate" to this set of processes
+       A_element%parent_communicator = A%my_k_points( A%iterator_value )%communicator
+       A_element%iterator_value = INVALID
+    End If
+       
+  End Function ks_array_take_out_current_element
 
   Pure Function ks_array_get_ks_point_info( A ) Result( info )
 

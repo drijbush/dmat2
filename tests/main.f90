@@ -316,6 +316,8 @@ Program test_distributed_matrix
         End If
         Call test_ks_array_tr_inv
         Call test_ks_array_tr_inv_with_iterator
+        Call test_ks_array_tr_inv_with_iterator_and_take_out
+        Call test_ks_array_add_with_iterator_and_take_out
      Case default
         Write( *,* ) "Unknown test: ", Trim( tests( i ) )
         Flush( output_unit )
