@@ -288,7 +288,7 @@ Module distributed_matrix_module
        Logical                           , Intent( In    ), Optional :: do_comms
      End Subroutine get_global_complex
 
-     Subroutine get_raw_real( A, raw_data, communicator, descriptor )
+     Subroutine get_raw_real( A, raw_data, communicator, descriptor, daggered )
        !! Get raw data from a real array 
        Import :: wp
        Import :: distributed_matrix
@@ -297,8 +297,9 @@ Module distributed_matrix_module
        Real( wp ), Dimension( :, : ), Allocatable, Intent(   Out ) :: raw_data
        Integer   ,                                 Intent(   Out ) :: communicator
        Integer   , Dimension( :    ),              Intent(   Out ) :: descriptor
+       Logical   ,                                 Intent(   Out ) :: daggered
      End Subroutine get_raw_real
-     Subroutine get_raw_complex( A, raw_data, communicator, descriptor )
+     Subroutine get_raw_complex( A, raw_data, communicator, descriptor, daggered )
        !! Get raw data from a complex array 
        Import :: wp
        Import :: distributed_matrix
@@ -307,6 +308,7 @@ Module distributed_matrix_module
        Complex( wp ), Dimension( :, : ), Allocatable, Intent(   Out ) :: raw_data
        Integer      ,                                 Intent(   Out ) :: communicator
        Integer      , Dimension( :    ),              Intent(   Out ) :: descriptor
+       Logical      ,                                 Intent(   Out ) :: daggered
      End Subroutine get_raw_complex
 
      Subroutine set_raw_real( A, raw_data )
@@ -1278,7 +1280,7 @@ Contains
   End Subroutine complex_matrix_set_raw_complex
 
   ! Get the raw data
-  Subroutine real_matrix_get_raw_real( A, raw_data, communicator, descriptor )
+  Subroutine real_matrix_get_raw_real( A, raw_data, communicator, descriptor, daggered )
 
     !! get the raw data for A
 
@@ -1286,6 +1288,7 @@ Contains
     Real( wp ), Dimension( :, : )   , Allocatable, Intent(   Out ) :: raw_data
     Integer   ,                                    Intent(   Out ) :: communicator
     Integer   , Dimension( :    )   ,              Intent(   Out ) :: descriptor
+    Logical   ,                                    Intent(   Out ) :: daggered
 
     If( A%warn_on_raw ) Then
        Call warn_on_raw( "real_matrix_get_raw_real" )
@@ -1293,11 +1296,12 @@ Contains
 
     raw_data     = A%data
     communicator = A%get_comm()
-    descriptor   = A%matrix_map%get_descriptor() 
+    descriptor   = A%matrix_map%get_descriptor()
+    daggered     = A%daggered 
     
   End Subroutine real_matrix_get_raw_real
 
-  Subroutine real_matrix_get_raw_complex( A, raw_data, communicator, descriptor )
+  Subroutine real_matrix_get_raw_complex( A, raw_data, communicator, descriptor, daggered )
 
     !! get the raw data for A
 
@@ -1305,6 +1309,7 @@ Contains
     Complex( wp ), Dimension( :, : )   , Allocatable, Intent(   Out ) :: raw_data
     Integer      ,                                    Intent(   Out ) :: communicator
     Integer      , Dimension( :    )   ,              Intent(   Out ) :: descriptor
+    Logical      ,                                    Intent(   Out ) :: daggered
 
     If( A%warn_on_raw ) Then
        Call warn_on_raw( "real_matrix_get_raw_complex" )
@@ -1315,10 +1320,11 @@ Contains
     raw_data     = 1
     communicator = A%get_comm()
     descriptor   = A%matrix_map%get_descriptor() 
+    daggered     = A%daggered 
 
   End Subroutine real_matrix_get_raw_complex
 
-  Subroutine complex_matrix_get_raw_real( A, raw_data, communicator, descriptor )
+  Subroutine complex_matrix_get_raw_real( A, raw_data, communicator, descriptor, daggered )
 
     !! get the raw data for A
 
@@ -1326,6 +1332,7 @@ Contains
     Real   ( wp ), Dimension( :, : )      , Allocatable, Intent(   Out ) :: raw_data
     Integer      ,                                       Intent(   Out ) :: communicator
     Integer      , Dimension( :    )      ,              Intent(   Out ) :: descriptor
+    Logical      ,                                       Intent(   Out ) :: daggered
 
     If( A%warn_on_raw ) Then
        Call warn_on_raw( "complex_matrix_get_raw_real" )
@@ -1336,10 +1343,11 @@ Contains
     raw_data     = 1
     communicator = A%get_comm()
     descriptor   = A%matrix_map%get_descriptor() 
+    daggered     = A%daggered 
 
   End Subroutine complex_matrix_get_raw_real
 
-  Subroutine complex_matrix_get_raw_complex( A, raw_data, communicator, descriptor )
+  Subroutine complex_matrix_get_raw_complex( A, raw_data, communicator, descriptor, daggered )
 
     !! get the raw data for A
 
@@ -1347,6 +1355,7 @@ Contains
     Complex( wp ), Dimension( :, : )     , Allocatable, Intent(   Out ) :: raw_data
     Integer      ,                                      Intent(   Out ) :: communicator
     Integer      , Dimension( :    )     ,              Intent(   Out ) :: descriptor
+    Logical      ,                                      Intent(   Out ) :: daggered
 
     If( A%warn_on_raw ) Then
        Call warn_on_raw( "complex_matrix_get_raw_complex" )
@@ -1355,6 +1364,7 @@ Contains
     raw_data     = A%data
     communicator = A%get_comm()
     descriptor   = A%matrix_map%get_descriptor() 
+    daggered     = A%daggered 
     
   End Subroutine complex_matrix_get_raw_complex
 

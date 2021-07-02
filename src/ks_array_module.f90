@@ -1646,7 +1646,7 @@ Contains
 
   End Subroutine ks_array_set_raw_complex
 
-  Subroutine ks_array_get_raw_real( A, k, s, raw_data, communicator, descriptor )
+  Subroutine ks_array_get_raw_real( A, k, s, raw_data, communicator, descriptor, daggered )
 
     Use mpi, Only : MPI_COMM_NULL
 
@@ -1658,6 +1658,7 @@ Contains
     Real( wp ), Dimension( :, : ), Allocatable, Intent(   Out ) :: raw_data
     Integer                                   , Intent(   Out ) :: communicator
     Integer   , Dimension( : )                , Intent(   Out ) :: descriptor
+    Logical                                   , Intent(   Out ) :: daggered
 
     Integer :: ks, my_ks
     
@@ -1666,7 +1667,7 @@ Contains
     my_ks = A%get_my_ks_index( ks )
 
     If( my_ks /= NOT_ME ) Then
-       Call A%my_k_points( my_ks )%data( 1 )%matrix%get_raw( raw_data, communicator, descriptor )
+       Call A%my_k_points( my_ks )%data( 1 )%matrix%get_raw( raw_data, communicator, descriptor, daggered )
     Else
        communicator = MPI_COMM_NULL
        descriptor = - Huge( descriptor )
@@ -1674,7 +1675,7 @@ Contains
 
   End Subroutine ks_array_get_raw_real
 
-  Subroutine ks_array_get_raw_complex( A, k, s, raw_data, communicator, descriptor )
+  Subroutine ks_array_get_raw_complex( A, k, s, raw_data, communicator, descriptor, daggered )
 
     Use mpi, Only : MPI_COMM_NULL
 
@@ -1686,6 +1687,7 @@ Contains
     Complex( wp ), Dimension( :, : ), Allocatable, Intent(   Out ) :: raw_data
     Integer                                      , Intent(   Out ) :: communicator
     Integer   , Dimension( : )                   , Intent(   Out ) :: descriptor
+    Logical                                      , Intent(   Out ) :: daggered
 
     Integer :: ks, my_ks
     
@@ -1694,7 +1696,7 @@ Contains
     my_ks = A%get_my_ks_index( ks )
 
     If( my_ks /= NOT_ME ) Then
-       Call A%my_k_points( my_ks )%data( 1 )%matrix%get_raw( raw_data, communicator, descriptor )
+       Call A%my_k_points( my_ks )%data( 1 )%matrix%get_raw( raw_data, communicator, descriptor, daggered )
     Else
        communicator = MPI_COMM_NULL
        descriptor = - Huge( descriptor )

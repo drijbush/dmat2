@@ -568,7 +568,7 @@ Contains
 
   End Subroutine ks_matrix_set_raw_complex
 
-  Subroutine ks_matrix_get_raw_real( A, raw_data, communicator, descriptor )
+  Subroutine ks_matrix_get_raw_real( A, raw_data, communicator, descriptor, daggered )
 
     !! Get the raw data tor A and its data distribution
 
@@ -576,12 +576,13 @@ Contains
     Real( wp ), Dimension( :, : ), Allocatable, Intent(   Out ) :: raw_data
     Integer   ,                                 Intent(   Out ) :: communicator
     Integer   , Dimension( :    ),              Intent(   Out ) :: descriptor
+    Logical   ,                                 Intent(   Out ) :: daggered
 
-    Call A%matrix%get_raw( raw_data, communicator, descriptor )
+    Call A%matrix%get_raw( raw_data, communicator, descriptor, daggered )
 
   End Subroutine ks_matrix_get_raw_real
 
-  Subroutine ks_matrix_get_raw_complex( A, raw_data, communicator, descriptor )
+  Subroutine ks_matrix_get_raw_complex( A, raw_data, communicator, descriptor, daggered )
 
     !! Get the raw data tor A and its data distribution
 
@@ -589,8 +590,9 @@ Contains
     Complex( wp ), Dimension( :, : ), Allocatable, Intent(   Out ) :: raw_data
     Integer      ,                                 Intent(   Out ) :: communicator
     Integer      , Dimension( :    ),              Intent(   Out ) :: descriptor
+    Logical      ,                                 Intent(   Out ) :: daggered
 
-    Call A%matrix%get_raw( raw_data, communicator, descriptor )
+    Call A%matrix%get_raw( raw_data, communicator, descriptor, daggered )
 
   End Subroutine ks_matrix_get_raw_complex
 
