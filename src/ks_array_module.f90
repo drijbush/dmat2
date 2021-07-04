@@ -1857,15 +1857,15 @@ Contains
 
     ks = A%get_ks( k, s )
 
-    A%all_k_point_info( ks )%spin      = s_new
-    A%all_k_point_info( ks )%k_indices = k_new
-    
     my_ks = A%get_my_ks_index( ks )
     If( my_ks /= NOT_ME ) Then
        A%my_k_points( my_ks )%info%spin      = s_new
        A%my_k_points( my_ks )%info%k_indices = k_new
     End If
 
+    A%all_k_point_info( ks )%spin      = s_new
+    A%all_k_point_info( ks )%k_indices = k_new
+    
     Call mpi_barrier( A%parent_communicator, error ) 
 
   End Subroutine ks_array_element_relabel
