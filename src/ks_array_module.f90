@@ -135,6 +135,7 @@ Module ks_array_module
      Procedure, Public :: iterator_next           => ks_array_iterator_next            !! Move to the next matrix in the ks_array
      Procedure, Public :: iterator_previous       => ks_array_iterator_previous        !! Move to the previous matrix in the ks_array
      Procedure, Public :: get_ks_point_info       => ks_array_get_ks_point_info        !! Get what ks points this array holds data about
+     Procedure, Public :: element_relabel         => ks_array_element_relabel          !! Change the label for an element in the array
      ! Private implementations
      Procedure,            Private :: ks_array_create
      Procedure,            Private :: ks_array_create_vary
@@ -1771,8 +1772,8 @@ Contains
     Integer, Dimension( : ), Allocatable :: gl_indexing
 
     Class( ks_array )          , Intent( In ) :: A
-    Integer                    , Intent( In ) :: s
     Integer    , Dimension( : ), Intent( In ) :: k
+    Integer                    , Intent( In ) :: s
     Character( Len = * )       , Intent( In ) :: what
 
     Integer :: ks, my_ks
@@ -1798,8 +1799,8 @@ Contains
     Integer, Dimension( : ), Allocatable :: lg_indexing
 
     Class( ks_array )          , Intent( In ) :: A
-    Integer                    , Intent( In ) :: s
     Integer    , Dimension( : ), Intent( In ) :: k
+    Integer                    , Intent( In ) :: s
     Character( Len = * )       , Intent( In ) :: what
 
     Integer :: ks, my_ks
@@ -1819,8 +1820,8 @@ Contains
     Integer :: n
 
     Class( ks_array )          , Intent( In )           :: A
-    Integer                    , Intent( In )           :: s
     Integer    , Dimension( : ), Intent( In )           :: k
+    Integer                    , Intent( In )           :: s
     Integer                    , Intent( In ), Optional :: dim
 
     Integer :: ks, my_ks
@@ -1836,6 +1837,38 @@ Contains
     End If
 
   End Function ks_array_size
+
+  Subroutine ks_array_element_relabel( A, k, s, k_new, s_new )
+
+    !! Relabel an element in the KS_array
+    !! Synchronising across all processes holding elements of the KS array. This ensures
+    !! the labeling never becomes inconsistent between porcesses
+
+    Use mpi, Only : mpi_barrier
+
+    Class( ks_array )          , Intent( InOut ) :: A
+    Integer    , Dimension( : ), Intent( In    ) :: k
+    Integer                    , Intent( In    ) :: s
+    Integer    , Dimension( : ), Intent( In    ) :: k_new
+    Integer                    , Intent( In    ) :: s_new
+
+    Integer :: ks, my_ks
+    Integer :: error
+
+    ks = A%get_ks( k, s )
+
+    A%all_k_point_info( ks )%spin      = s_new
+    A%all_k_point_info( ks )%k_indices = k_new
+    
+    my_ks = A%get_my_ks_index( ks )
+    If( my_ks /= NOT_ME ) Then
+       A%my_k_points( my_ks )%info%spin      = s_new
+       A%my_k_points( my_ks )%info%k_indices = k_new
+    End If
+
+    Call mpi_barrier( A%parent_communicator, error ) 
+
+  End Subroutine ks_array_element_relabel
 
   Subroutine ks_array_iterator_init( A )
 
