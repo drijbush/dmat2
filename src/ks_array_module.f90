@@ -1838,22 +1838,31 @@ Contains
 
   End Function ks_array_size
 
-  Subroutine ks_array_element_relabel( A, k, s, k_new, s_new )
+  Subroutine ks_array_element_relabel( A, k, s, k_new, s_new, comms_level )
 
     !! Relabel an element in the KS_array
-    !! Synchronising across all processes holding elements of the KS array. This ensures
-    !! the labeling never becomes inconsistent between porcesses
+    !! Blocking across all processes holding elements of the KS array unless
+    !! COMMS_LEVEL is set to KS_ARRAY_NO_COMMS. The synchronisation help prevent
+    !! the labeling becoming inconsistent between porcesses
 
     Use mpi, Only : mpi_barrier
 
-    Class( ks_array )          , Intent( InOut ) :: A
-    Integer    , Dimension( : ), Intent( In    ) :: k
-    Integer                    , Intent( In    ) :: s
-    Integer    , Dimension( : ), Intent( In    ) :: k_new
-    Integer                    , Intent( In    ) :: s_new
+    Class( ks_array )          , Intent( InOut )           :: A
+    Integer    , Dimension( : ), Intent( In    )           :: k
+    Integer                    , Intent( In    )           :: s
+    Integer    , Dimension( : ), Intent( In    )           :: k_new
+    Integer                    , Intent( In    )           :: s_new
+    Integer                    , Intent( In    ), Optional :: comms_level
 
     Integer :: ks, my_ks
+    Integer :: local_comms_level
     Integer :: error
+
+    If( .Not. Present( comms_level ) ) Then
+       local_comms_level = KS_ARRAY_COMMS_GET_ON_ALL
+    Else
+       local_comms_level = comms_level
+    End If
 
     ks = A%get_ks( k, s )
 
@@ -1866,7 +1875,9 @@ Contains
     A%all_k_point_info( ks )%spin      = s_new
     A%all_k_point_info( ks )%k_indices = k_new
     
-    Call mpi_barrier( A%parent_communicator, error ) 
+    If( local_comms_level /= KS_ARRAY_NO_COMMS ) Then
+       Call mpi_barrier( A%parent_communicator, error )
+    End If
 
   End Subroutine ks_array_element_relabel
 
