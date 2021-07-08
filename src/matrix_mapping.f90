@@ -122,7 +122,8 @@ Contains
     Call mpi_comm_size( comm, nproc, error )
     Call factor( nproc, nprow, npcol )
     context = comm
-    Call blacs_gridinit( context, 'C', nprow, npcol )
+!!$    Call blacs_gridinit( context, 'C', nprow, npcol )
+    Call blacs_gridinit( context, 'R', nprow, npcol )
     
   End Subroutine get_context_from_comm
   
