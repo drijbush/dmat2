@@ -29,6 +29,7 @@ Module distributed_matrix_module
      Procedure, Public :: global_to_local        => matrix_global_to_local     !! Get an array for mapping global indices to local  ones
      Procedure, Public :: local_to_global        => matrix_local_to_global     !! Get an array for mapping local  indices to global ones
      Procedure, Public :: size                   => matrix_size                !! Get the dimensions of the matrix
+     Procedure, Public :: max_size               => matrix_max_global_size     !! Get the maximum dimension of the matrix on any proc holding it
      Procedure, Public :: get_comm               => matrix_communicator        !! Get the communicator containing the processes holding the matrix
      Generic  , Public :: Assignment( = )        => set_real_scalar            !! Set all elements in a matrix to a constant real value
      Generic  , Public :: Operator( * )          => multiply                   !! Multiply two matrices together
@@ -684,6 +685,25 @@ Contains
     End If
 
   End Function matrix_size
+
+  Function matrix_max_global_size( A, dim ) Result( n )
+
+    Use mpi, Only : MPI_In_place, MPI_Integer, MPI_Sum, MPI_Allreduce
+
+    !! Get the maximum size of dimension DIM of the matrix on all processes holding the matrix
+
+    Integer :: n
+
+    Class( distributed_matrix ), Intent( In ) :: A
+    Integer                    , Intent( In ) :: dim
+
+    Integer :: error
+
+    n = A%size( dim )
+
+    Call MPI_Allreduce( MPI_In_place, n, 1, MPI_Integer, MPI_Sum, A%matrix_map%get_comm(), error )
+
+  End Function matrix_max_global_size
 
   Function matrix_communicator( A ) Result( c )
 
