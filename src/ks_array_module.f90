@@ -1609,10 +1609,10 @@ Contains
 
     !! Set the raw data for matrix with spin label s and k-point label k
 
-    Class( ks_array )                         , Intent( InOut ) :: A
-    Integer   , Dimension( : )                , Intent( In    ) :: k
-    Integer                                   , Intent( In    ) :: s
-    Real( wp ), Dimension( :, : ), Allocatable, Intent( In    ) :: raw_data
+    Class( ks_array )            , Intent( InOut ) :: A
+    Integer   , Dimension( : )   , Intent( In    ) :: k
+    Integer                      , Intent( In    ) :: s
+    Real( wp ), Dimension( :, : ), Intent( In    ) :: raw_data
 
     Integer :: ks, my_ks
     
@@ -1630,10 +1630,10 @@ Contains
 
     !! Set the raw data for matrix with spin label s and k-point label k
 
-    Class( ks_array )                            , Intent( InOut ) :: A
-    Integer   , Dimension( : )                   , Intent( In    ) :: k
-    Integer                                      , Intent( In    ) :: s
-    Complex( wp ), Dimension( :, : ), Allocatable, Intent( In    ) :: raw_data
+    Class( ks_array )               , Intent( InOut ) :: A
+    Integer   , Dimension( : )      , Intent( In    ) :: k
+    Integer                         , Intent( In    ) :: s
+    Complex( wp ), Dimension( :, : ), Intent( In    ) :: raw_data
 
     Integer :: ks, my_ks
     
