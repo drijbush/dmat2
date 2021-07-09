@@ -688,7 +688,7 @@ Contains
 
   Function matrix_max_global_size( A, dim ) Result( n )
 
-    Use mpi, Only : MPI_In_place, MPI_Integer, MPI_Sum, MPI_Allreduce
+    Use mpi, Only : MPI_In_place, MPI_Integer, MPI_Sum
 
     !! Get the maximum size of dimension DIM of the matrix on all processes holding the matrix
 
